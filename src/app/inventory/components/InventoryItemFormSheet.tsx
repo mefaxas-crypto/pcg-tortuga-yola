@@ -34,6 +34,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'Material Code is required.'),
@@ -43,7 +48,7 @@ const formSchema = z.object({
   unit: z.string().min(1, 'Unit is required.'),
   purchaseUnit: z.string().min(1, 'Purchase Unit is required.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
-  supplier: z.string().min(1, 'Supplier is required.'),
+  supplierId: z.string().min(1, 'Supplier is required.'),
   allergens: z.string().optional(),
 });
 
@@ -75,25 +80,42 @@ export function InventoryItemFormSheet({
       unit: '',
       purchaseUnit: '',
       parLevel: 0,
-      supplier: '',
+      supplierId: '',
       allergens: '',
     },
   });
 
   useEffect(() => {
-    if (open) {
-        const q = query(collection(db, 'suppliers'));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const suppliersData: Supplier[] = [];
-          querySnapshot.forEach((doc) => {
-            suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
-          });
-          setSuppliers(suppliersData.sort((a, b) => a.name.localeCompare(b.name)));
-        });
-    
-        return () => unsubscribe();
+    if (!open) {
+      form.reset();
     }
-  }, [open]);
+  }, [open, form]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'suppliers'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const suppliersData: Supplier[] = [];
+      querySnapshot.forEach((doc) => {
+        suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
+      });
+      setSuppliers(suppliersData.sort((a, b) => a.name.localeCompare(b.name)));
+    }, (error) => {
+      console.error("Failed to fetch suppliers:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load suppliers. Please try again later.',
+      });
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
+  
+  const handleClose = () => {
+    if (!loading) {
+      onClose();
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -103,7 +125,6 @@ export function InventoryItemFormSheet({
             title: 'Ingredient Added',
             description: `"${values.name}" has been added to your inventory.`,
         });
-      form.reset();
       onClose();
     } catch (error) {
       console.error(error);
@@ -118,12 +139,7 @@ export function InventoryItemFormSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-            form.reset();
-            onClose();
-        }
-    }}>
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Add a New Ingredient</SheetTitle>
@@ -136,166 +152,165 @@ export function InventoryItemFormSheet({
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
           >
-             <FormField
-              control={form.control}
-              name="materialCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cod. Material (SAP Code)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 1006335" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ingredient Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Extra Virgin Olive Oil 5L" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
+            <fieldset disabled={loading} className="grid gap-4">
+              <FormField
                 control={form.control}
-                name="category"
+                name="materialCode"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {categories.map(category => (
-                            <SelectItem key={category} value={category}>{category}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-             />
-            <div className="grid grid-cols-2 gap-4">
-               <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Quantity</FormLabel>
+                  <FormItem>
+                    <FormLabel>Cod. Material (SAP Code)</FormLabel>
                     <FormControl>
-                        <Input type="number" {...field} />
+                      <Input placeholder="e.g., 1006335" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ingredient Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Extra Virgin Olive Oil 5L" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
                   control={form.control}
-                  name="unit"
+                  name="category"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Recipe Unit</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
+                      <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a unit" />
-                          </Trigger>
-                        </FormControl>
-                        <SelectContent>
-                          {recipeUnits.map(unit => (
-                            <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                              <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                          {categories.map(category => (
+                              <SelectItem key={category} value={category}>{category}</SelectItem>
                           ))}
-                        </SelectContent>
+                          </SelectContent>
                       </Select>
                       <FormMessage />
-                    </FormItem>
+                      </FormItem>
                   )}
-                />
-            </div>
-             <FormField
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Quantity</FormLabel>
+                      <FormControl>
+                          <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Recipe Unit</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a unit" />
+                            </Trigger>
+                          </FormControl>
+                          <SelectContent>
+                            {recipeUnits.map(unit => (
+                              <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              </div>
+              <FormField
+                  control={form.control}
+                  name="purchaseUnit"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Purchase Unit</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select a purchase unit" />
+                          </Trigger>
+                          </FormControl>
+                          <SelectContent>
+                          {purchaseUnits.map(unit => (
+                              <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                          ))}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+              <FormField
                 control={form.control}
-                name="purchaseUnit"
+                name="parLevel"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Purchase Unit</FormLabel>
+                  <FormItem>
+                    <FormLabel>Par Level</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="supplierId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Supplier</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a purchase unit" />
-                        </Trigger>
-                        </FormControl>
-                        <SelectContent>
-                        {purchaseUnits.map(unit => (
-                            <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                          <SelectValue placeholder="Select a supplier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {suppliers.map(supplier => (
+                          <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
                         ))}
-                        </SelectContent>
+                      </SelectContent>
                     </Select>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-            <FormField
-              control={form.control}
-              name="parLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Par Level</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="supplier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Supplier</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+              />
+              <FormField
+                control={form.control}
+                name="allergens"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allergens</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a supplier" />
-                      </Trigger>
+                      <Input placeholder="e.g., Gluten, Nuts" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {suppliers.map(supplier => (
-                        <SelectItem key={supplier.id} value={supplier.name}>{supplier.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="allergens"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Allergens</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Gluten, Nuts" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </fieldset>
             <SheetFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => {
-                  form.reset();
-                  onClose();
-              }}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
