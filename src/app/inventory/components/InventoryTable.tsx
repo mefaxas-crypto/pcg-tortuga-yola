@@ -1,6 +1,5 @@
 'use client';
 
-import { inventoryItems } from '@/lib/data';
 import {
   Table,
   TableBody,
@@ -27,8 +26,36 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem } from '@/lib/types';
+import { useEffect, useState } from 'react';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function InventoryTable() {
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'inventory'));
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const items: InventoryItem[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() } as InventoryItem);
+        });
+        setInventoryItems(items.sort((a, b) => a.name.localeCompare(b.name)));
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching inventory:', error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+  
   const getStatusBadge = (status: InventoryItem['status']) => {
     switch (status) {
       case 'In Stock':
@@ -71,7 +98,18 @@ export function InventoryTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inventoryItems.map((item) => (
+              {loading && Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                  </TableRow>
+              ))}
+              {!loading && inventoryItems?.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
@@ -117,6 +155,11 @@ export function InventoryTable() {
             </TableBody>
           </Table>
         </div>
+         {!loading && inventoryItems?.length === 0 && (
+          <div className="py-12 text-center text-muted-foreground">
+            No ingredients found. Add your first one!
+          </div>
+        )}
       </CardContent>
     </Card>
   );
