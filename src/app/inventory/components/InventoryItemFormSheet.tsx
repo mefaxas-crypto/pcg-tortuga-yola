@@ -88,7 +88,10 @@ export function InventoryItemFormSheet({
 
   useEffect(() => {
     if (mode === 'edit' && item) {
-      form.reset(item);
+      form.reset({
+        ...item,
+        allergens: item.allergens || '',
+      });
     } else {
       form.reset({
         materialCode: '',
