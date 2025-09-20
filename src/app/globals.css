@@ -20,7 +20,7 @@
     --secondary-foreground: 210 100% 10%;
 
     --muted: 35 31% 69%; /* #D2B48C - Wicker Beige */
-    --muted-foreground: 0 0% 60%; /* Lighter version of Foundation Stone for muted text */
+    --muted-foreground: 0 0% 43%; /* #6D6D6D - Foundation Stone for muted text */
 
     --accent: 35 31% 69%; /* #D2B48C - Wicker Beige */
     --accent-foreground: 34 50% 15%;
@@ -28,8 +28,8 @@
     --destructive: 355 71% 57%; /* #DC3545 - Error Red */
     --destructive-foreground: 45 33% 96%;
 
-    --border: 0 0% 43%; /* #6D6D6D - Foundation Stone */
-    --input: 0 0% 43%;
+    --border: 45 33% 90%; /* Lighter version of Sand White for high-contrast borders */
+    --input: 45 33% 90%; /* Lighter version of Sand White for high-contrast inputs */
     --ring: 45 100% 59%;
 
     --radius: 0.5rem;
