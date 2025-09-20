@@ -50,7 +50,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
           {/* Column 1: Interactive Controls */}
           <div
             className={cn(
-              'space-y-8 transition-opacity duration-300',
+              'space-y-8 transition-opacity duration-300 w-full md:w-4/5',
               isSubRecipe
                 ? 'opacity-30 pointer-events-none'
                 : 'opacity-100',
@@ -127,13 +127,13 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
           {/* Column 2: Calculations */}
           <div className="space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
-              <span className="text-muted-foreground">Ingredients Cost (M.P.)</span>
+              <span className="text-muted-foreground">Ingredients Cost</span>
               <span className="font-medium">
                 {formatCurrency(totalRecipeCost)}
               </span>
             </div>
             <div className="flex justify-between items-center border-b pb-2">
-              <span className="text-muted-foreground">Cost per Portion (P/P)</span>
+              <span className="text-muted-foreground">Cost per Portion</span>
               <span className="font-medium">
                 {formatCurrency(costPerPortion)}
               </span>
