@@ -201,9 +201,9 @@ export function RecipeForm({
               control={form.control}
               name="isSubRecipe"
               render={({ field }) => (
-                <FormItem className="rounded-lg border p-2 shadow-sm">
+                <FormItem className="rounded-lg border p-1 px-2 shadow-sm">
                   <FormLabel className="text-xs">Recipe Type</FormLabel>
-                  <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center justify-between gap-1 pt-0.5">
                     <span className={cn("text-xs", !field.value ? 'text-muted-foreground' : 'text-foreground')}>Sub-recipe</span>
                      <FormControl>
                         <Switch
@@ -298,20 +298,6 @@ export function RecipeForm({
             />
           </div>
           
-           <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
            <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
             <div className="space-y-4">
@@ -397,6 +383,21 @@ export function RecipeForm({
             </div>
           </div>
         </fieldset>
+
+        <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notes / Method</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
             Cancel
