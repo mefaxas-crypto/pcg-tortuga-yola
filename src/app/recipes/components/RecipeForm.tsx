@@ -484,9 +484,9 @@ export function RecipeForm({
                                                     onKeyDown={(e) => handleEnterKey(e, index)}
                                                     data-enterkey
                                                     onChange={(e) => {
-                                                        const newQuantity = parseFloat(e.target.value) || 0;
-                                                        const newTotal = newQuantity * (selectedItem?.purchasePrice || 0);
-                                                        quantityField.onChange(newQuantity);
+                                                        const newQuantity = parseFloat(e.target.value);
+                                                        const newTotal = (newQuantity || 0) * (selectedItem?.purchasePrice || 0);
+                                                        quantityField.onChange(isNaN(newQuantity) ? '' : newQuantity);
                                                         form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                     }}
                                                 />
@@ -566,5 +566,3 @@ export function RecipeForm({
     </Form>
   );
 }
-
-    
