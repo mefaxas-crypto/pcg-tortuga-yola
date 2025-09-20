@@ -90,7 +90,7 @@ export function InventoryTable() {
                 <TableHead>Item</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Quantity</TableHead>
+                <TableHead>Presentation</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
