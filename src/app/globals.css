@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 210 100% 12%; /* #002B54 - A slightly darker Pioneer Blue */
+    --background: 210 50% 8%; /* Near-black with a hint of blue */
     --foreground: 45 33% 96%; /* #F8F7F2 - Sand White */
 
     --card: 210 100% 15%; /* #003366 - Pioneer Blue */
@@ -20,7 +20,7 @@
     --secondary-foreground: 210 100% 10%;
 
     --muted: 35 31% 69%; /* #D2B48C - Wicker Beige */
-    --muted-foreground: 0 0% 43%; /* #6D6D6D - Foundation Stone for muted text */
+    --muted-foreground: 0 0% 60%; /* Lighter gray for better readability */
 
     --accent: 35 31% 69%; /* #D2B48C - Wicker Beige */
     --accent-foreground: 34 50% 15%;
@@ -28,8 +28,8 @@
     --destructive: 355 71% 57%; /* #DC3545 - Error Red */
     --destructive-foreground: 45 33% 96%;
 
-    --border: 45 33% 90%; /* Lighter version of Sand White for high-contrast borders */
-    --input: 45 33% 90%; /* Lighter version of Sand White for high-contrast inputs */
+    --border: 210 20% 25%; /* Subtle blue-gray border */
+    --input: 210 20% 25%;
     --ring: 45 100% 59%;
 
     --radius: 0.5rem;
