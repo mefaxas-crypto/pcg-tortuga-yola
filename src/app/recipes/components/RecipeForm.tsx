@@ -212,7 +212,22 @@ export function RecipeForm({
                 />
               </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* This is a placeholder. It will be functional in a future step. */}
+            <FormItem>
+              <FormLabel>Menu</FormLabel>
+              <Select disabled>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a menu" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="placeholder">Dinner Menu (placeholder)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
             <FormField
               control={form.control}
               name="category"
@@ -236,6 +251,20 @@ export function RecipeForm({
               )}
             />
           </div>
+          
+           <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           
           <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
@@ -322,19 +351,6 @@ export function RecipeForm({
             </div>
           </div>
            
-           <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
         </fieldset>
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
