@@ -44,6 +44,7 @@ export type Recipe = {
   id: string;
   recipeCode: string;
   name: string;
+  isSubRecipe: boolean;
   category: string;
   yield?: number; // How many portions the recipe makes
   yieldUnit?: string;

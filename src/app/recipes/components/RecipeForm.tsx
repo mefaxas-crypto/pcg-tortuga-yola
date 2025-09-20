@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -27,9 +28,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { Info, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Switch } from '@/components/ui/switch';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -41,12 +43,22 @@ const recipeIngredientSchema = z.object({
 const formSchema = z.object({
   recipeCode: z.string().min(1, 'Recipe code is required.'),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
-  category: z.string().min(1, 'Category is required.'),
+  isSubRecipe: z.boolean(),
+  category: z.string().optional(),
   yield: z.coerce.number().min(0, 'Yield must be a positive number.').optional(),
   yieldUnit: z.string().optional(),
   notes: z.string().optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, 'A recipe must have at least one ingredient.'),
+}).superRefine((data, ctx) => {
+    if (!data.isSubRecipe && !data.category) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['category'],
+            message: 'Category is required for a main recipe.',
+        });
+    }
 });
+
 
 type RecipeFormProps = {
   mode: 'add' | 'edit';
@@ -54,7 +66,7 @@ type RecipeFormProps = {
 };
 
 // Placeholder data
-const recipeCategories = ['Appetizer', 'Entree', 'Dessert', 'Beverage', 'Sub-recipe', 'Other'];
+const recipeCategories = ['Appetizer', 'Entree', 'Dessert', 'Beverage', 'Other'];
 const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit', 'portion'];
 
 
@@ -74,10 +86,12 @@ export function RecipeForm({
         ...recipe,
         yield: recipe.yield || 1,
         yieldUnit: recipe.yieldUnit || 'portion',
+        isSubRecipe: recipe.isSubRecipe || false,
       } : 
       {
         recipeCode: '',
         name: '',
+        isSubRecipe: false,
         category: '',
         yield: 1,
         yieldUnit: 'portion',
@@ -90,6 +104,8 @@ export function RecipeForm({
     control: form.control,
     name: 'ingredients',
   });
+
+  const isSubRecipe = form.watch('isSubRecipe');
 
   useEffect(() => {
     const q = query(collection(db, 'inventory'));
@@ -114,14 +130,19 @@ export function RecipeForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
+        const dataToSave = {
+            ...values,
+            category: values.isSubRecipe ? 'Sub-recipe' : values.category,
+        };
+
         if (mode === 'edit' && recipe) {
-            await editRecipe(recipe.id, values);
+            await editRecipe(recipe.id, dataToSave);
              toast({
                 title: 'Recipe Updated',
                 description: `"${values.name}" has been updated.`,
             });
         } else {
-            await addRecipe(values);
+            await addRecipe(dataToSave);
             toast({
                 title: 'Recipe Added',
                 description: `"${values.name}" has been added to your collection.`,
@@ -147,7 +168,7 @@ export function RecipeForm({
         className="flex flex-col h-full space-y-6"
       >
         <fieldset disabled={loading} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start">
             <FormField
               control={form.control}
               name="recipeCode"
@@ -212,7 +233,27 @@ export function RecipeForm({
                 />
               </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="isSubRecipe"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-start rounded-lg border p-3 shadow-sm gap-4">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-0.5">
+                    <FormLabel>Mark as sub-recipe</FormLabel>
+                    <FormDescription>
+                      Sub-recipes are components used in other recipes, not sold directly on a menu.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+          <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity", isSubRecipe ? "opacity-50 pointer-events-none" : "opacity-100")}>
             {/* This is a placeholder. It will be functional in a future step. */}
             <FormItem>
               <FormLabel>Menu</FormLabel>
@@ -234,7 +275,7 @@ export function RecipeForm({
               render={({ field }) => (
                   <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubRecipe}>
                       <FormControl>
                       <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
@@ -252,21 +293,7 @@ export function RecipeForm({
             />
           </div>
           
-           <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          
-          <div>
+           <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
             <div className="space-y-4">
               {fields.map((field, index) => {
@@ -350,6 +377,20 @@ export function RecipeForm({
               </Button>
             </div>
           </div>
+
+          <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
            
         </fieldset>
         <div className="flex justify-end gap-2 pt-4">
