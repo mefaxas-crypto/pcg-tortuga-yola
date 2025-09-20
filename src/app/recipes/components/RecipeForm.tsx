@@ -371,7 +371,7 @@ export function RecipeForm({
                       <FormControl>
                       <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
-                      </Trigger>
+                      </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                       {recipeCategories.map(category => (
@@ -415,15 +415,16 @@ export function RecipeForm({
                                     <TableCell className="pt-2 pb-3">
                                         <FormField
                                             control={form.control}
-                                            name={`ingredients.${index}.name`}
-                                            render={({ field: nameField }) => (
+                                            name={`ingredients.${index}.inventoryItemId`}
+                                            render={({ field: inventoryItemField }) => (
                                             <FormItem>
                                                 <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
                                                              <Input
-                                                                {...nameField}
                                                                 placeholder="Start typing to search..."
+                                                                value={form.watch(`ingredients.${index}.name`)}
+                                                                onChange={(e) => form.setValue(`ingredients.${index}.name`, e.target.value)}
                                                                 onFocus={() => setOpenPopoverIndex(index)}
                                                             />
                                                         </FormControl>
@@ -601,3 +602,4 @@ export function RecipeForm({
     
 
     
+
