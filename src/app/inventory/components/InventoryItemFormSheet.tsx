@@ -217,7 +217,7 @@ export function InventoryItemFormSheet({
                     name="unit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Recipe Unit</FormLabel>
+                        <FormLabel>Unit</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
