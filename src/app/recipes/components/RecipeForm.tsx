@@ -201,18 +201,19 @@ export function RecipeForm({
               control={form.control}
               name="isSubRecipe"
               render={({ field }) => (
-                <FormItem className="rounded-lg border p-3 shadow-sm">
-                  <FormLabel>Recipe Type</FormLabel>
-                  <div className="flex items-center justify-between gap-4 pt-2">
-                    <span className={cn("text-sm", !field.value ? 'text-muted-foreground' : 'text-foreground')}>Sub-recipe</span>
+                <FormItem className="rounded-lg border p-2 shadow-sm">
+                  <FormLabel className="text-xs">Recipe Type</FormLabel>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className={cn("text-xs", !field.value ? 'text-muted-foreground' : 'text-foreground')}>Sub-recipe</span>
                      <FormControl>
                         <Switch
                           checked={!field.value}
                           onCheckedChange={(checked) => field.onChange(!checked)}
                           aria-readonly
+                          className="data-[state=checked]:h-5 data-[state=unchecked]:h-5 data-[state=checked]:w-9 data-[state=unchecked]:w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"
                         />
                       </FormControl>
-                    <span className={cn("text-sm", field.value ? 'text-muted-foreground' : 'text-foreground')}>Recipe</span>
+                    <span className={cn("text-xs", field.value ? 'text-muted-foreground' : 'text-foreground')}>Recipe</span>
                   </div>
                 </FormItem>
               )}
@@ -297,6 +298,20 @@ export function RecipeForm({
             />
           </div>
           
+           <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
            <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
             <div className="space-y-4">
@@ -381,19 +396,6 @@ export function RecipeForm({
               </Button>
             </div>
           </div>
-           <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
         </fieldset>
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
