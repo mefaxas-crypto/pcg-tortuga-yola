@@ -17,7 +17,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addRecipe, editRecipe } from '@/lib/actions';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import type { InventoryItem, Recipe } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -95,6 +95,7 @@ export function RecipeForm({
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
+  const commandInputRef = useRef<HTMLInputElement>(null);
 
 
   const { toast } = useToast();
@@ -218,6 +219,30 @@ export function RecipeForm({
       setLoading(false);
     }
   }
+
+  const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, index: number) => {
+      if (e.key === 'Enter') {
+          e.preventDefault();
+          const visibleItems = inventory.filter(item => item.name.toLowerCase().includes((form.getValues(`ingredients.${index}.name`) || '').toLowerCase()));
+          if (visibleItems.length > 0) {
+              const item = visibleItems[0];
+              const newQuantity = 1;
+              const newTotal = newQuantity * (item.unitCost || 0);
+              update(index, {
+                  inventoryItemId: item.id,
+                  name: item.name,
+                  materialCode: item.materialCode,
+                  unit: item.unit,
+                  unitPrice: item.unitCost,
+                  quantity: newQuantity,
+                  totalCost: newTotal
+              });
+              form.clearErrors(`ingredients.${index}.inventoryItemId`);
+              setOpenPopoverIndex(null);
+          }
+      }
+  };
+
 
   return (
     <>
@@ -377,7 +402,7 @@ export function RecipeForm({
                          {fields.map((field, index) => {
                             const selectedItemId = form.watch(`ingredients.${index}.inventoryItemId`);
                             const selectedItem = inventory.find(i => i.id === selectedItemId);
-                            const unitPrice = selectedItem?.purchasePrice || 0;
+                            const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
                             const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
 
                             return (
@@ -389,10 +414,15 @@ export function RecipeForm({
                                             name={`ingredients.${index}.name`}
                                             render={({ field: nameField }) => (
                                             <FormItem>
-                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
+                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
+                                                    setOpenPopoverIndex(open ? index : null);
+                                                    if(open) {
+                                                        setTimeout(() => commandInputRef.current?.focus(), 100);
+                                                    }
+                                                }}>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
-                                                            <Input
+                                                             <Input
                                                                 {...nameField}
                                                                 placeholder="Start typing to search..."
                                                                 onFocus={() => setOpenPopoverIndex(index)}
@@ -400,8 +430,9 @@ export function RecipeForm({
                                                         </FormControl>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                        <Command shouldFilter={false}>
+                                                        <Command onKeyDown={(e) => handleCommandKeyDown(e, index)} shouldFilter={false}>
                                                         <CommandInput 
+                                                            ref={commandInputRef}
                                                             value={nameField.value}
                                                             onValueChange={nameField.onChange}
                                                             placeholder="Search ingredients..." 
@@ -432,13 +463,13 @@ export function RecipeForm({
                                                                     key={item.id}
                                                                     onSelect={() => {
                                                                         const newQuantity = 1;
-                                                                        const newTotal = newQuantity * (item.purchasePrice || 0);
+                                                                        const newTotal = newQuantity * (item.unitCost || 0);
                                                                         update(index, {
                                                                             inventoryItemId: item.id,
                                                                             name: item.name,
                                                                             materialCode: item.materialCode,
                                                                             unit: item.unit,
-                                                                            unitPrice: item.purchasePrice,
+                                                                            unitPrice: item.unitCost,
                                                                             quantity: newQuantity,
                                                                             totalCost: newTotal
                                                                         });
@@ -475,9 +506,8 @@ export function RecipeForm({
                                                     onChange={(e) => {
                                                         const newQuantity = parseFloat(e.target.value);
                                                         quantityField.onChange(isNaN(newQuantity) ? '' : newQuantity);
-                                                        const currentItem = inventory.find(i => i.id === form.getValues(`ingredients.${index}.inventoryItemId`));
-                                                        const unitPrice = currentItem?.purchasePrice || 0;
-                                                        const newTotal = (newQuantity || 0) * unitPrice;
+                                                        const currentUnitPrice = form.getValues(`ingredients.${index}.unitPrice`) || 0;
+                                                        const newTotal = (newQuantity || 0) * currentUnitPrice;
                                                         form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                     }}
                                                     value={quantityField.value || ''}
@@ -527,25 +557,27 @@ export function RecipeForm({
                 </CardFooter>
             </Card>
 
-            <RecipeFinancialsCard 
-                form={form}
-                totalRecipeCost={totalRecipeCost}
-                isSubRecipe={isSubRecipe}
+            <div className="relative z-20 space-y-6">
+              <RecipeFinancialsCard 
+                  form={form}
+                  totalRecipeCost={totalRecipeCost}
+                  isSubRecipe={isSubRecipe}
+              />
+          
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                  <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
             />
-        
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notes / Method</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-          />
+          </div>
         </fieldset>
 
         <div className="flex justify-end gap-2 pt-4">

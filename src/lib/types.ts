@@ -11,6 +11,7 @@ export type InventoryItem = {
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
   purchasePrice: number;
+  unitCost: number; // The cost of a single recipe unit (e.g., price per gram)
   allergens?: string[]; // This is now an array of strings
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };

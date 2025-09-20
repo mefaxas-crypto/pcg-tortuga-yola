@@ -123,6 +123,7 @@ export async function editInventoryItem(
       supplier: supplierName,
     });
     revalidatePath('/inventory');
+    revalidatePath('/recipes/**'); // Revalidate recipes when inventory changes
     return {success: true};
   } catch (e) {
     console.error('Error updating document: ', e);
@@ -181,6 +182,7 @@ export async function editRecipe(id: string, recipeData: EditRecipeData) {
     const recipeRef = doc(db, 'recipes', id);
     await updateDoc(recipeRef, recipeData);
     revalidatePath('/recipes');
+    revalidatePath(`/recipes/${id}/edit`);
     return {success: true};
   } catch (e) {
     console.error('Error updating recipe: ', e);

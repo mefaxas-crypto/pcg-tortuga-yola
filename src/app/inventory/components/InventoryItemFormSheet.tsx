@@ -13,6 +13,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -46,6 +47,7 @@ const formSchema = z.object({
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().min(1, 'Supplier is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price must be a positive number.'),
+  unitCost: z.coerce.number().min(0, 'Unit cost must be a positive number.'),
   allergens: z.array(z.string()).optional(),
 });
 
@@ -84,6 +86,7 @@ export function InventoryItemFormSheet({
       parLevel: 0,
       supplierId: '',
       purchasePrice: 0,
+      unitCost: 0,
       allergens: [],
     },
   });
@@ -106,6 +109,7 @@ export function InventoryItemFormSheet({
           parLevel: 0,
           supplierId: '',
           purchasePrice: 0,
+          unitCost: 0,
           allergens: [],
         });
       }
@@ -273,11 +277,11 @@ export function InventoryItemFormSheet({
                     name="unit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Unit</FormLabel>
+                        <FormLabel>Recipe Unit</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a unit" />
+                              <SelectValue placeholder="e.g., g, mL" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -301,7 +305,7 @@ export function InventoryItemFormSheet({
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a purchase unit" />
+                                <SelectValue placeholder="e.g., Case" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -328,6 +332,20 @@ export function InventoryItemFormSheet({
                   )}
                 />
               </div>
+               <FormField
+                  control={form.control}
+                  name="unitCost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit Cost</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} />
+                      </FormControl>
+                      <FormDescription>The cost for one recipe unit (e.g., cost per gram).</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="parLevel"
