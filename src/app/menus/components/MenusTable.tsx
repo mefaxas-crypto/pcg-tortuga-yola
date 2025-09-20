@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { FilePenLine, MoreVertical, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +24,10 @@ import { useEffect, useState } from 'react';
 import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
+import { useRouter } from 'next/navigation';
 
 export function MenusTable() {
+  const router = useRouter();
   const [menus, setMenus] = useState<Menu[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,9 +59,17 @@ export function MenusTable() {
     }).format(value || 0);
   }
 
-  const calculateTotalCost = (items: Menu['items']) => {
-    return items.reduce((acc, item) => acc + (item.totalCost || 0), 0);
+  const calculateTotals = (items: Menu['items']) => {
+    const totalCost = items.reduce((acc, item) => acc + (item.totalCost || 0), 0);
+    const totalRevenue = items.reduce((acc, item) => acc + (item.sellingPrice || 0), 0);
+    const totalProfit = totalRevenue - totalCost;
+    return { totalCost, totalRevenue, totalProfit };
   }
+
+  const handleEdit = (menu: Menu) => {
+    router.push(`/menus/${menu.id}/edit`);
+  };
+
 
   return (
     <Card>
@@ -71,6 +81,8 @@ export function MenusTable() {
                 <TableHead>Menu Name</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead className="text-right">Total Cost</TableHead>
+                <TableHead className="text-right">Total Revenue</TableHead>
+                <TableHead className="text-right">Total Profit</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -90,50 +102,69 @@ export function MenusTable() {
                       <Skeleton className="h-5 w-20 ml-auto" />
                     </TableCell>
                     <TableCell>
+                      <Skeleton className="h-5 w-20 ml-auto" />
+                    </TableCell>
+                     <TableCell>
+                      <Skeleton className="h-5 w-20 ml-auto" />
+                    </TableCell>
+                    <TableCell>
                       <Skeleton className="h-8 w-8 rounded-full ml-auto" />
                     </TableCell>
                   </TableRow>
                 ))}
               {!loading &&
-                menus?.map((menu) => (
-                  <TableRow key={menu.id}>
-                    <TableCell className="font-medium">
-                      {menu.name}
-                    </TableCell>
-                    <TableCell>{menu.items.length}</TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(calculateTotalCost(menu.items))}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            aria-haspopup="true"
-                            size="icon"
-                            variant="ghost"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DeleteMenuDialog
-                            menuId={menu.id}
-                            menuName={menu.name}
-                          >
-                            <DropdownMenuItem
-                              onSelect={(e) => e.preventDefault()}
-                              className="text-destructive-foreground focus:text-destructive-foreground focus:bg-destructive/90"
+                menus?.map((menu) => {
+                  const { totalCost, totalRevenue, totalProfit } = calculateTotals(menu.items);
+                  return (
+                    <TableRow key={menu.id}>
+                      <TableCell className="font-medium">
+                        {menu.name}
+                      </TableCell>
+                      <TableCell>{menu.items.length}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(totalCost)}
+                      </TableCell>
+                       <TableCell className="text-right text-green-600">
+                        {formatCurrency(totalRevenue)}
+                      </TableCell>
+                       <TableCell className="text-right font-bold text-primary">
+                        {formatCurrency(totalProfit)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              aria-haspopup="true"
+                              size="icon"
+                              variant="ghost"
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                             <DropdownMenuItem onClick={() => handleEdit(menu)}>
+                              <FilePenLine className="mr-2 h-4 w-4" />
+                              Edit
                             </DropdownMenuItem>
-                          </DeleteMenuDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            <DeleteMenuDialog
+                              menuId={menu.id}
+                              menuName={menu.name}
+                            >
+                              <DropdownMenuItem
+                                onSelect={(e) => e.preventDefault()}
+                                className="text-destructive-foreground focus:text-destructive-foreground focus:bg-destructive/90"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DeleteMenuDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
             </TableBody>
           </Table>
         </div>

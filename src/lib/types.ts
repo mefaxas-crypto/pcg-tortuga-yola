@@ -69,7 +69,7 @@ export type MenuItem = {
   name: string;
   category: string;
   totalCost: number;
-  // We can add sellingPrice here later for profitability analysis
+  sellingPrice: number;
 };
 
 export type Menu = {
