@@ -6,7 +6,7 @@ import { InventoryTable } from './components/InventoryTable';
 export default function InventoryPage() {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Ingredients">
+      <PageHeader title="Inventory">
         <Button>
           <PlusCircle className="mr-2" />
           Add New Ingredient

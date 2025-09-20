@@ -18,9 +18,9 @@ import {
   Settings,
   ShoppingCart,
   Truck,
-  Flame,
   Warehouse,
   UtensilsCrossed,
+  PackagePlus,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,13 +29,13 @@ export function SidebarNav() {
 
   const menuItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/inventory', label: 'Ingredients', icon: Warehouse },
+    { href: '/inventory', label: 'Inventory', icon: Warehouse },
     { href: '/suppliers', label: 'Suppliers', icon: Truck },
-    { href: '/recipes', label: 'Recipes', icon: BookOpen },
-    { href: '/fabrication', label: 'Fabrication', icon: Flame },
+    { href: '/recipes', label: 'Recipes & Menus', icon: BookOpen },
+    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus },
     { href: '/sales', label: 'Sales', icon: ShoppingCart },
     { href: '/reports', label: 'Reports', icon: BarChart3 },
-    { href: '/waste-prediction', label: 'AI Tools', icon: Bot },
+    { href: '/ai-tools', label: 'AI Tools', icon: Bot },
   ];
 
   return (
@@ -56,7 +56,7 @@ export function SidebarNav() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname === '/' : true)}
                 icon={<item.icon />}
                 tooltip={item.label}
               >
