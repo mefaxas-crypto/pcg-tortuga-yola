@@ -225,7 +225,7 @@ export function InventoryItemFormSheet({
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a unit" />
-                            </Trigger>
+                            </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {recipeUnits.map(unit => (
@@ -248,7 +248,7 @@ export function InventoryItemFormSheet({
                           <FormControl>
                           <SelectTrigger>
                               <SelectValue placeholder="Select a purchase unit" />
-                          </Trigger>
+                          </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                           {purchaseUnits.map(unit => (
