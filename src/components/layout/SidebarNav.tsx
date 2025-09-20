@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -21,6 +22,7 @@ import {
   Warehouse,
   UtensilsCrossed,
   PackagePlus,
+  ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,7 +33,8 @@ export function SidebarNav() {
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/inventory', label: 'Inventory', icon: Warehouse },
     { href: '/suppliers', label: 'Suppliers', icon: Truck },
-    { href: '/recipes', label: 'Recipes & Menus', icon: BookOpen },
+    { href: '/recipes', label: 'Recipes', icon: BookOpen },
+    { href: '/menus', label: 'Menus', icon: ClipboardList },
     { href: '/purchasing', label: 'Purchasing', icon: PackagePlus },
     { href: '/sales', label: 'Sales', icon: ShoppingCart },
     { href: '/reports', label: 'Reports', icon: BarChart3 },

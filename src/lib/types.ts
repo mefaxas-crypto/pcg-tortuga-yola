@@ -51,6 +51,7 @@ export type Recipe = {
   name: string;
   isSubRecipe: boolean;
   category: string;
+  menuId?: string; // ID of the menu this recipe belongs to
   yield?: number; // How many portions the recipe makes
   yieldUnit?: string;
   notes?: string;
@@ -62,3 +63,20 @@ export type Recipe = {
 
 export type AddRecipeData = Omit<Recipe, 'id'>;
 export type EditRecipeData = Omit<Recipe, 'id'>;
+
+export type MenuItem = {
+  recipeId: string;
+  name: string;
+  category: string;
+  totalCost: number;
+  // We can add sellingPrice here later for profitability analysis
+};
+
+export type Menu = {
+  id: string;
+  name: string;
+  items: MenuItem[];
+};
+
+export type AddMenuData = Omit<Menu, 'id'>;
+export type EditMenuData = Omit<Menu, 'id'>;

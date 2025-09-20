@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addRecipe, editRecipe } from '@/lib/actions';
 import { useEffect, useMemo, useState, useRef } from 'react';
-import type { InventoryItem, Recipe } from '@/lib/types';
+import type { InventoryItem, Menu, Recipe } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -54,6 +54,7 @@ const formSchema = z.object({
   recipeCode: z.string().min(1, 'Recipe code is required.'),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   isSubRecipe: z.boolean(),
+  menuId: z.string().optional(),
   category: z.string().optional(),
   yield: z.coerce.number().min(0, 'Yield must be a positive number.').optional(),
   yieldUnit: z.string().optional(),
@@ -93,6 +94,7 @@ export function RecipeForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
   const commandInputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +117,7 @@ export function RecipeForm({
         recipeCode: '',
         name: '',
         isSubRecipe: false,
+        menuId: '',
         category: '',
         yield: 1,
         yieldUnit: 'portion',
@@ -150,8 +153,8 @@ export function RecipeForm({
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const qInventory = query(collection(db, 'inventory'));
+    const unsubscribeInventory = onSnapshot(qInventory, (querySnapshot) => {
       const inventoryData: InventoryItem[] = [];
       querySnapshot.forEach((doc) => {
         inventoryData.push({ id: doc.id, ...doc.data() } as InventoryItem);
@@ -166,11 +169,30 @@ export function RecipeForm({
       });
     });
 
+    const qMenus = query(collection(db, 'menus'));
+    const unsubscribeMenus = onSnapshot(qMenus, (querySnapshot) => {
+      const menuData: Menu[] = [];
+      querySnapshot.forEach((doc) => {
+        menuData.push({ id: doc.id, ...doc.data() } as Menu);
+      });
+      setMenus(menuData.sort((a, b) => a.name.localeCompare(b.name)));
+    }, (error) => {
+      console.error("Failed to fetch menus:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load menus. Please try again later.',
+      });
+    });
+
     if (mode === 'add' && fields.length === 0) {
       addEmptyIngredient();
     }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeInventory();
+      unsubscribeMenus();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast, mode]);
   
@@ -343,21 +365,28 @@ export function RecipeForm({
               </div>
           </div>
           <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity", isSubRecipe ? "opacity-50 pointer-events-none" : "opacity-100")}>
-            {/* This is a placeholder. It will be functional in a future step. */}
-            <FormItem>
-              <FormLabel>Menu</FormLabel>
-              <Select disabled>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a menu" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="placeholder">Dinner Menu (placeholder)</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
+            <FormField
+              control={form.control}
+              name="menuId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Menu</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubRecipe}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a menu" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {menus.map(menu => (
+                          <SelectItem key={menu.id} value={menu.id}>{menu.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="category"

@@ -1,3 +1,4 @@
+
 'use client';
 
 import PageHeader from '@/components/PageHeader';
@@ -26,7 +27,7 @@ export default function RecipesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Recipes & Menus">
+      <PageHeader title="Recipes">
          <Button asChild>
           <Link href="/recipes/new">
             <PlusCircle className="mr-2" />
@@ -36,10 +37,9 @@ export default function RecipesPage() {
       </PageHeader>
 
       <Tabs defaultValue="recipes">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="recipes">Recipes</TabsTrigger>
           <TabsTrigger value="fabrication">Fabrication</TabsTrigger>
-          <TabsTrigger value="menus">Menus</TabsTrigger>
         </TabsList>
         <TabsContent value="recipes">
             <RecipesTable onEdit={handleEdit} />
@@ -64,28 +64,6 @@ export default function RecipesPage() {
                 </div>
                 </CardContent>
             </Card>
-        </TabsContent>
-         <TabsContent value="menus">
-          <Card>
-            <CardHeader>
-              <CardTitle>Menus</CardTitle>
-              <CardDescription>
-                Assemble menus and analyze overall profitability.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[300px]">
-                <div className="flex flex-col items-center gap-1 text-center">
-                  <h3 className="text-2xl font-bold tracking-tight">
-                    Menu Engineering Coming Soon
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    You'll be able to create and analyze your menus here.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

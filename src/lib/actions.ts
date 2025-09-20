@@ -1,3 +1,4 @@
+
 'use server';
 
 import {
@@ -19,8 +20,8 @@ import type {
   AddAllergenData,
   AddRecipeData,
   EditRecipeData,
-  InventoryItem,
-  RecipeIngredient,
+  AddMenuData,
+  EditMenuData,
 } from './types';
 import {revalidatePath} from 'next/cache';
 
@@ -198,5 +199,41 @@ export async function deleteRecipe(recipeId: string) {
   } catch (e) {
     console.error('Error deleting recipe: ', e);
     throw new Error('Failed to delete recipe');
+  }
+}
+
+// Menu Actions
+export async function addMenu(menuData: AddMenuData) {
+  try {
+    const docRef = await addDoc(collection(db, 'menus'), menuData);
+    revalidatePath('/menus');
+    return {success: true, id: docRef.id};
+  } catch (e) {
+    console.error('Error adding menu: ', e);
+    throw new Error('Failed to add menu');
+  }
+}
+
+export async function editMenu(id: string, menuData: EditMenuData) {
+  try {
+    const menuRef = doc(db, 'menus', id);
+    await updateDoc(menuRef, menuData);
+    revalidatePath('/menus');
+    revalidatePath(`/menus/${id}/edit`);
+    return {success: true};
+  } catch (e) {
+    console.error('Error updating menu: ', e);
+    throw new Error('Failed to edit menu');
+  }
+}
+
+export async function deleteMenu(menuId: string) {
+  try {
+    await deleteDoc(doc(db, 'menus', menuId));
+    revalidatePath('/menus');
+    return {success: true};
+  } catch (e) {
+    console.error('Error deleting menu: ', e);
+    throw new Error('Failed to delete menu');
   }
 }
