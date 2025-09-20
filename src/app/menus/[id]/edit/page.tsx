@@ -8,7 +8,7 @@ import type { Menu } from '@/lib/types';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MenuForm } from '../components/MenuForm';
+import { MenuForm } from '../../components/MenuForm';
 
 export default function EditMenuPage({ params }: { params: { id: string } }) {
   const [menu, setMenu] = useState<Menu | null>(null);
@@ -65,4 +65,3 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
