@@ -35,7 +35,8 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -88,6 +89,7 @@ export function RecipeForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const { toast } = useToast();
   const ingredientInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   
@@ -232,6 +234,7 @@ export function RecipeForm({
   };
 
   return (
+    <>
     <Form {...form}>
       <form
         onSubmit={(e) => {
@@ -304,7 +307,7 @@ export function RecipeForm({
                     <FormItem>
                       <FormLabel>Yield</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 4" {...field} />
+                        <Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -414,7 +417,7 @@ export function RecipeForm({
                                                         <Input
                                                           ref={(el) => ingredientInputsRef.current[index] = el}
                                                           placeholder="Select ingredient"
-                                                          value={field.value ? inventory.find(i => i.id === field.value)?.name : ''}
+                                                          value={selectedItem?.name ?? ''}
                                                           readOnly
                                                           className="pr-8"
                                                           onKeyDown={(e) => handleEnterKey(e, index)}
@@ -435,17 +438,18 @@ export function RecipeForm({
                                                               value={item.name}
                                                               key={item.id}
                                                               onSelect={() => {
-                                                                const newItemData = {
+                                                                const newQuantity = 1;
+                                                                const newTotal = newQuantity * (item.purchasePrice || 0);
+                                                                update(index, {
                                                                     ...field,
                                                                     inventoryItemId: item.id,
                                                                     name: item.name,
                                                                     materialCode: item.materialCode,
                                                                     unit: item.unit,
                                                                     unitPrice: item.purchasePrice,
-                                                                    quantity: 1, // Default quantity
-                                                                    totalCost: item.purchasePrice * 1
-                                                                };
-                                                                update(index, newItemData);
+                                                                    quantity: newQuantity,
+                                                                    totalCost: newTotal
+                                                                });
                                                               }}
                                                             >
                                                               <Check
@@ -459,6 +463,13 @@ export function RecipeForm({
                                                               {item.name}
                                                             </CommandItem>
                                                           ))}
+                                                        </CommandGroup>
+                                                        <CommandSeparator />
+                                                        <CommandGroup>
+                                                            <CommandItem onSelect={() => setIngredientSheetOpen(true)}>
+                                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                                Add New Ingredient
+                                                            </CommandItem>
                                                         </CommandGroup>
                                                       </CommandList>
                                                     </Command>
@@ -489,6 +500,7 @@ export function RecipeForm({
                                                         quantityField.onChange(isNaN(newQuantity) ? '' : newQuantity);
                                                         form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                     }}
+                                                    value={quantityField.value || ''}
                                                 />
                                                 </FormControl>
                                                 <FormMessage />
@@ -564,5 +576,11 @@ export function RecipeForm({
         </div>
       </form>
     </Form>
+    <InventoryItemFormSheet 
+        open={ingredientSheetOpen}
+        onClose={() => setIngredientSheetOpen(false)}
+        mode="add"
+    />
+    </>
   );
 }
