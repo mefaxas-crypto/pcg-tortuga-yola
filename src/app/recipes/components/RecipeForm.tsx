@@ -534,10 +534,11 @@ export function RecipeForm({
                                                     placeholder="Qty" 
                                                     {...quantityField}
                                                     onChange={(e) => {
-                                                        const newQuantity = parseFloat(e.target.value);
-                                                        quantityField.onChange(isNaN(newQuantity) ? '' : newQuantity);
+                                                        const value = e.target.value;
+                                                        quantityField.onChange(value); // Store the raw string value
+                                                        const newQuantity = parseFloat(value);
                                                         const currentUnitPrice = form.getValues(`ingredients.${index}.unitPrice`) || 0;
-                                                        const newTotal = (newQuantity || 0) * currentUnitPrice;
+                                                        const newTotal = (isNaN(newQuantity) ? 0 : newQuantity) * currentUnitPrice;
                                                         form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                     }}
                                                     value={quantityField.value || ''}
@@ -626,5 +627,7 @@ export function RecipeForm({
     </>
   );
 }
+
+    
 
     
