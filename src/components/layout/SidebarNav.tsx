@@ -17,8 +17,11 @@ import {
   LayoutDashboard,
   Settings,
   ShoppingCart,
+  Truck,
+  Users,
   UtensilsCrossed,
   Warehouse,
+  Flame
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,8 +30,10 @@ export function SidebarNav() {
 
   const menuItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/inventory', label: 'Inventory', icon: Warehouse },
+    { href: '/inventory', label: 'Ingredients', icon: Warehouse },
+    { href: '/suppliers', label: 'Suppliers', icon: Truck },
     { href: '/recipes', label: 'Recipes', icon: BookOpen },
+    { href: '/fabrication', label: 'Fabrication', icon: Flame },
     { href: '/sales', label: 'Sales', icon: ShoppingCart },
     { href: '/reports', label: 'Reports', icon: BarChart3 },
     { href: '/waste-prediction', label: 'AI Tools', icon: Bot },
@@ -41,9 +46,8 @@ export function SidebarNav() {
           <UtensilsCrossed className="h-8 w-8 text-primary" />
           <div className="flex flex-col">
             <h2 className="text-lg font-semibold tracking-tighter font-headline">
-              PCG Kitchen
+              Pantry Pilot
             </h2>
-            <p className="text-sm text-muted-foreground -mt-1">Manager</p>
           </div>
         </div>
       </SidebarHeader>

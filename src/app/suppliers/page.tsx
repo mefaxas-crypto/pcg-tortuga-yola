@@ -1,18 +1,18 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { InventoryTable } from './components/InventoryTable';
+import { SuppliersTable } from './components/SuppliersTable';
 
-export default function InventoryPage() {
+export default function SuppliersPage() {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Ingredients">
+      <PageHeader title="Suppliers">
         <Button>
           <PlusCircle className="mr-2" />
-          Add New Ingredient
+          Add New Supplier
         </Button>
       </PageHeader>
-      <InventoryTable />
+      <SuppliersTable />
     </div>
   );
 }

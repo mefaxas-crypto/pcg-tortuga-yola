@@ -9,3 +9,10 @@ export type InventoryItem = {
   expirationDate: string;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
+
+export type Supplier = {
+    id: string;
+    name: string;
+    contactPerson: string;
+    phoneNumber: string;
+};
