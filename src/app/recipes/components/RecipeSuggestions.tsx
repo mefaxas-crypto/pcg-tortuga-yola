@@ -23,9 +23,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Bot, ChefHat, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { InventoryItem } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   inventory: z.string().min(1, 'Please list at least one ingredient.'),
@@ -33,30 +37,69 @@ const formSchema = z.object({
 
 export function RecipeSuggestions() {
   const [loading, setLoading] = useState(false);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
   const [recipes, setRecipes] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      inventory: 'Tomatoes, Onions, Garlic, Chicken Breast, Olive Oil',
+      inventory: '',
     },
   });
+
+  useEffect(() => {
+    setInventoryLoading(true);
+    const q = query(collection(db, 'inventory'));
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const items: InventoryItem[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push(doc.data() as InventoryItem);
+        });
+        const inventoryNames = items.map((item) => item.name).join(', ');
+        form.setValue('inventory', inventoryNames);
+        setInventoryLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching inventory:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load inventory for suggestions.',
+        });
+        setInventoryLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [form, toast]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     setRecipes([]);
-    const inventoryList = values.inventory.split(',').map((item) => item.trim());
+    const inventoryList = values.inventory.split(',').map((item) => item.trim()).filter(Boolean);
+
+    if (inventoryList.length === 0) {
+      form.setError('inventory', { message: 'Please list at least one ingredient.' });
+      setLoading(false);
+      return;
+    }
 
     try {
-      const result = await suggestRecipesFromInventory({ inventory: inventoryList, numRecipes: 5 });
+      const result = await suggestRecipesFromInventory({
+        inventory: inventoryList,
+        numRecipes: 5,
+      });
       setRecipes(result.recipes);
     } catch (error) {
       console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to generate recipe suggestions. Please try again.',
+        description:
+          'Failed to generate recipe suggestions. Please try again.',
       });
     } finally {
       setLoading(false);
@@ -71,7 +114,8 @@ export function RecipeSuggestions() {
           <CardTitle>Intelligent Recipe Suggestions</CardTitle>
         </div>
         <CardDescription>
-          Minimize waste by discovering recipes for your current inventory.
+          Minimize waste by discovering recipes for your current inventory. Your
+          inventory is pre-filled below.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -87,14 +131,20 @@ export function RecipeSuggestions() {
                 <FormItem>
                   <FormLabel>Available Ingredients</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="e.g., Chicken, potatoes, carrots..."
-                      className="resize-none h-32"
-                      {...field}
-                    />
+                    {inventoryLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-32 w-full" />
+                      </div>
+                    ) : (
+                      <Textarea
+                        placeholder="e.g., Chicken, potatoes, carrots..."
+                        className="resize-none h-32"
+                        {...field}
+                      />
+                    )}
                   </FormControl>
                   <FormDescription>
-                    Enter ingredients separated by commas.
+                    Your current inventory items are listed here, comma-separated.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -109,7 +159,10 @@ export function RecipeSuggestions() {
                 </h4>
                 <ul className="space-y-2">
                   {recipes.map((recipe, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm p-2 rounded-md bg-secondary/50">
+                    <li
+                      key={index}
+                      className="flex items-start gap-2 text-sm p-2 rounded-md bg-secondary/50"
+                    >
                       <Sparkles className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                       <span>{recipe}</span>
                     </li>
@@ -119,8 +172,16 @@ export function RecipeSuggestions() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Thinking...' : 'Suggest Recipes'}
+            <Button
+              type="submit"
+              disabled={loading || inventoryLoading}
+              className="w-full"
+            >
+              {loading
+                ? 'Thinking...'
+                : inventoryLoading
+                ? 'Loading Inventory...'
+                : 'Suggest Recipes'}
               <Sparkles className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
