@@ -14,6 +14,7 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] "Inventory" page exists.
     *   [x] Overhaul the "Add New Ingredient" functionality to include all the detailed fields (SKU, units, costs, par level, etc.).
     *   [x] Implement Edit & Delete functionality for ingredients.
+    *   **Note on Par Levels:** Currently, the `parLevel` is measured in the recipe/presentation `unit` (e.g., individual eggs), not the `purchaseUnit` (e.g., cases). A future enhancement could add a conversion factor to allow setting par levels by the purchase unit.
 
 *   **1.3 Managing Allergens:** A simple but necessary list for ingredients.
     *   [x] Create a dedicated "Allergens" data model and management UI (likely in "Settings").
