@@ -16,8 +16,8 @@
     --primary: 45 100% 59%; /* Villa Yellow */
     --primary-foreground: 34 50% 15%; /* Dark brown for contrast on yellow */
 
-    --secondary: 45 33% 92%; /* Lighter Sand White for secondary backgrounds */
-    --secondary-foreground: 210 100% 20%; /* Pioneer Blue */
+    --secondary: 0 0% 40%; /* Foundation Stone */
+    --secondary-foreground: 45 33% 96%; /* Sand White */
 
     --muted: 0 0% 89.8%; /* Lighter gray for muted backgrounds */
     --muted-foreground: 0 0% 40%; /* Foundation Stone */
