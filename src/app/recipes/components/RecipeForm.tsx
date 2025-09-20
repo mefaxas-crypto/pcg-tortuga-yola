@@ -429,28 +429,25 @@ export function RecipeForm({
                                             render={({ field: inventoryItemField }) => (
                                             <FormItem>
                                                 <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
-                                                    if (!open) {
-                                                        setOpenPopoverIndex(null);
-                                                        if (selectedItem) {
-                                                            const newQueries = [...searchQueries];
-                                                            newQueries[index] = selectedItem.name;
-                                                            setSearchQueries(newQueries);
-                                                        }
-                                                    } else {
-                                                        setOpenPopoverIndex(index);
+                                                    setOpenPopoverIndex(open ? index : null);
+                                                    // If popover is closing without a selection, reset search query to the selected item name
+                                                    if (!open && selectedItem) {
+                                                        const newQueries = [...searchQueries];
+                                                        newQueries[index] = selectedItem.name;
+                                                        setSearchQueries(newQueries);
                                                     }
                                                 }}>
                                                 <PopoverTrigger asChild>
                                                     <FormControl>
                                                         <Input
                                                             placeholder="Search ingredients..."
-                                                            value={selectedItemId ? form.getValues(`ingredients.${index}.name`) : currentSearchQuery}
+                                                            value={currentSearchQuery}
                                                             onChange={(e) => {
                                                                 const newQueries = [...searchQueries];
                                                                 newQueries[index] = e.target.value;
                                                                 setSearchQueries(newQueries);
+                                                                // Also clear the underlying item ID so the form knows it's a search, not a selection
                                                                 form.setValue(`ingredients.${index}.inventoryItemId`, '');
-                                                                setOpenPopoverIndex(index);
                                                             }}
                                                             onFocus={() => setOpenPopoverIndex(index)}
                                                             className="w-full"
@@ -478,12 +475,12 @@ export function RecipeForm({
                                                             </div>
                                                         </CommandEmpty>
                                                         <CommandGroup>
-                                                        {inventory.filter(i => i.name.toLowerCase().includes(currentSearchQuery.toLowerCase())).map((item) => (
+                                                        {inventory.filter(i => i.name.toLowerCase().includes(currentSearchQuery.toLowerCase()) || i.materialCode.toLowerCase().startsWith(currentSearchQuery.toLowerCase())).map((item) => (
                                                             <CommandItem
                                                                 value={item.name}
                                                                 key={item.id}
                                                                 onSelect={() => {
-                                                                    const newQuantity = 1;
+                                                                    const newQuantity = form.getValues(`ingredients.${index}.quantity`) || 1;
                                                                     const unitCost = item.unitCost || 0;
                                                                     const newTotal = newQuantity * unitCost;
                                                                     update(index, {
@@ -529,13 +526,17 @@ export function RecipeForm({
                                                     value={quantityField.value || ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
-                                                        quantityField.onChange(value); // Keep as string for display
+                                                        // Allow empty or partial decimal numbers in the input
+                                                        quantityField.onChange(value);
+                                                        
                                                         const newQuantity = parseFloat(value);
                                                         const currentUnitPrice = form.getValues(`ingredients.${index}.unitPrice`) || 0;
-                                                        if (!isNaN(newQuantity)) {
+
+                                                        if (!isNaN(newQuantity) && newQuantity > 0) {
                                                             const newTotal = newQuantity * currentUnitPrice;
                                                             form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                         } else {
+                                                            // If input is not a valid positive number, set cost to 0
                                                             form.setValue(`ingredients.${index}.totalCost`, 0);
                                                         }
                                                     }}
