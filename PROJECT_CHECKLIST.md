@@ -27,8 +27,9 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Implement UI to create recipes by combining multiple inventory items (ingredients).
     *   [x] Automatically calculate the cost of a recipe based on the cost of its ingredients.
     *   [ ] Implement UI to create "Menus" by combining recipes.
-    *   [ ] Make the "Menu" dropdown in the recipe form functional.
+    *   [x] Make the "Menu" dropdown in the recipe form functional.
     *   [ ] Analyze menu profitability.
+    *   **Note on Unit Conversion**: When building the unit conversion engine, the recipe form should allow inputting various units (e.g., 'cup', 'tbsp') but always calculate the final cost based on a standard unit like grams.
 
 *   **2.2 Inventory Depletion & Sales Tracking:**
     *   [ ] Implement a "Sales" page to log which menu items are sold.
@@ -39,3 +40,5 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement a "Purchasing" page to create purchase orders for suppliers.
     *   [ ] Automatically suggest items to reorder based on "Low Stock" levels.
     *   [ ] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
+
+    

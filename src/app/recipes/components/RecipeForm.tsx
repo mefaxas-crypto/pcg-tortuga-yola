@@ -16,7 +16,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addRecipe, editRecipe } from '@/lib/actions';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InventoryItem, Recipe } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -89,6 +89,7 @@ export function RecipeForm({
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const { toast } = useToast();
+  const ingredientInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -123,6 +124,18 @@ export function RecipeForm({
     return ingredients.reduce((total, item) => total + (item.totalCost || 0), 0);
   }, [ingredients]);
 
+  const addEmptyIngredient = () => {
+    append({
+        inventoryItemId: '',
+        quantity: 0,
+        name: '',
+        materialCode: '',
+        unit: '',
+        unitPrice: 0,
+        totalCost: 0
+    });
+  };
+
   useEffect(() => {
     const q = query(collection(db, 'inventory'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -140,21 +153,25 @@ export function RecipeForm({
       });
     });
 
-     if (mode === 'add') {
-      append({
-        inventoryItemId: '',
-        quantity: 0,
-        name: '',
-        materialCode: '',
-        unit: '',
-        unitPrice: 0,
-        totalCost: 0
-      });
+    if (mode === 'add' && fields.length === 0) {
+      for (let i = 0; i < 5; i++) {
+        addEmptyIngredient();
+      }
     }
 
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast, mode]);
+
+  useEffect(() => {
+    // Focus the last added ingredient input
+    if (fields.length > 0) {
+      const lastIngredientInput = ingredientInputsRef.current[fields.length - 1];
+      if (lastIngredientInput) {
+        lastIngredientInput.focus();
+      }
+    }
+  }, [fields.length]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -163,7 +180,18 @@ export function RecipeForm({
             ...values,
             category: values.isSubRecipe ? 'Sub-recipe' : values.category,
             totalCost: totalRecipeCost,
+            ingredients: values.ingredients.filter(ing => ing.inventoryItemId) // Filter out empty rows
         };
+
+        if (dataToSave.ingredients.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'No Ingredients',
+                description: 'A recipe must have at least one ingredient.',
+            });
+            setLoading(false);
+            return;
+        }
 
         if (mode === 'edit' && recipe) {
             await editRecipe(recipe.id, dataToSave);
@@ -191,10 +219,28 @@ export function RecipeForm({
     }
   }
 
+  const handleEnterKey = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const nextIndex = index + 1;
+        if (nextIndex < fields.length) {
+            ingredientInputsRef.current[nextIndex]?.focus();
+        } else {
+            addEmptyIngredient();
+        }
+    }
+  };
+
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={(e) => {
+          if (e.nativeEvent.submitter?.dataset?.enterkey) {
+            e.preventDefault();
+            return;
+          }
+          form.handleSubmit(onSubmit)(e);
+        }}
         className="flex flex-col h-full space-y-6"
       >
         <fieldset disabled={loading} className="space-y-4">
@@ -366,10 +412,13 @@ export function RecipeForm({
                                                     <FormControl>
                                                       <div className="relative">
                                                         <Input
+                                                          ref={(el) => ingredientInputsRef.current[index] = el}
                                                           placeholder="Select ingredient"
                                                           value={field.value ? inventory.find(i => i.id === field.value)?.name : ''}
                                                           readOnly
                                                           className="pr-8"
+                                                          onKeyDown={(e) => handleEnterKey(e, index)}
+                                                          data-enterkey
                                                         />
                                                         <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
                                                       </div>
@@ -432,6 +481,8 @@ export function RecipeForm({
                                                     step="any" 
                                                     placeholder="Qty" 
                                                     {...quantityField}
+                                                    onKeyDown={(e) => handleEnterKey(e, index)}
+                                                    data-enterkey
                                                     onChange={(e) => {
                                                         const newQuantity = parseFloat(e.target.value) || 0;
                                                         const newTotal = newQuantity * (selectedItem?.purchasePrice || 0);
@@ -475,7 +526,7 @@ export function RecipeForm({
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => append({ inventoryItemId: '', quantity: 0, name: '', materialCode: '', unit: '', unitPrice: 0, totalCost: 0 })}
+                            onClick={() => addEmptyIngredient()}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Ingredient
@@ -515,3 +566,5 @@ export function RecipeForm({
     </Form>
   );
 }
+
+    
