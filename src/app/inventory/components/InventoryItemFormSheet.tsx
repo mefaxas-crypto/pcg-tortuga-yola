@@ -64,6 +64,7 @@ export function InventoryItemFormSheet({
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const { toast } = useToast();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -80,17 +81,19 @@ export function InventoryItemFormSheet({
   });
 
   useEffect(() => {
-    const q = query(collection(db, 'suppliers'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const suppliersData: Supplier[] = [];
-      querySnapshot.forEach((doc) => {
-        suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
-      });
-      setSuppliers(suppliersData.sort((a, b) => a.name.localeCompare(b.name)));
-    });
-
-    return () => unsubscribe();
-  }, []);
+    if (open) {
+        const q = query(collection(db, 'suppliers'));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const suppliersData: Supplier[] = [];
+          querySnapshot.forEach((doc) => {
+            suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
+          });
+          setSuppliers(suppliersData.sort((a, b) => a.name.localeCompare(b.name)));
+        });
+    
+        return () => unsubscribe();
+    }
+  }, [open]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -115,7 +118,12 @@ export function InventoryItemFormSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+            form.reset();
+            onClose();
+        }
+    }}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Add a New Ingredient</SheetTitle>
@@ -160,7 +168,7 @@ export function InventoryItemFormSheet({
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a category" />
@@ -196,7 +204,7 @@ export function InventoryItemFormSheet({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Recipe Unit</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a unit" />
@@ -219,7 +227,7 @@ export function InventoryItemFormSheet({
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Purchase Unit</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a purchase unit" />
@@ -254,7 +262,7 @@ export function InventoryItemFormSheet({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Supplier</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a supplier" />
@@ -284,7 +292,10 @@ export function InventoryItemFormSheet({
               )}
             />
             <SheetFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={() => {
+                  form.reset();
+                  onClose();
+              }}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
