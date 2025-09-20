@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -433,9 +434,7 @@ export function RecipeForm({
                                             render={() => (
                                             <FormItem>
                                                 <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
-                                                    if (!open) {
-                                                        setOpenPopoverIndex(null);
-                                                    }
+                                                    if (!open) setOpenPopoverIndex(null);
                                                 }}>
                                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                       <Command shouldFilter={false}>
@@ -493,12 +492,14 @@ export function RecipeForm({
                                                         </CommandList>
                                                       </Command>
                                                     </PopoverContent>
-                                                    {/* This is the visible input field now */}
                                                     <FormControl>
                                                         <Input
                                                           placeholder="Search or select an ingredient"
                                                           value={searchQueries[index] || ''}
-                                                          onChange={(e) => handleSearchQueryChange(index, e.target.value)}
+                                                          onChange={(e) => {
+                                                            handleSearchQueryChange(index, e.target.value);
+                                                            if (!open) setOpenPopoverIndex(index);
+                                                          }}
                                                           onFocus={() => setOpenPopoverIndex(index)}
                                                         />
                                                     </FormControl>
@@ -516,19 +517,22 @@ export function RecipeForm({
                                             <FormItem>
                                                 <FormControl>
                                                 <Input 
-                                                    type="number" 
-                                                    step="any" 
-                                                    placeholder="Qty" 
-                                                    {...quantityField}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    placeholder="Qty"
+                                                    value={quantityField.value || ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
-                                                        quantityField.onChange(value);
+                                                        quantityField.onChange(value); // Keep as string for display
                                                         const newQuantity = parseFloat(value);
                                                         const currentUnitPrice = form.getValues(`ingredients.${index}.unitPrice`) || 0;
-                                                        const newTotal = (isNaN(newQuantity) ? 0 : newQuantity) * currentUnitPrice;
-                                                        form.setValue(`ingredients.${index}.totalCost`, newTotal);
+                                                        if (!isNaN(newQuantity)) {
+                                                            const newTotal = newQuantity * currentUnitPrice;
+                                                            form.setValue(`ingredients.${index}.totalCost`, newTotal);
+                                                        } else {
+                                                            form.setValue(`ingredients.${index}.totalCost`, 0);
+                                                        }
                                                     }}
-                                                    value={quantityField.value || ''}
                                                 />
                                                 </FormControl>
                                                 <FormMessage />
@@ -614,3 +618,4 @@ export function RecipeForm({
     </>
   );
 }
+
