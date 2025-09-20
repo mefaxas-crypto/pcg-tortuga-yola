@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
@@ -97,7 +97,6 @@ export function RecipeForm({
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
-  const [searchQueries, setSearchQueries] = useState<string[]>([]);
 
 
   const { toast } = useToast();
@@ -136,12 +135,6 @@ export function RecipeForm({
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
 
-  // Initialize search queries based on ingredients
-  useEffect(() => {
-    setSearchQueries(ingredients.map(ing => ing.name || ''));
-  }, [ingredients]);
-
-
   const totalRecipeCost = useMemo(() => {
     return ingredients.reduce((total, item) => total + (item.totalCost || 0), 0);
   }, [ingredients]);
@@ -156,7 +149,6 @@ export function RecipeForm({
         unitPrice: 0,
         totalCost: 0
     });
-    setSearchQueries(prev => [...prev, '']);
   };
 
   useEffect(() => {
@@ -248,13 +240,6 @@ export function RecipeForm({
       setLoading(false);
     }
   }
-
-  const handleSearchQueryChange = (index: number, value: string) => {
-    const newQueries = [...searchQueries];
-    newQueries[index] = value;
-    setSearchQueries(newQueries);
-  };
-
 
   return (
     <>
@@ -385,9 +370,9 @@ export function RecipeForm({
                   <FormLabel>Category</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isSubRecipe}>
                       <FormControl>
-                        <SelectTrigger>
+                      <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
+                      </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                       {recipeCategories.map(category => (
@@ -431,79 +416,78 @@ export function RecipeForm({
                                         <FormField
                                             control={form.control}
                                             name={`ingredients.${index}.inventoryItemId`}
-                                            render={() => (
+                                            render={({ field: inventoryItemField }) => (
                                             <FormItem>
-                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
-                                                    if (!open) setOpenPopoverIndex(null);
-                                                }}>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Input
-                                                              placeholder="Search or select an ingredient"
-                                                              value={searchQueries[index] || ''}
-                                                              onChange={(e) => {
-                                                                handleSearchQueryChange(index, e.target.value);
-                                                                if (!open) setOpenPopoverIndex(index);
-                                                              }}
-                                                              onFocus={() => setOpenPopoverIndex(index)}
-                                                            />
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                      <Command shouldFilter={false}>
-                                                        <CommandInput 
-                                                            placeholder="Search ingredients..."
-                                                            value={searchQueries[index] || ''}
-                                                            onValueChange={(value) => handleSearchQueryChange(index, value)}
-                                                        />
-                                                        <CommandList>
-                                                            <CommandEmpty>
-                                                                <div className='p-4 text-sm text-center'>
-                                                                    <p>No ingredient found.</p>
-                                                                    <Button
-                                                                        variant="link"
-                                                                        className='mt-2'
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            setOpenPopoverIndex(null);
-                                                                            setIngredientSheetOpen(true);
-                                                                        }}
-                                                                    >
-                                                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                                                        Add New Ingredient
-                                                                    </Button>
-                                                                </div>
-                                                            </CommandEmpty>
-                                                            <CommandGroup>
-                                                            {inventory.filter(item => item.name.toLowerCase().includes((searchQueries[index] || '').toLowerCase())).map((item) => (
-                                                                <CommandItem
-                                                                    value={item.id}
-                                                                    key={item.id}
-                                                                    onSelect={() => {
-                                                                        const newQuantity = 1;
-                                                                        const unitCost = item.unitCost || 0;
-                                                                        const newTotal = newQuantity * unitCost;
-                                                                        update(index, {
-                                                                            inventoryItemId: item.id,
-                                                                            name: item.name,
-                                                                            materialCode: item.materialCode,
-                                                                            unit: item.unit,
-                                                                            unitPrice: unitCost,
-                                                                            quantity: newQuantity,
-                                                                            totalCost: newTotal
-                                                                        });
-                                                                        handleSearchQueryChange(index, item.name);
-                                                                        form.clearErrors(`ingredients.${index}.inventoryItemId`);
+                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                        "w-full justify-between font-normal",
+                                                        !inventoryItemField.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {inventoryItemField.value
+                                                        ? inventory.find(
+                                                            (item) => item.id === inventoryItemField.value
+                                                        )?.name
+                                                        : "Select an ingredient"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                    <Command>
+                                                    <CommandInput placeholder="Search ingredients..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>
+                                                            <div className='p-4 text-sm text-center'>
+                                                                <p>No ingredient found.</p>
+                                                                <Button
+                                                                    variant="link"
+                                                                    className='mt-2'
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
                                                                         setOpenPopoverIndex(null);
+                                                                        setIngredientSheetOpen(true);
                                                                     }}
                                                                 >
-                                                                    {item.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                      </Command>
-                                                    </PopoverContent>
+                                                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                                                    Add New Ingredient
+                                                                </Button>
+                                                            </div>
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                        {inventory.map((item) => (
+                                                            <CommandItem
+                                                                value={item.name}
+                                                                key={item.id}
+                                                                onSelect={() => {
+                                                                    const newQuantity = 1;
+                                                                    const unitCost = item.unitCost || 0;
+                                                                    const newTotal = newQuantity * unitCost;
+                                                                    update(index, {
+                                                                        inventoryItemId: item.id,
+                                                                        name: item.name,
+                                                                        materialCode: item.materialCode,
+                                                                        unit: item.unit,
+                                                                        unitPrice: unitCost,
+                                                                        quantity: newQuantity,
+                                                                        totalCost: newTotal
+                                                                    });
+                                                                    form.clearErrors(`ingredients.${index}.inventoryItemId`);
+                                                                    setOpenPopoverIndex(null);
+                                                                }}
+                                                            >
+                                                                {item.name}
+                                                            </CommandItem>
+                                                        ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
                                                 </Popover>
                                                 <FormMessage />
                                             </FormItem>
