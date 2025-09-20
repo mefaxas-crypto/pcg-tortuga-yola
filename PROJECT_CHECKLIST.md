@@ -1,4 +1,3 @@
-
 # Revised Feature Checklist (Grounded Approach)
 
 This file tracks our development progress to ensure we build the app logically, where each new feature rests on a solid foundation.
@@ -38,4 +37,3 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement a "Purchasing" page to create purchase orders for suppliers.
     *   [ ] Automatically suggest items to reorder based on "Low Stock" levels.
     *   [ ] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
-
