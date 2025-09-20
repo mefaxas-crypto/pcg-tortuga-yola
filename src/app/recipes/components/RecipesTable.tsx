@@ -60,6 +60,7 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Code</TableHead>
                 <TableHead>Recipe Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Ingredients</TableHead>
@@ -73,6 +74,9 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
               {loading &&
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
+                     <TableCell>
+                      <Skeleton className="h-5 w-20" />
+                    </TableCell>
                     <TableCell>
                       <Skeleton className="h-5 w-32" />
                     </TableCell>
@@ -93,6 +97,7 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
               {!loading &&
                 recipes?.map((recipe) => (
                   <TableRow key={recipe.id}>
+                     <TableCell>{recipe.recipeCode}</TableCell>
                     <TableCell className="font-medium">
                       {recipe.name}
                     </TableCell>

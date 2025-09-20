@@ -42,6 +42,7 @@ export type RecipeIngredient = {
 
 export type Recipe = {
   id: string;
+  recipeCode: string;
   name: string;
   category: string;
   yield?: number; // How many portions the recipe makes
