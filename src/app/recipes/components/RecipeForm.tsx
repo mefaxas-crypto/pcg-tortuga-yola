@@ -413,18 +413,16 @@ export function RecipeForm({
                                                 <Popover>
                                                   <PopoverTrigger asChild>
                                                     <FormControl>
-                                                      <div className="relative">
-                                                        <Input
-                                                          ref={(el) => ingredientInputsRef.current[index] = el}
-                                                          placeholder="Select ingredient"
-                                                          value={selectedItem?.name ?? ''}
-                                                          readOnly
-                                                          className="pr-8"
-                                                          onKeyDown={(e) => handleEnterKey(e, index)}
-                                                          data-enterkey
-                                                        />
-                                                        <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
-                                                      </div>
+                                                      <button
+                                                        type="button"
+                                                        className={cn(
+                                                          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                                                          !formField.value && "text-muted-foreground"
+                                                        )}
+                                                      >
+                                                        {selectedItem?.name ?? "Select ingredient"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                      </button>
                                                     </FormControl>
                                                   </PopoverTrigger>
                                                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -451,6 +449,8 @@ export function RecipeForm({
                                                                     totalCost: newTotal
                                                                 });
                                                                 form.clearErrors(`ingredients.${index}.inventoryItemId`);
+                                                                // Close popover
+                                                                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
                                                               }}
                                                             >
                                                               <Check
@@ -468,9 +468,9 @@ export function RecipeForm({
                                                         <CommandSeparator />
                                                         <CommandGroup>
                                                             <CommandItem onSelect={() => {
-                                                                setIngredientSheetOpen(true);
-                                                                // Close popover
+                                                                // Close popover before opening sheet
                                                                 document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                                                setIngredientSheetOpen(true);
                                                             }}>
                                                                 <PlusCircle className="mr-2 h-4 w-4" />
                                                                 Add New Ingredient
