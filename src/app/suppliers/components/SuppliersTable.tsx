@@ -26,6 +26,7 @@ import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
 import type { Supplier } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteSupplierDialog } from './DeleteSupplierDialog';
 
 export function SuppliersTable() {
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
@@ -95,10 +96,15 @@ export function SuppliersTable() {
                           <FilePenLine className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive-foreground/80 focus:text-destructive-foreground focus:bg-destructive/90">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        <DeleteSupplierDialog supplierId={supplier.id} supplierName={supplier.name}>
+                            <DropdownMenuItem 
+                                onSelect={(e) => e.preventDefault()}
+                                className="text-destructive-foreground/80 focus:text-destructive-foreground focus:bg-destructive/90"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                            </DropdownMenuItem>
+                        </DeleteSupplierDialog>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

@@ -1,6 +1,6 @@
 'use server';
 
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Supplier } from './types';
 
@@ -16,4 +16,14 @@ export async function addSupplier(supplierData: AddSupplierData) {
     console.error('Error adding document: ', e);
     return { success: false, error: 'Failed to add supplier' };
   }
+}
+
+export async function deleteSupplier(supplierId: string) {
+    try {
+        await deleteDoc(doc(db, 'suppliers', supplierId));
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting document: ', e);
+        return { success: false, error: 'Failed to delete supplier' };
+    }
 }
