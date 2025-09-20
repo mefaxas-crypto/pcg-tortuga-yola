@@ -16,8 +16,8 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addRecipe, editRecipe } from '@/lib/actions';
-import { useEffect, useState } from 'react';
-import type { InventoryItem, Recipe, RecipeIngredient } from '@/lib/types';
+import { useEffect, useMemo, useState } from 'react';
+import type { InventoryItem, Recipe } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -28,16 +28,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Info, PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
-  name: z.string(), // We'll populate this from the selected item
-  unit: z.string(),   // We'll populate this from the selected item
+  name: z.string(), // Populated from selected item
+  materialCode: z.string(), // Populated from selected item
+  unit: z.string(),   // Populated from selected item
+  unitPrice: z.coerce.number(), // Populated from selected item
   quantity: z.coerce.number().min(0.001, 'Quantity must be positive.'),
+  totalCost: z.coerce.number(), // Calculated field
 });
 
 const formSchema = z.object({
@@ -69,6 +74,10 @@ type RecipeFormProps = {
 const recipeCategories = ['Appetizer', 'Entree', 'Dessert', 'Beverage', 'Other'];
 const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit', 'portion'];
 
+const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+}
+
 
 export function RecipeForm({
   mode,
@@ -96,16 +105,21 @@ export function RecipeForm({
         yield: 1,
         yieldUnit: 'portion',
         notes: '',
-        ingredients: [{ inventoryItemId: '', quantity: 0, name: '', unit: '' }],
+        ingredients: [],
       },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'ingredients',
   });
 
   const isSubRecipe = form.watch('isSubRecipe');
+  const ingredients = form.watch('ingredients');
+
+  const totalRecipeCost = useMemo(() => {
+    return ingredients.reduce((total, item) => total + (item.totalCost || 0), 0);
+  }, [ingredients]);
 
   useEffect(() => {
     const q = query(collection(db, 'inventory'));
@@ -124,8 +138,20 @@ export function RecipeForm({
       });
     });
 
+     if (mode === 'add') {
+      append({
+        inventoryItemId: '',
+        quantity: 0,
+        name: '',
+        materialCode: '',
+        unit: '',
+        unitPrice: 0,
+        totalCost: 0
+      });
+    }
+
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, mode, append]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -133,6 +159,7 @@ export function RecipeForm({
         const dataToSave = {
             ...values,
             category: values.isSubRecipe ? 'Sub-recipe' : values.category,
+            totalCost: totalRecipeCost,
         };
 
         if (mode === 'edit' && recipe) {
@@ -298,93 +325,7 @@ export function RecipeForm({
             />
           </div>
           
-           <div>
-            <h3 className="text-lg font-medium mb-2">Ingredients</h3>
-            <div className="space-y-4">
-              {fields.map((field, index) => {
-                const selectedItemId = form.watch(`ingredients.${index}.inventoryItemId`);
-                const selectedItem = inventory.find(i => i.id === selectedItemId);
-
-                return (
-                    <div key={field.id} className="grid grid-cols-[1fr_100px_50px_auto] gap-2 items-start p-3 bg-secondary/30 rounded-lg">
-                      <FormField
-                        control={form.control}
-                        name={`ingredients.${index}.inventoryItemId`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <Select 
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                const item = inventory.find(i => i.id === value);
-                                if (item) {
-                                  form.setValue(`ingredients.${index}.name`, item.name);
-                                  form.setValue(`ingredients.${index}.unit`, item.unit);
-                                }
-                              }} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select ingredient" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {inventory.map((item) => (
-                                  <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`ingredients.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input type="number" step="any" placeholder="Qty" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="pt-2 text-sm text-muted-foreground">
-                        {selectedItem?.unit}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive h-9 w-9"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                );
-              })}
-              <FormMessage className={cn(!form.formState.errors.ingredients ? "hidden" : "")}>
-                {form.formState.errors.ingredients?.root?.message || form.formState.errors.ingredients?.message}
-              </FormMessage>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => append({ inventoryItemId: '', quantity: 0, name: '', unit: '' })}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Ingredient
-              </Button>
-            </div>
-          </div>
-        </fieldset>
-
-        <FormField
+           <FormField
             control={form.control}
             name="notes"
             render={({ field }) => (
@@ -397,6 +338,143 @@ export function RecipeForm({
             </FormItem>
             )}
         />
+          
+           <Card>
+                <CardHeader>
+                    <CardTitle>Ingredients</CardTitle>
+                </CardHeader>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className='w-[100px]'>Code</TableHead>
+                            <TableHead>Ingredient</TableHead>
+                            <TableHead className='w-[120px]'>Quantity</TableHead>
+                            <TableHead className='w-[80px]'>Unit</TableHead>
+                            <TableHead className='w-[120px] text-right'>Unit Price</TableHead>
+                            <TableHead className='w-[120px] text-right'>Total Cost</TableHead>
+                            <TableHead className='w-[50px]'></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                         {fields.map((field, index) => {
+                            const selectedItemId = form.watch(`ingredients.${index}.inventoryItemId`);
+                            const quantity = form.watch(`ingredients.${index}.quantity`);
+                            const selectedItem = inventory.find(i => i.id === selectedItemId);
+                            const unitPrice = selectedItem?.purchasePrice || 0;
+                            const totalCost = (quantity || 0) * unitPrice;
+
+                            return (
+                                <TableRow key={field.id} className="align-top">
+                                    <TableCell className="pt-2 pb-3 text-muted-foreground">{selectedItem?.materialCode || '-'}</TableCell>
+                                    <TableCell className="pt-2 pb-3">
+                                        <FormField
+                                            control={form.control}
+                                            name={`ingredients.${index}.inventoryItemId`}
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <Select 
+                                                onValueChange={(value) => {
+                                                    const item = inventory.find(i => i.id === value);
+                                                    if (item) {
+                                                        const newItemData = {
+                                                            ...field,
+                                                            inventoryItemId: item.id,
+                                                            name: item.name,
+                                                            materialCode: item.materialCode,
+                                                            unit: item.unit,
+                                                            unitPrice: item.purchasePrice,
+                                                            quantity: 1, // Default quantity
+                                                            totalCost: item.purchasePrice * 1
+                                                        };
+                                                        update(index, newItemData);
+                                                    }
+                                                }} 
+                                                defaultValue={field.value}
+                                                >
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                    <SelectValue placeholder="Select ingredient" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {inventory.map((item) => (
+                                                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="pt-2 pb-3">
+                                        <FormField
+                                            control={form.control}
+                                            name={`ingredients.${index}.quantity`}
+                                            render={({ field: quantityField }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                <Input 
+                                                    type="number" 
+                                                    step="any" 
+                                                    placeholder="Qty" 
+                                                    {...quantityField}
+                                                    onChange={(e) => {
+                                                        const newQuantity = parseFloat(e.target.value) || 0;
+                                                        const newTotal = newQuantity * (selectedItem?.purchasePrice || 0);
+                                                        quantityField.onChange(newQuantity);
+                                                        form.setValue(`ingredients.${index}.totalCost`, newTotal);
+                                                    }}
+                                                />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="pt-3.5 pb-3 text-sm text-muted-foreground">{selectedItem?.unit}</TableCell>
+                                    <TableCell className="pt-3.5 pb-3 text-right text-sm text-muted-foreground">{formatCurrency(unitPrice)}</TableCell>
+                                    <TableCell className="pt-3.5 pb-3 text-right text-sm font-medium">{formatCurrency(totalCost)}</TableCell>
+                                    <TableCell className="pt-2 pb-3">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive h-9 w-9"
+                                            onClick={() => remove(index)}
+                                            disabled={fields.length <= 1}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+                <CardFooter className="flex-col items-stretch gap-4 !p-6">
+                    <FormMessage className={cn(!form.formState.errors.ingredients ? "hidden" : "")}>
+                        {form.formState.errors.ingredients?.root?.message || form.formState.errors.ingredients?.message}
+                    </FormMessage>
+
+                    <div className="flex items-center gap-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => append({ inventoryItemId: '', quantity: 0, name: '', materialCode: '', unit: '', unitPrice: 0, totalCost: 0 })}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Ingredient
+                        </Button>
+                        <div className="flex-grow text-right">
+                            <span className="text-sm text-muted-foreground">Total Recipe Cost: </span>
+                            <span className="text-lg font-bold">{formatCurrency(totalRecipeCost)}</span>
+                        </div>
+                    </div>
+                </CardFooter>
+            </Card>
+        </fieldset>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>

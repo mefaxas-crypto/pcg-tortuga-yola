@@ -164,47 +164,10 @@ export async function deleteAllergen(allergenId: string) {
   }
 }
 
-async function calculateRecipeCost(ingredients: RecipeIngredient[]): Promise<number> {
-  let totalCost = 0;
-
-  if (ingredients.length === 0) {
-    return 0;
-  }
-  
-  // Create a map of inventory item IDs to their quantities
-  const ingredientIds = ingredients.map(i => i.inventoryItemId);
-
-  // Fetch all the necessary inventory items in one query
-  const inventoryQuery = query(collection(db, 'inventory'), where('__name__', 'in', ingredientIds));
-  const querySnapshot = await getDocs(inventoryQuery);
-  
-  const inventoryItemsMap = new Map<string, InventoryItem>();
-  querySnapshot.forEach(doc => {
-    inventoryItemsMap.set(doc.id, { id: doc.id, ...doc.data() } as InventoryItem);
-  });
-
-  for (const ingredient of ingredients) {
-    const inventoryItem = inventoryItemsMap.get(ingredient.inventoryItemId);
-
-    if (inventoryItem) {
-      // This is a simplification. It assumes the purchase unit and recipe unit are the same.
-      // E.g., if purchase price is per 'kg', and recipe uses 'g', this won't be accurate yet.
-      // We need a conversion factor for a real-world scenario.
-      const costPerUnit = inventoryItem.purchasePrice / (inventoryItem.quantity || 1);
-      const ingredientCost = costPerUnit * ingredient.quantity;
-      totalCost += ingredientCost;
-    }
-  }
-
-  return totalCost;
-}
-
-
 // Recipe Actions
 export async function addRecipe(recipeData: AddRecipeData) {
   try {
-    const totalCost = await calculateRecipeCost(recipeData.ingredients);
-    const docRef = await addDoc(collection(db, 'recipes'), {...recipeData, totalCost});
+    const docRef = await addDoc(collection(db, 'recipes'), recipeData);
     revalidatePath('/recipes');
     return {success: true, id: docRef.id};
   } catch (e) {
@@ -215,9 +178,8 @@ export async function addRecipe(recipeData: AddRecipeData) {
 
 export async function editRecipe(id: string, recipeData: EditRecipeData) {
   try {
-    const totalCost = await calculateRecipeCost(recipeData.ingredients);
     const recipeRef = doc(db, 'recipes', id);
-    await updateDoc(recipeRef, {...recipeData, totalCost});
+    await updateDoc(recipeRef, recipeData);
     revalidatePath('/recipes');
     return {success: true};
   } catch (e) {
