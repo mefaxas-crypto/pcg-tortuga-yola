@@ -18,7 +18,6 @@ import { ArrowUpRight, BarChart3, Bot, Package } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
-import { LowStockItems } from './dashboard/components/LowStockItems';
 
 export default function Home() {
   return (
@@ -92,7 +91,19 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LowStockItems />
+        <Card>
+          <CardHeader>
+            <CardTitle>Low Stock Items</CardTitle>
+            <CardDescription>
+              These items are below their set par levels. Consider reordering.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="py-12 text-center text-muted-foreground">
+              Inventory tracking is not yet implemented.
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center">
