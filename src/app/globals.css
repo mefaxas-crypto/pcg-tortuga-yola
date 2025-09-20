@@ -4,6 +4,54 @@
 
 @layer base {
   :root {
+    --background: 45 33% 96%; /* Sand White */
+    --foreground: 210 100% 20%; /* Pioneer Blue */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 210 100% 20%; /* Pioneer Blue */
+
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 210 100% 20%; /* Pioneer Blue */
+
+    --primary: 45 100% 59%; /* Villa Yellow */
+    --primary-foreground: 34 50% 15%; /* Dark brown for contrast on yellow */
+
+    --secondary: 45 33% 92%; /* Lighter Sand White for secondary backgrounds */
+    --secondary-foreground: 210 100% 20%; /* Pioneer Blue */
+
+    --muted: 0 0% 89.8%; /* Lighter gray for muted backgrounds */
+    --muted-foreground: 0 0% 40%; /* Foundation Stone */
+
+    --accent: 45 33% 94%; /* Very light beige for accents */
+    --accent-foreground: 210 100% 25%; /* Slightly lighter Pioneer Blue */
+    
+    --destructive: 355 71% 57%; /* Error Red */
+    --destructive-foreground: 45 33% 96%;
+
+    --border: 0 0% 90%; /* Light gray border */
+    --input: 0 0% 95%; /* Light gray for input background */
+    --ring: 45 100% 59%;
+
+    --radius: 0.5rem;
+
+    /* Custom Sidebar colors for light theme */
+    --sidebar-background: 210 100% 20%; /* Pioneer Blue */
+    --sidebar-foreground: 45 33% 96%; /* Sand White */
+    --sidebar-primary: 45 100% 59%; /* Villa Yellow */
+    --sidebar-primary-foreground: 34 50% 15%; /* Dark brown */
+    --sidebar-accent: 210 100% 25%; /* Lighter Pioneer Blue */
+    --sidebar-accent-foreground: 45 33% 96%; /* Sand White */
+    --sidebar-border: 210 100% 25%; /* Lighter Pioneer Blue for borders */
+    --sidebar-ring: 45 100% 59%; /* Villa Yellow */
+
+    --chart-1: 45 100% 59%;   /* Villa Yellow */
+    --chart-2: 173 70% 56%;  /* Caribbean Turquoise */
+    --chart-3: 180 100% 25%; /* Ojos Lagoon Green */
+    --chart-4: 39 88% 49%;   /* La Yola Gold */
+    --chart-5: 28 75% 31%;   /* Nautical Wood Brown */
+  }
+
+  .dark {
     --background: 210 50% 8%; /* Near-black with a hint of blue */
     --foreground: 45 33% 96%; /* #F8F7F2 - Sand White */
 
@@ -32,8 +80,6 @@
     --input: 210 20% 25%;
     --ring: 45 100% 59%;
 
-    --radius: 0.5rem;
-
     /* Custom Sidebar colors for dark theme */
     --sidebar-background: 210 100% 10%; /* Darker Pioneer Blue */
     --sidebar-foreground: 45 33% 90%;
@@ -43,12 +89,6 @@
     --sidebar-accent-foreground: 45 33% 96%;
     --sidebar-border: 210 100% 15%;
     --sidebar-ring: 45 100% 59%;
-
-    --chart-1: 45 100% 59%;   /* Villa Yellow */
-    --chart-2: 173 70% 56%;  /* Caribbean Turquoise */
-    --chart-3: 180 100% 25%; /* Ojos Lagoon Green */
-    --chart-4: 39 88% 49%;   /* La Yola Gold */
-    --chart-5: 28 75% 31%;   /* Nautical Wood Brown */
   }
 }
 
