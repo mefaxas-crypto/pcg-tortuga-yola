@@ -18,10 +18,9 @@ import {
   Settings,
   ShoppingCart,
   Truck,
-  Users,
-  UtensilsCrossed,
+  Flame,
   Warehouse,
-  Flame
+  UtensilsCrossed,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -55,15 +54,16 @@ export function SidebarNav() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  icon={<item.icon />}
-                  tooltip={item.label}
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                icon={<item.icon />}
+                tooltip={item.label}
+              >
+                <Link href={item.href}>
                   {item.label}
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -72,15 +72,16 @@ export function SidebarNav() {
         <SidebarSeparator />
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link href="/settings" legacyBehavior passHref>
               <SidebarMenuButton
+                asChild
                 isActive={pathname === '/settings'}
                 icon={<Settings />}
                 tooltip="Settings"
               >
-                Settings
+                <Link href="/settings">
+                  Settings
+                </Link>
               </SidebarMenuButton>
-            </Link>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
