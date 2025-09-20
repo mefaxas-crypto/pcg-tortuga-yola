@@ -139,7 +139,7 @@ export function RecipeForm({
   const addEmptyIngredient = () => {
     append({
         inventoryItemId: '',
-        quantity: 0,
+        quantity: 1,
         name: '',
         materialCode: '',
         unit: '',
@@ -400,8 +400,12 @@ export function RecipeForm({
                                                         </FormControl>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                        <Command>
-                                                        <CommandInput placeholder="Search ingredients..." />
+                                                        <Command shouldFilter={false}>
+                                                        <CommandInput 
+                                                            value={nameField.value}
+                                                            onValueChange={nameField.onChange}
+                                                            placeholder="Search ingredients..." 
+                                                        />
                                                         <CommandList>
                                                             <CommandEmpty>
                                                                 <div className='p-4 text-sm text-center'>
@@ -420,7 +424,9 @@ export function RecipeForm({
                                                                 </div>
                                                             </CommandEmpty>
                                                             <CommandGroup>
-                                                            {inventory.map((item) => (
+                                                            {inventory
+                                                                .filter(item => item.name.toLowerCase().includes((nameField.value || '').toLowerCase()))
+                                                                .map((item) => (
                                                                 <CommandItem
                                                                     value={item.name}
                                                                     key={item.id}
