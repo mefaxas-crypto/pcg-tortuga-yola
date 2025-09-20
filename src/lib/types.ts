@@ -25,3 +25,10 @@ export type Supplier = {
     phoneNumber?: string;
     email?: string;
 };
+
+export type Allergen = {
+  id: string;
+  name: string;
+};
+
+export type AddAllergenData = Omit<Allergen, 'id'>;

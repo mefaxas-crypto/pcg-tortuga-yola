@@ -9,7 +9,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
-import type {AddInventoryItemData, EditInventoryItemData, Supplier} from './types';
+import type {AddInventoryItemData, EditInventoryItemData, Supplier, AddAllergenData} from './types';
 import {revalidatePath} from 'next/cache';
 
 // We are defining a specific type for adding a supplier
@@ -21,6 +21,7 @@ export async function addSupplier(supplierData: AddSupplierData) {
   try {
     const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
     revalidatePath('/suppliers');
+    revalidatePath('/settings/allergens');
     return {success: true, id: docRef.id};
   } catch (e) {
     console.error('Error adding document: ', e);
@@ -121,4 +122,27 @@ export async function deleteInventoryItem(itemId: string) {
         console.error('Error deleting document: ', e);
         throw new Error('Failed to delete inventory item');
     }
+}
+
+// Allergen Actions
+export async function addAllergen(allergenData: AddAllergenData) {
+  try {
+    const docRef = await addDoc(collection(db, 'allergens'), allergenData);
+    revalidatePath('/settings/allergens');
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error('Error adding allergen: ', e);
+    throw new Error('Failed to add allergen');
+  }
+}
+
+export async function deleteAllergen(allergenId: string) {
+  try {
+    await deleteDoc(doc(db, 'allergens', allergenId));
+    revalidatePath('/settings/allergens');
+    return { success: true };
+  } catch (e) {
+    console.error('Error deleting allergen: ', e);
+    throw new Error('Failed to delete allergen');
+  }
 }
