@@ -100,7 +100,7 @@ export function AllergensTable() {
                           >
                             <DropdownMenuItem
                               onSelect={(e) => e.preventDefault()}
-                              className="text-destructive-foreground/80 focus:text-destructive-foreground focus:bg-destructive/90"
+                              className="text-destructive-foreground focus:text-destructive-foreground focus:bg-destructive/90"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete

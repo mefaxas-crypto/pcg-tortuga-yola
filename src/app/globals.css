@@ -26,7 +26,7 @@
     --accent-foreground: 210 100% 25%; /* Slightly lighter Pioneer Blue */
     
     --destructive: 355 71% 57%; /* Error Red */
-    --destructive-foreground: 45 33% 96%;
+    --destructive-foreground: 0 0% 10%; /* Near Black for contrast on red */
 
     --border: 0 0% 90%; /* Light gray border */
     --input: 0 0% 95%; /* Light gray for input background */
@@ -74,7 +74,7 @@
     --accent-foreground: 34 50% 15%;
 
     --destructive: 355 71% 57%; /* #DC3545 - Error Red */
-    --destructive-foreground: 45 33% 96%;
+    --destructive-foreground: 0 0% 10%;
 
     --border: 45 33% 96%; /* Light gray border */
     --input: 210 20% 25%;

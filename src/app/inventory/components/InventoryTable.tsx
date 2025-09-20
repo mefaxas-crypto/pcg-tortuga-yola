@@ -154,7 +154,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                           Edit
                         </DropdownMenuItem>
                         <DeleteInventoryItemDialog itemId={item.id} itemName={item.name}>
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive-foreground/80 focus:text-destructive-foreground focus:bg-destructive/90">
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive-foreground focus:text-destructive-foreground focus:bg-destructive/90">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
