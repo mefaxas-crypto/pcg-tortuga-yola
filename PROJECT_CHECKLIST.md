@@ -23,7 +23,7 @@ This file tracks our development progress to ensure we build the app logically, 
 ## PHASE 2: LINKING DATA & CREATING VALUE
 
 *   **2.1 Recipe & Menu Costing:**
-    *   [ ] Create a "Recipes" data model.
+    *   [x] Create a "Recipes" data model.
     *   [ ] Implement UI to create recipes by combining multiple inventory items (ingredients).
     *   [ ] Automatically calculate the cost of a recipe based on the cost of its ingredients.
     *   [ ] Implement UI to create "Menus" by combining recipes.

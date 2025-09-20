@@ -1,3 +1,5 @@
+'use client';
+
 import PageHeader from '@/components/PageHeader';
 import {
   Card,
@@ -7,12 +9,45 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame } from 'lucide-react';
+import { Flame, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { RecipeFormSheet } from './components/RecipeFormSheet';
+import { RecipesTable } from './components/RecipesTable';
+import type { Recipe } from '@/lib/types';
 
 export default function RecipesPage() {
+  const [sheetState, setSheetState] = useState<{
+    open: boolean;
+    mode: 'add' | 'edit';
+    recipe?: Recipe;
+  }>({
+    open: false,
+    mode: 'add',
+  });
+
+  const handleAdd = () => {
+    setSheetState({ open: true, mode: 'add' });
+  };
+
+  const handleEdit = (recipe: Recipe) => {
+    setSheetState({ open: true, mode: 'edit', recipe });
+  };
+
+  const handleClose = () => {
+    setSheetState({ open: false, mode: sheetState.mode });
+  };
+
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Recipes & Menus" />
+      <PageHeader title="Recipes & Menus">
+         <Button onClick={handleAdd}>
+          <PlusCircle className="mr-2" />
+          Add New Recipe
+        </Button>
+      </PageHeader>
+
       <Tabs defaultValue="recipes">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="recipes">Recipes</TabsTrigger>
@@ -20,26 +55,7 @@ export default function RecipesPage() {
           <TabsTrigger value="menus">Menus</TabsTrigger>
         </TabsList>
         <TabsContent value="recipes">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Recipes</CardTitle>
-              <CardDescription>
-                Browse and manage your collection of recipes and sub-recipes.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[300px]">
-                <div className="flex flex-col items-center gap-1 text-center">
-                  <h3 className="text-2xl font-bold tracking-tight">
-                    Recipe Management Coming Soon
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    You'll be able to create, edit, and cost your recipes here.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <RecipesTable onEdit={handleEdit} />
         </TabsContent>
         <TabsContent value="fabrication">
             <Card>
@@ -85,6 +101,13 @@ export default function RecipesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+       <RecipeFormSheet
+        open={sheetState.open}
+        mode={sheetState.mode}
+        recipe={sheetState.recipe}
+        onClose={handleClose}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
-import type {AddInventoryItemData, EditInventoryItemData, Supplier, AddAllergenData} from './types';
+import type {AddInventoryItemData, EditInventoryItemData, Supplier, AddAllergenData, AddRecipeData, EditRecipeData} from './types';
 import {revalidatePath} from 'next/cache';
 
 // We are defining a specific type for adding a supplier
@@ -21,7 +21,6 @@ export async function addSupplier(supplierData: AddSupplierData) {
   try {
     const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
     revalidatePath('/suppliers');
-    revalidatePath('/settings/allergens');
     return {success: true, id: docRef.id};
   } catch (e) {
     console.error('Error adding document: ', e);
@@ -144,5 +143,42 @@ export async function deleteAllergen(allergenId: string) {
   } catch (e) {
     console.error('Error deleting allergen: ', e);
     throw new Error('Failed to delete allergen');
+  }
+}
+
+// Recipe Actions
+export async function addRecipe(recipeData: AddRecipeData) {
+  try {
+    // TODO: Calculate totalCost
+    const docRef = await addDoc(collection(db, 'recipes'), recipeData);
+    revalidatePath('/recipes');
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error('Error adding recipe: ', e);
+    throw new Error('Failed to add recipe');
+  }
+}
+
+export async function editRecipe(id: string, recipeData: EditRecipeData) {
+  try {
+    // TODO: Calculate totalCost
+    const recipeRef = doc(db, 'recipes', id);
+    await updateDoc(recipeRef, recipeData);
+    revalidatePath('/recipes');
+    return { success: true };
+  } catch (e) {
+    console.error('Error updating recipe: ', e);
+    throw new Error('Failed to edit recipe');
+  }
+}
+
+export async function deleteRecipe(recipeId: string) {
+  try {
+    await deleteDoc(doc(db, 'recipes', recipeId));
+    revalidatePath('/recipes');
+    return { success: true };
+  } catch (e) {
+    console.error('Error deleting recipe: ', e);
+    throw new Error('Failed to delete recipe');
   }
 }

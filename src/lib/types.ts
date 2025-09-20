@@ -10,7 +10,7 @@ export type InventoryItem = {
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
   purchasePrice: number;
-  allergens?: string[];
+  allergens: string[]; // This is now an array of strings
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
@@ -32,3 +32,22 @@ export type Allergen = {
 };
 
 export type AddAllergenData = Omit<Allergen, 'id'>;
+
+export type RecipeIngredient = {
+  inventoryItemId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+};
+
+export type Recipe = {
+  id: string;
+  name: string;
+  category: string;
+  notes?: string;
+  ingredients: RecipeIngredient[];
+  totalCost?: number;
+};
+
+export type AddRecipeData = Omit<Recipe, 'id' | 'totalCost'>;
+export type EditRecipeData = Omit<Recipe, 'id' | 'totalCost'>;
