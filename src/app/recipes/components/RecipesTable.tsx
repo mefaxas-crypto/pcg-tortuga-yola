@@ -99,7 +99,6 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
                     <TableCell>{recipe.category}</TableCell>
                     <TableCell>{recipe.ingredients.length}</TableCell>
                     <TableCell className="text-right">
-                      {/* TODO: Implement Cost Calculation */}
                       {new Intl.NumberFormat('en-US', {
                         style: 'currency',
                         currency: 'USD',

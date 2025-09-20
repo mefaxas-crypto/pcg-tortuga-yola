@@ -11,40 +11,27 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Flame, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { RecipeFormSheet } from './components/RecipeFormSheet';
 import { RecipesTable } from './components/RecipesTable';
 import type { Recipe } from '@/lib/types';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 
 export default function RecipesPage() {
-  const [sheetState, setSheetState] = useState<{
-    open: boolean;
-    mode: 'add' | 'edit';
-    recipe?: Recipe;
-  }>({
-    open: false,
-    mode: 'add',
-  });
-
-  const handleAdd = () => {
-    setSheetState({ open: true, mode: 'add' });
-  };
+  const router = useRouter();
 
   const handleEdit = (recipe: Recipe) => {
-    setSheetState({ open: true, mode: 'edit', recipe });
+    router.push(`/recipes/${recipe.id}/edit`);
   };
-
-  const handleClose = () => {
-    setSheetState({ open: false, mode: sheetState.mode });
-  };
-
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Recipes & Menus">
-         <Button onClick={handleAdd}>
-          <PlusCircle className="mr-2" />
-          Add New Recipe
+         <Button asChild>
+          <Link href="/recipes/new">
+            <PlusCircle className="mr-2" />
+            Add New Recipe
+          </Link>
         </Button>
       </PageHeader>
 
@@ -101,13 +88,6 @@ export default function RecipesPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-       <RecipeFormSheet
-        open={sheetState.open}
-        mode={sheetState.mode}
-        recipe={sheetState.recipe}
-        onClose={handleClose}
-      />
     </div>
   );
 }
