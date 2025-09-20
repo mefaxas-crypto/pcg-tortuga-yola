@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
@@ -97,6 +97,7 @@ export function RecipeForm({
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
+  const [searchQueries, setSearchQueries] = useState<string[]>([]);
 
 
   const { toast } = useToast();
@@ -149,7 +150,15 @@ export function RecipeForm({
         unitPrice: 0,
         totalCost: 0
     });
+    setSearchQueries(prev => [...prev, '']);
   };
+  
+  useEffect(() => {
+    if (fields.length > 0 && searchQueries.length !== fields.length) {
+      setSearchQueries(fields.map(field => field.name || ''));
+    }
+  }, [fields, searchQueries.length]);
+
 
   useEffect(() => {
     const qInventory = query(collection(db, 'inventory'));
@@ -408,6 +417,7 @@ export function RecipeForm({
                             const selectedItem = inventory.find(i => i.id === selectedItemId);
                             const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
                             const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
+                            const currentSearchQuery = searchQueries[index] || '';
 
                             return (
                                 <TableRow key={field.id} className="align-top">
@@ -418,29 +428,37 @@ export function RecipeForm({
                                             name={`ingredients.${index}.inventoryItemId`}
                                             render={({ field: inventoryItemField }) => (
                                             <FormItem>
-                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
+                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
+                                                    if (!open) {
+                                                        setOpenPopoverIndex(null);
+                                                        if (selectedItem) {
+                                                            const newQueries = [...searchQueries];
+                                                            newQueries[index] = selectedItem.name;
+                                                            setSearchQueries(newQueries);
+                                                        }
+                                                    } else {
+                                                        setOpenPopoverIndex(index);
+                                                    }
+                                                }}>
                                                 <PopoverTrigger asChild>
                                                     <FormControl>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn(
-                                                        "w-full justify-between font-normal",
-                                                        !inventoryItemField.value && "text-muted-foreground"
-                                                        )}
-                                                    >
-                                                        {inventoryItemField.value
-                                                        ? inventory.find(
-                                                            (item) => item.id === inventoryItemField.value
-                                                        )?.name
-                                                        : "Select an ingredient"}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
+                                                        <Input
+                                                            placeholder="Search ingredients..."
+                                                            value={selectedItemId ? form.getValues(`ingredients.${index}.name`) : currentSearchQuery}
+                                                            onChange={(e) => {
+                                                                const newQueries = [...searchQueries];
+                                                                newQueries[index] = e.target.value;
+                                                                setSearchQueries(newQueries);
+                                                                form.setValue(`ingredients.${index}.inventoryItemId`, '');
+                                                                setOpenPopoverIndex(index);
+                                                            }}
+                                                            onFocus={() => setOpenPopoverIndex(index)}
+                                                            className="w-full"
+                                                        />
                                                     </FormControl>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                     <Command>
-                                                    <CommandInput placeholder="Search ingredients..." />
                                                     <CommandList>
                                                         <CommandEmpty>
                                                             <div className='p-4 text-sm text-center'>
@@ -460,7 +478,7 @@ export function RecipeForm({
                                                             </div>
                                                         </CommandEmpty>
                                                         <CommandGroup>
-                                                        {inventory.map((item) => (
+                                                        {inventory.filter(i => i.name.toLowerCase().includes(currentSearchQuery.toLowerCase())).map((item) => (
                                                             <CommandItem
                                                                 value={item.name}
                                                                 key={item.id}
@@ -478,6 +496,9 @@ export function RecipeForm({
                                                                         totalCost: newTotal
                                                                     });
                                                                     form.clearErrors(`ingredients.${index}.inventoryItemId`);
+                                                                    const newQueries = [...searchQueries];
+                                                                    newQueries[index] = item.name;
+                                                                    setSearchQueries(newQueries);
                                                                     setOpenPopoverIndex(null);
                                                                 }}
                                                             >
@@ -534,7 +555,12 @@ export function RecipeForm({
                                             variant="ghost"
                                             size="icon"
                                             className="text-destructive h-9 w-9"
-                                            onClick={() => remove(index)}
+                                            onClick={() => {
+                                                remove(index);
+                                                const newQueries = [...searchQueries];
+                                                newQueries.splice(index, 1);
+                                                setSearchQueries(newQueries);
+                                            }}
                                             disabled={fields.length <= 1}
                                         >
                                             <Trash2 className="h-4 w-4" />
