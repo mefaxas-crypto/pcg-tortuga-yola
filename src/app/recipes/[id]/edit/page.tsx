@@ -12,10 +12,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  const { id } = params;
 
   useEffect(() => {
     async function fetchRecipe() {
+      const { id } = params;
       if (!id) return;
       setLoading(true);
       try {
@@ -35,7 +35,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
     }
 
     fetchRecipe();
-  }, [id]);
+  }, [params]);
 
 
   return (
