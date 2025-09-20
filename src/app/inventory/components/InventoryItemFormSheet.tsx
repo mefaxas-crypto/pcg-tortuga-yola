@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem } from '@/lib/actions';
 import { useEffect, useState } from 'react';
-import type { InventoryItem, Supplier } from '@/lib/types';
+import type { Supplier } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -34,26 +34,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
-  name: z.string().min(2, 'Item name must be at least 2 characters.'),
-  category: z.string().min(2, 'Category must be at least 2 characters.'),
+  materialCode: z.string().min(1, 'Material Code is required.'),
+  name: z.string().min(2, 'Ingredient name must be at least 2 characters.'),
+  category: z.string().min(1, 'Category is required.'),
   quantity: z.coerce.number().min(0, 'Quantity cannot be negative.'),
   unit: z.string().min(1, 'Unit is required.'),
+  purchaseUnit: z.string().min(1, 'Purchase Unit is required.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplier: z.string().min(1, 'Supplier is required.'),
-  expirationDate: z.date().optional(),
+  allergens: z.string().optional(),
 });
 
 type InventoryItemFormSheetProps = {
   open: boolean;
   onClose: () => void;
 };
+
+// Placeholder data - we can build a management UI for these later
+const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
+const purchaseUnits = ['Case', 'Box', 'Bottle', 'Bag', 'Each', 'Unit'];
+const recipeUnits = ['kg', 'g', 'L', 'mL', 'unit'];
 
 export function InventoryItemFormSheet({
   open,
@@ -65,12 +67,15 @@ export function InventoryItemFormSheet({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      materialCode: '',
       name: '',
       category: '',
       quantity: 0,
       unit: '',
+      purchaseUnit: '',
       parLevel: 0,
       supplier: '',
+      allergens: '',
     },
   });
 
@@ -90,11 +95,7 @@ export function InventoryItemFormSheet({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-        const itemData = {
-            ...values,
-            expirationDate: values.expirationDate ? format(values.expirationDate, 'yyyy-MM-dd') : '',
-        };
-        await addInventoryItem(itemData);
+        await addInventoryItem(values);
         toast({
             title: 'Ingredient Added',
             description: `"${values.name}" has been added to your inventory.`,
@@ -115,11 +116,11 @@ export function InventoryItemFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Add a New Ingredient</SheetTitle>
           <SheetDescription>
-            Enter the details of the new ingredient. Click save when you're done.
+            Enter the details of the new ingredient to normalize it for your kitchen.
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>
@@ -127,6 +128,19 @@ export function InventoryItemFormSheet({
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
           >
+             <FormField
+              control={form.control}
+              name="materialCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cod. Material (SAP Code)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 1006335" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="name"
@@ -134,25 +148,34 @@ export function InventoryItemFormSheet({
                 <FormItem>
                   <FormLabel>Ingredient Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., All-Purpose Flour" {...field} />
+                    <Input placeholder="e.g., Extra Virgin Olive Oil 5L" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
              <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Dry Goods" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {categories.map(category => (
+                            <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+             />
             <div className="grid grid-cols-2 gap-4">
                <FormField
                 control={form.control}
@@ -168,19 +191,50 @@ export function InventoryItemFormSheet({
                 )}
                 />
                 <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recipe Unit</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a unit" />
+                          </Trigger>
+                        </FormControl>
+                        <SelectContent>
+                          {recipeUnits.map(unit => (
+                            <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
+             <FormField
                 control={form.control}
-                name="unit"
+                name="purchaseUnit"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., kg, lb, gal" {...field} />
-                    </FormControl>
+                    <FormLabel>Purchase Unit</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a purchase unit" />
+                        </Trigger>
+                        </FormControl>
+                        <SelectContent>
+                        {purchaseUnits.map(unit => (
+                            <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
                     <FormMessage />
                     </FormItem>
                 )}
                 />
-            </div>
             <FormField
               control={form.control}
               name="parLevel"
@@ -204,7 +258,7 @@ export function InventoryItemFormSheet({
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a supplier" />
-                      </SelectTrigger>
+                      </Trigger>
                     </FormControl>
                     <SelectContent>
                       {suppliers.map(supplier => (
@@ -216,43 +270,15 @@ export function InventoryItemFormSheet({
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
-              name="expirationDate"
+              name="allergens"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Expiration Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setDate(new Date().getDate() -1))
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <FormItem>
+                  <FormLabel>Allergens</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Gluten, Nuts" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
