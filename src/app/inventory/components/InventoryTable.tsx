@@ -88,9 +88,10 @@ export function InventoryTable() {
               <TableRow>
                 <TableHead>Material</TableHead>
                 <TableHead>Item</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Presentation</TableHead>
+                <TableHead className="text-right">Price</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -101,9 +102,10 @@ export function InventoryTable() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
               ))}
@@ -111,6 +113,7 @@ export function InventoryTable() {
                 <TableRow key={item.id}>
                   <TableCell>{item.materialCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>{item.category}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
@@ -119,9 +122,11 @@ export function InventoryTable() {
                       {item.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{item.category}</TableCell>
                   <TableCell>
                     {item.quantity} {item.unit}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.purchasePrice || 0)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

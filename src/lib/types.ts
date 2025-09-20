@@ -9,6 +9,7 @@ export type InventoryItem = {
   parLevel: number;
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
+  purchasePrice: number;
   allergens?: string;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };

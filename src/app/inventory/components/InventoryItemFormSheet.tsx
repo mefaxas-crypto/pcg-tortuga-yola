@@ -44,6 +44,7 @@ const formSchema = z.object({
   purchaseUnit: z.string().min(1, 'Purchase Unit is required.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().min(1, 'Supplier is required.'),
+  purchasePrice: z.coerce.number().min(0, 'Purchase price must be a positive number.'),
   allergens: z.string().optional(),
 });
 
@@ -76,6 +77,7 @@ export function InventoryItemFormSheet({
       purchaseUnit: '',
       parLevel: 0,
       supplierId: '',
+      purchasePrice: 0,
       allergens: '',
     },
   });
@@ -233,28 +235,43 @@ export function InventoryItemFormSheet({
                     )}
                   />
               </div>
-              <FormField
+               <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="purchaseUnit"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Purchase Unit</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a purchase unit" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {purchaseUnits.map(unit => (
+                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <FormField
                   control={form.control}
-                  name="purchaseUnit"
+                  name="purchasePrice"
                   render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Purchase Unit</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select a purchase unit" />
-                          </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                          {purchaseUnits.map(unit => (
-                              <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                          ))}
-                          </SelectContent>
-                      </Select>
+                    <FormItem>
+                      <FormLabel>Purchase Price</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} />
+                      </FormControl>
                       <FormMessage />
-                      </FormItem>
+                    </FormItem>
                   )}
-                  />
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="parLevel"
