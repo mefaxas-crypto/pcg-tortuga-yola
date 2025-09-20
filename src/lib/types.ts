@@ -15,6 +15,8 @@ export type InventoryItem = {
 };
 
 export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
+export type EditInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
+
 
 export type Supplier = {
     id: string;

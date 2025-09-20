@@ -22,9 +22,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { addInventoryItem } from '@/lib/actions';
+import { addInventoryItem, editInventoryItem } from '@/lib/actions';
 import { useEffect, useState } from 'react';
-import type { Supplier } from '@/lib/types';
+import type { Supplier, InventoryItem } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -50,6 +50,8 @@ const formSchema = z.object({
 
 type InventoryItemFormSheetProps = {
   open: boolean;
+  mode: 'add' | 'edit';
+  item?: InventoryItem;
   onClose: () => void;
 };
 
@@ -60,6 +62,8 @@ const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit'];
 
 export function InventoryItemFormSheet({
   open,
+  mode,
+  item,
   onClose,
 }: InventoryItemFormSheetProps) {
   const [loading, setLoading] = useState(false);
@@ -83,10 +87,23 @@ export function InventoryItemFormSheet({
   });
 
   useEffect(() => {
-    if (!open) {
-      form.reset();
+    if (mode === 'edit' && item) {
+      form.reset(item);
+    } else {
+      form.reset({
+        materialCode: '',
+        name: '',
+        category: '',
+        quantity: 0,
+        unit: '',
+        purchaseUnit: '',
+        parLevel: 0,
+        supplierId: '',
+        purchasePrice: 0,
+        allergens: '',
+      });
     }
-  }, [open, form]);
+  }, [item, mode, form, open]);
 
   useEffect(() => {
     const q = query(collection(db, 'suppliers'));
@@ -117,18 +134,26 @@ export function InventoryItemFormSheet({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-        await addInventoryItem(values);
-        toast({
-            title: 'Ingredient Added',
-            description: `"${values.name}" has been added to your inventory.`,
-        });
+        if (mode === 'edit' && item) {
+            await editInventoryItem(item.id, values);
+             toast({
+                title: 'Ingredient Updated',
+                description: `"${values.name}" has been updated.`,
+            });
+        } else {
+            await addInventoryItem(values);
+            toast({
+                title: 'Ingredient Added',
+                description: `"${values.name}" has been added to your inventory.`,
+            });
+        }
       onClose();
     } catch (error) {
       console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: `Failed to add ingredient. Please try again.`,
+        description: `Failed to ${mode === 'add' ? 'add' : 'update'} ingredient. Please try again.`,
       });
     } finally {
       setLoading(false);
@@ -140,9 +165,9 @@ export function InventoryItemFormSheet({
       <SheetContent className="overflow-y-auto">
         <Form {...form}>
           <SheetHeader>
-            <SheetTitle>Add a New Ingredient</SheetTitle>
+            <SheetTitle>{mode === 'add' ? 'Add a New Ingredient' : 'Edit Ingredient'}</SheetTitle>
             <SheetDescription>
-              Enter the details of the new ingredient to normalize it for your kitchen.
+              {mode === 'add' ? 'Enter the details of the new ingredient.' : 'Update the details for this ingredient.'}
             </SheetDescription>
           </SheetHeader>
           <form
@@ -326,7 +351,7 @@ export function InventoryItemFormSheet({
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Save Ingredient'}
+                {loading ? 'Saving...' : 'Save Changes'}
               </Button>
             </SheetFooter>
           </form>

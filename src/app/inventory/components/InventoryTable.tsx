@@ -30,8 +30,13 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
 
-export function InventoryTable() {
+type InventoryTableProps = {
+  onEdit: (item: InventoryItem) => void;
+};
+
+export function InventoryTable({ onEdit }: InventoryTableProps) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -144,14 +149,16 @@ export function InventoryTable() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(item)}>
                           <FilePenLine className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive-foreground/80 focus:text-destructive-foreground focus:bg-destructive/90">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        <DeleteInventoryItemDialog itemId={item.id} itemName={item.name}>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive-foreground/80 focus:text-destructive-foreground focus:bg-destructive/90">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DeleteInventoryItemDialog>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

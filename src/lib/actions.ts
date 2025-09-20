@@ -9,7 +9,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
-import type {AddInventoryItemData, Supplier} from './types';
+import type {AddInventoryItemData, EditInventoryItemData, Supplier} from './types';
 import {revalidatePath} from 'next/cache';
 
 // We are defining a specific type for adding a supplier
@@ -51,17 +51,20 @@ export async function deleteSupplier(supplierId: string) {
   }
 }
 
+function getStatus(quantity: number, parLevel: number): 'In Stock' | 'Low Stock' | 'Out of Stock' {
+    if (quantity <= 0) {
+      return 'Out of Stock';
+    } else if (quantity < parLevel) {
+      return 'Low Stock';
+    } else {
+      return 'In Stock';
+    }
+}
+
 export async function addInventoryItem(itemData: AddInventoryItemData) {
   try {
-    let status: 'In Stock' | 'Low Stock' | 'Out of Stock';
-    if (itemData.quantity <= 0) {
-      status = 'Out of Stock';
-    } else if (itemData.quantity < itemData.parLevel) {
-      status = 'Low Stock';
-    } else {
-      status = 'In Stock';
-    }
-
+    const status = getStatus(itemData.quantity, itemData.parLevel);
+    
     // Fetch supplier name from the supplierId
     const supplierRef = doc(db, 'suppliers', itemData.supplierId);
     const supplierSnap = await getDoc(supplierRef);
@@ -81,4 +84,41 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
     console.error('Error adding document: ', e);
     throw new Error('Failed to add inventory item');
   }
+}
+
+export async function editInventoryItem(id: string, itemData: EditInventoryItemData) {
+  try {
+    const itemRef = doc(db, 'inventory', id);
+    const status = getStatus(itemData.quantity, itemData.parLevel);
+    
+    // Fetch supplier name from the supplierId
+    const supplierRef = doc(db, 'suppliers', itemData.supplierId);
+    const supplierSnap = await getDoc(supplierRef);
+    if (!supplierSnap.exists()) {
+      throw new Error('Supplier not found');
+    }
+    const supplierName = supplierSnap.data().name;
+
+    await updateDoc(itemRef, {
+      ...itemData,
+      status,
+      supplier: supplierName,
+    });
+    revalidatePath('/inventory');
+    return {success: true};
+  } catch (e) {
+    console.error('Error updating document: ', e);
+    throw new Error('Failed to edit inventory item');
+  }
+}
+
+export async function deleteInventoryItem(itemId: string) {
+    try {
+        await deleteDoc(doc(db, 'inventory', itemId));
+        revalidatePath('/inventory');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting document: ', e);
+        throw new Error('Failed to delete inventory item');
+    }
 }
