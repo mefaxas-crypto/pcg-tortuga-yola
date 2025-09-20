@@ -47,42 +47,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
           <CardTitle>Financials</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-          {/* Column 1: Calculations */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <span className="text-muted-foreground">Ingredients Cost (M.P.)</span>
-              <span className="font-medium">
-                {formatCurrency(totalRecipeCost)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center border-b pb-2">
-              <span className="text-muted-foreground">Cost per Portion (P/P)</span>
-              <span className="font-medium">
-                {formatCurrency(costPerPortion)}
-              </span>
-            </div>
-            
-            <div className={cn('transition-opacity', isSubRecipe ? 'opacity-30' : 'opacity-100')}>
-              <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-muted-foreground">
-                  Contingency ({contingency}%)
-                </span>
-                <span className="font-medium text-primary">
-                  {formatCurrency(costPerPortion * (contingency / 100))}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b-2 border-foreground/50 font-bold pb-2 mt-4">
-                <span>Total Cost</span>
-                <span>{formatCurrency(totalCostWithContingency)}</span>
-              </div>
-              <div className="flex justify-between items-center text-lg font-bold text-green-600 pt-2">
-                <span>Suggested Price</span>
-                <span>{formatCurrency(suggestedPrice)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Column 2: Interactive Controls */}
+          {/* Column 1: Interactive Controls */}
           <div
             className={cn(
               'space-y-8 transition-opacity duration-300',
@@ -157,6 +122,41 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
                 </FormItem>
               )}
             />
+          </div>
+
+          {/* Column 2: Calculations */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center border-b pb-2">
+              <span className="text-muted-foreground">Ingredients Cost (M.P.)</span>
+              <span className="font-medium">
+                {formatCurrency(totalRecipeCost)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-b pb-2">
+              <span className="text-muted-foreground">Cost per Portion (P/P)</span>
+              <span className="font-medium">
+                {formatCurrency(costPerPortion)}
+              </span>
+            </div>
+            
+            <div className={cn('transition-opacity', isSubRecipe ? 'opacity-30' : 'opacity-100')}>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-muted-foreground">
+                  Contingency ({contingency}%)
+                </span>
+                <span className="font-medium text-primary">
+                  {formatCurrency(costPerPortion * (contingency / 100))}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b-2 border-foreground/50 font-bold pb-2 mt-4">
+                <span>Total Cost</span>
+                <span>{formatCurrency(totalCostWithContingency)}</span>
+              </div>
+              <div className="flex justify-between items-center text-lg font-bold text-green-600 pt-2">
+                <span>Suggested Price</span>
+                <span>{formatCurrency(suggestedPrice)}</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
