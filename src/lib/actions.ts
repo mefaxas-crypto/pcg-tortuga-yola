@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   updateDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
@@ -61,9 +62,21 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
       status = 'In Stock';
     }
 
-    const docRef = await addDoc(collection(db, 'inventory'), { ...itemData, status });
+    // Fetch supplier name from the supplierId
+    const supplierRef = doc(db, 'suppliers', itemData.supplierId);
+    const supplierSnap = await getDoc(supplierRef);
+    if (!supplierSnap.exists()) {
+      throw new Error('Supplier not found');
+    }
+    const supplierName = supplierSnap.data().name;
+
+    const docRef = await addDoc(collection(db, 'inventory'), {
+      ...itemData,
+      status,
+      supplier: supplierName,
+    });
     revalidatePath('/inventory');
-    return { success: true, id: docRef.id };
+    return {success: true, id: docRef.id};
   } catch (e) {
     console.error('Error adding document: ', e);
     throw new Error('Failed to add inventory item');

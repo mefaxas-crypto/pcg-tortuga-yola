@@ -7,12 +7,13 @@ export type InventoryItem = {
   unit: string; // The unit for recipes (e.g., kg, L, unit)
   purchaseUnit: string; // The unit you buy from the supplier (e.g., Case, Box)
   parLevel: number;
-  supplier: string;
+  supplier: string; // Supplier Name
+  supplierId: string; // Supplier Document ID
   allergens?: string;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
-export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status'>;
+export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
 
 export type Supplier = {
     id: string;

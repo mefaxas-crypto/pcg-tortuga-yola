@@ -34,11 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'Material Code is required.'),
@@ -141,13 +136,13 @@ export function InventoryItemFormSheet({
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <SheetContent className="overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Add a New Ingredient</SheetTitle>
-          <SheetDescription>
-            Enter the details of the new ingredient to normalize it for your kitchen.
-          </SheetDescription>
-        </SheetHeader>
         <Form {...form}>
+          <SheetHeader>
+            <SheetTitle>Add a New Ingredient</SheetTitle>
+            <SheetDescription>
+              Enter the details of the new ingredient to normalize it for your kitchen.
+            </SheetDescription>
+          </SheetHeader>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4 py-4"
