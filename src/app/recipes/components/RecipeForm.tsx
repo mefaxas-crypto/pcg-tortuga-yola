@@ -35,7 +35,7 @@ import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Popover, PopoverContent } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
@@ -436,13 +436,25 @@ export function RecipeForm({
                                                 <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
                                                     if (!open) setOpenPopoverIndex(null);
                                                 }}>
+                                                    <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                            <Input
+                                                              placeholder="Search or select an ingredient"
+                                                              value={searchQueries[index] || ''}
+                                                              onChange={(e) => {
+                                                                handleSearchQueryChange(index, e.target.value);
+                                                                if (!open) setOpenPopoverIndex(index);
+                                                              }}
+                                                              onFocus={() => setOpenPopoverIndex(index)}
+                                                            />
+                                                        </FormControl>
+                                                    </PopoverTrigger>
                                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                       <Command shouldFilter={false}>
                                                         <CommandInput 
                                                             placeholder="Search ingredients..."
                                                             value={searchQueries[index] || ''}
                                                             onValueChange={(value) => handleSearchQueryChange(index, value)}
-                                                            onFocus={() => setOpenPopoverIndex(index)}
                                                         />
                                                         <CommandList>
                                                             <CommandEmpty>
@@ -492,17 +504,6 @@ export function RecipeForm({
                                                         </CommandList>
                                                       </Command>
                                                     </PopoverContent>
-                                                    <FormControl>
-                                                        <Input
-                                                          placeholder="Search or select an ingredient"
-                                                          value={searchQueries[index] || ''}
-                                                          onChange={(e) => {
-                                                            handleSearchQueryChange(index, e.target.value);
-                                                            if (!open) setOpenPopoverIndex(index);
-                                                          }}
-                                                          onFocus={() => setOpenPopoverIndex(index)}
-                                                        />
-                                                    </FormControl>
                                                 </Popover>
                                                 <FormMessage />
                                             </FormItem>
@@ -618,4 +619,3 @@ export function RecipeForm({
     </>
   );
 }
-
