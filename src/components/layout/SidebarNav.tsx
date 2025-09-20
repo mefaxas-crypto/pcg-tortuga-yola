@@ -45,7 +45,7 @@ export function SidebarNav() {
           <UtensilsCrossed className="h-8 w-8 text-primary" />
           <div className="flex flex-col">
             <h2 className="text-lg font-semibold tracking-tighter font-headline">
-              Pantry Pilot
+              PCG Kitchen Manager
             </h2>
           </div>
         </div>

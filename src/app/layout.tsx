@@ -7,7 +7,7 @@ import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
 
 export const metadata: Metadata = {
-  title: 'Pantry Pilot',
+  title: 'PCG Kitchen Manager',
   description: 'A comprehensive kitchen management system.',
 };
 
