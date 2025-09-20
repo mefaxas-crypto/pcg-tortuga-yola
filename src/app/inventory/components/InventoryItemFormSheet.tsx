@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -95,7 +96,16 @@ export function InventoryItemFormSheet({
     if (open) {
       if (mode === 'edit' && item) {
         form.reset({
-          ...item,
+          materialCode: item.materialCode || '',
+          name: item.name || '',
+          category: item.category || '',
+          quantity: item.quantity || 0,
+          unit: item.unit || '',
+          purchaseUnit: item.purchaseUnit || '',
+          parLevel: item.parLevel || 0,
+          supplierId: item.supplierId || '',
+          purchasePrice: item.purchasePrice || 0,
+          unitCost: item.unitCost || 0,
           allergens: item.allergens || [],
         });
       } else {
@@ -414,3 +424,5 @@ export function InventoryItemFormSheet({
     </Sheet>
   );
 }
+
+    
