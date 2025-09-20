@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -104,6 +105,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                 <TableHead>Status</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Purchase Unit</TableHead>
+                <TableHead>Conversion</TableHead>
                 <TableHead className="text-right">Purchase Price</TableHead>
                  <TableHead className="text-right">Unit Cost</TableHead>
                 <TableHead>
@@ -118,6 +120,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
@@ -142,6 +145,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     {item.quantity} {item.unit}
                   </TableCell>
                    <TableCell>{item.purchaseUnit}</TableCell>
+                   <TableCell>{item.conversionFactor}</TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(item.purchasePrice || 0)}
                   </TableCell>

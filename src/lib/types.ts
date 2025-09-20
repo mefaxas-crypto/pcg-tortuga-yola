@@ -7,6 +7,7 @@ export type InventoryItem = {
   quantity: number;
   unit: string; // The unit for recipes (e.g., kg, L, unit)
   purchaseUnit: string; // The unit you buy from the supplier (e.g., Case, Box)
+  conversionFactor: number; // How many recipe units are in one purchase unit
   parLevel: number;
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID

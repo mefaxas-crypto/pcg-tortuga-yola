@@ -45,6 +45,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(0, 'Quantity cannot be negative.'),
   unit: z.string().min(1, 'Unit is required.'),
   purchaseUnit: z.string().min(1, 'Purchase Unit is required.'),
+  conversionFactor: z.coerce.number().min(0.0001, 'Conversion factor must be positive.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().min(1, 'Supplier is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price must be a positive number.'),
@@ -84,6 +85,7 @@ export function InventoryItemFormSheet({
       quantity: 0,
       unit: '',
       purchaseUnit: '',
+      conversionFactor: 1,
       parLevel: 0,
       supplierId: '',
       purchasePrice: 0,
@@ -91,6 +93,17 @@ export function InventoryItemFormSheet({
       allergens: [],
     },
   });
+
+  const purchasePrice = form.watch('purchasePrice');
+  const conversionFactor = form.watch('conversionFactor');
+
+  useEffect(() => {
+    if (purchasePrice !== undefined && conversionFactor > 0) {
+      const newUnitCost = purchasePrice / conversionFactor;
+      form.setValue('unitCost', newUnitCost, { shouldValidate: true });
+    }
+  }, [purchasePrice, conversionFactor, form]);
+
 
   useEffect(() => {
     if (open) {
@@ -102,6 +115,7 @@ export function InventoryItemFormSheet({
           quantity: item.quantity || 0,
           unit: item.unit || '',
           purchaseUnit: item.purchaseUnit || '',
+          conversionFactor: item.conversionFactor || 1,
           parLevel: item.parLevel || 0,
           supplierId: item.supplierId || '',
           purchasePrice: item.purchasePrice || 0,
@@ -116,6 +130,7 @@ export function InventoryItemFormSheet({
           quantity: 0,
           unit: '',
           purchaseUnit: '',
+          conversionFactor: 1,
           parLevel: 0,
           supplierId: '',
           purchasePrice: 0,
@@ -305,7 +320,8 @@ export function InventoryItemFormSheet({
                     )}
                   />
               </div>
-               <div className="grid grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
                     name="purchaseUnit"
@@ -342,14 +358,30 @@ export function InventoryItemFormSheet({
                   )}
                 />
               </div>
+
+               <FormField
+                  control={form.control}
+                  name="conversionFactor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Conversion Factor</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.001" placeholder="e.g., 5000" {...field} />
+                      </FormControl>
+                      <FormDescription>How many recipe units are in one purchase unit?</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              
                <FormField
                   control={form.control}
                   name="unitCost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit Cost</FormLabel>
+                      <FormLabel>Unit Cost (Auto-calculated)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} />
+                        <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} readOnly className="bg-muted/50" />
                       </FormControl>
                       <FormDescription>The cost for one recipe unit (e.g., cost per gram).</FormDescription>
                       <FormMessage />
@@ -424,5 +456,3 @@ export function InventoryItemFormSheet({
     </Sheet>
   );
 }
-
-    

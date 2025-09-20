@@ -89,10 +89,13 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
     }
     const supplierName = supplierSnap.data().name;
 
+    const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
+
     const docRef = await addDoc(collection(db, 'inventory'), {
       ...itemData,
       status,
       supplier: supplierName,
+      unitCost,
     });
     revalidatePath('/inventory');
     return {success: true, id: docRef.id};
@@ -118,10 +121,13 @@ export async function editInventoryItem(
     }
     const supplierName = supplierSnap.data().name;
 
+    const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
+
     await updateDoc(itemRef, {
       ...itemData,
       status,
       supplier: supplierName,
+      unitCost,
     });
     revalidatePath('/inventory');
     revalidatePath('/recipes/**'); // Revalidate recipes when inventory changes
