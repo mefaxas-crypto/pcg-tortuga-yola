@@ -28,8 +28,8 @@
     --destructive: 355 71% 57%; /* Error Red */
     --destructive-foreground: 0 0% 10%; /* Near Black for contrast on red */
 
-    --border: 0 0% 90%; /* Light gray border */
-    --input: 0 0% 95%; /* Light gray for input background */
+    --border: 0 0% 85%; /* Darker gray border */
+    --input: 0 0% 92%; /* Darker gray for input background */
     --ring: 45 100% 59%;
 
     --radius: 0.5rem;
