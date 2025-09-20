@@ -2,7 +2,7 @@
 
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { InventoryTable } from './components/InventoryTable';
 import { useState } from 'react';
 import { InventoryItemFormSheet } from './components/InventoryItemFormSheet';
@@ -34,8 +34,8 @@ export default function InventoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Inventory">
-        <Button onClick={handleAdd}>
-          <PlusCircle className="mr-2" />
+        <Button onClick={handleAdd} className='rounded-full'>
+          <Plus className="mr-2 h-4 w-4" />
           Add New Ingredient
         </Button>
       </PageHeader>

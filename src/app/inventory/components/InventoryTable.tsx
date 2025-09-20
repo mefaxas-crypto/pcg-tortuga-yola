@@ -64,11 +64,11 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
   const getStatusBadge = (status: InventoryItem['status']) => {
     switch (status) {
       case 'In Stock':
-        return 'bg-green-400/20 text-green-300 border-green-400/30 hover:bg-green-400/30';
+        return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200/80';
       case 'Low Stock':
-        return 'bg-yellow-400/20 text-yellow-300 border-yellow-400/30 hover:bg-yellow-400/30';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200/80';
       case 'Out of Stock':
-        return 'bg-red-400/20 text-red-300 border-red-400/30 hover:bg-red-400/30';
+        return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200/80';
       default:
         return 'bg-secondary';
     }
@@ -90,7 +90,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
         <div className="relative w-full overflow-auto">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className='border-b-0'>
                 <TableHead>Material</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Category</TableHead>
@@ -118,9 +118,9 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
               ))}
               {!loading && inventoryItems?.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.materialCode}</TableCell>
+                  <TableCell className='text-muted-foreground'>{item.materialCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
+                  <TableCell className='text-muted-foreground'>{item.category}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"

@@ -67,16 +67,16 @@
     --secondary: 173 70% 56%; /* #40E0D0 - Caribbean Turquoise */
     --secondary-foreground: 210 100% 10%;
 
-    --muted: 35 31% 69%; /* #D2B48C - Wicker Beige */
+    --muted: 210 20% 35%; /* #6D6D6D - Foundation Stone */
     --muted-foreground: 0 0% 60%; /* Lighter gray for better readability */
 
-    --accent: 35 31% 69%; /* #D2B48C - Wicker Beige */
+    --accent: 45 33% 94%;
     --accent-foreground: 34 50% 15%;
 
     --destructive: 355 71% 57%; /* #DC3545 - Error Red */
     --destructive-foreground: 45 33% 96%;
 
-    --border: 210 20% 25%; /* Subtle blue-gray border */
+    --border: 45 33% 96%; /* Light gray border */
     --input: 210 20% 25%;
     --ring: 45 100% 59%;
 
