@@ -16,7 +16,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addRecipe, editRecipe } from '@/lib/actions';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { InventoryItem, Recipe } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -90,8 +90,9 @@ export function RecipeForm({
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState<Record<number, boolean>>({});
+
   const { toast } = useToast();
-  const ingredientInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -156,24 +157,12 @@ export function RecipeForm({
     });
 
     if (mode === 'add' && fields.length === 0) {
-      for (let i = 0; i < 5; i++) {
-        addEmptyIngredient();
-      }
+      addEmptyIngredient();
     }
 
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast, mode]);
-
-  useEffect(() => {
-    // Focus the last added ingredient input
-    if (fields.length > 0) {
-      const lastIngredientInput = ingredientInputsRef.current[fields.length - 1];
-      if (lastIngredientInput) {
-        lastIngredientInput.focus();
-      }
-    }
-  }, [fields.length]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -221,29 +210,11 @@ export function RecipeForm({
     }
   }
 
-  const handleEnterKey = (e: React.KeyboardEvent, index: number) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const nextIndex = index + 1;
-        if (nextIndex < fields.length) {
-            ingredientInputsRef.current[nextIndex]?.focus();
-        } else {
-            addEmptyIngredient();
-        }
-    }
-  };
-
   return (
     <>
     <Form {...form}>
       <form
-        onSubmit={(e) => {
-          if (e.nativeEvent.submitter?.dataset?.enterkey) {
-            e.preventDefault();
-            return;
-          }
-          form.handleSubmit(onSubmit)(e);
-        }}
+        onSubmit={form.handleSubmit(onSubmit)}
         className="flex flex-col h-full space-y-6"
       >
         <fieldset disabled={loading} className="space-y-4">
@@ -410,7 +381,7 @@ export function RecipeForm({
                                             name={`ingredients.${index}.inventoryItemId`}
                                             render={({ field: formField }) => (
                                             <FormItem>
-                                                <Popover>
+                                                <Popover open={popoverOpen[index]} onOpenChange={(open) => setPopoverOpen(prev => ({...prev, [index]: open}))}>
                                                   <PopoverTrigger asChild>
                                                     <FormControl>
                                                       <button
@@ -449,8 +420,7 @@ export function RecipeForm({
                                                                     totalCost: newTotal
                                                                 });
                                                                 form.clearErrors(`ingredients.${index}.inventoryItemId`);
-                                                                // Close popover
-                                                                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                                                setPopoverOpen(prev => ({...prev, [index]: false}));
                                                               }}
                                                             >
                                                               <Check
@@ -468,8 +438,7 @@ export function RecipeForm({
                                                         <CommandSeparator />
                                                         <CommandGroup>
                                                             <CommandItem onSelect={() => {
-                                                                // Close popover before opening sheet
-                                                                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                                                setPopoverOpen(prev => ({...prev, [index]: false}));
                                                                 setIngredientSheetOpen(true);
                                                             }}>
                                                                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -497,8 +466,6 @@ export function RecipeForm({
                                                     step="any" 
                                                     placeholder="Qty" 
                                                     {...quantityField}
-                                                    onKeyDown={(e) => handleEnterKey(e, index)}
-                                                    data-enterkey
                                                     onChange={(e) => {
                                                         const newQuantity = parseFloat(e.target.value);
                                                         const newTotal = (newQuantity || 0) * (selectedItem?.purchasePrice || 0);
