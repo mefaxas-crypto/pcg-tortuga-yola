@@ -10,7 +10,7 @@ export type InventoryItem = {
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
   purchasePrice: number;
-  allergens?: string;
+  allergens?: string[];
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 

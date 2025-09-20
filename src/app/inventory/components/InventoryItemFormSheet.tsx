@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem, editInventoryItem } from '@/lib/actions';
 import { useEffect, useState } from 'react';
-import type { Supplier, InventoryItem } from '@/lib/types';
+import type { Supplier, InventoryItem, Allergen } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'Material Code is required.'),
@@ -45,7 +46,7 @@ const formSchema = z.object({
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().min(1, 'Supplier is required.'),
   purchasePrice: z.coerce.number().min(0, 'Purchase price must be a positive number.'),
-  allergens: z.string().optional(),
+  allergens: z.array(z.string()).optional(),
 });
 
 type InventoryItemFormSheetProps = {
@@ -68,6 +69,7 @@ export function InventoryItemFormSheet({
 }: InventoryItemFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [allergens, setAllergens] = useState<Allergen[]>([]);
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -82,35 +84,37 @@ export function InventoryItemFormSheet({
       parLevel: 0,
       supplierId: '',
       purchasePrice: 0,
-      allergens: '',
+      allergens: [],
     },
   });
 
   useEffect(() => {
-    if (mode === 'edit' && item) {
-      form.reset({
-        ...item,
-        allergens: item.allergens || '',
-      });
-    } else {
-      form.reset({
-        materialCode: '',
-        name: '',
-        category: '',
-        quantity: 0,
-        unit: '',
-        purchaseUnit: '',
-        parLevel: 0,
-        supplierId: '',
-        purchasePrice: 0,
-        allergens: '',
-      });
+    if (open) {
+      if (mode === 'edit' && item) {
+        form.reset({
+          ...item,
+          allergens: item.allergens || [],
+        });
+      } else {
+        form.reset({
+          materialCode: '',
+          name: '',
+          category: '',
+          quantity: 0,
+          unit: '',
+          purchaseUnit: '',
+          parLevel: 0,
+          supplierId: '',
+          purchasePrice: 0,
+          allergens: [],
+        });
+      }
     }
   }, [item, mode, form, open]);
 
   useEffect(() => {
-    const q = query(collection(db, 'suppliers'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const qSuppliers = query(collection(db, 'suppliers'));
+    const unsubscribeSuppliers = onSnapshot(qSuppliers, (querySnapshot) => {
       const suppliersData: Supplier[] = [];
       querySnapshot.forEach((doc) => {
         suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
@@ -125,7 +129,26 @@ export function InventoryItemFormSheet({
       });
     });
 
-    return () => unsubscribe();
+    const qAllergens = query(collection(db, 'allergens'));
+    const unsubscribeAllergens = onSnapshot(qAllergens, (querySnapshot) => {
+      const allergensData: Allergen[] = [];
+      querySnapshot.forEach((doc) => {
+        allergensData.push({ id: doc.id, ...doc.data() } as Allergen);
+      });
+      setAllergens(allergensData.sort((a, b) => a.name.localeCompare(b.name)));
+    }, (error) => {
+      console.error("Failed to fetch allergens:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load allergens. Please try again later.',
+      });
+    });
+
+    return () => {
+      unsubscribeSuppliers();
+      unsubscribeAllergens();
+    };
   }, [toast]);
   
   const handleClose = () => {
@@ -162,6 +185,11 @@ export function InventoryItemFormSheet({
       setLoading(false);
     }
   }
+
+  const allergenOptions = allergens.map(allergen => ({
+    value: allergen.name,
+    label: allergen.name,
+  }));
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
@@ -342,7 +370,12 @@ export function InventoryItemFormSheet({
                   <FormItem>
                     <FormLabel>Allergens</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Gluten, Nuts" {...field} />
+                      <MultiSelect
+                        options={allergenOptions}
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || []}
+                        placeholder="Select allergens..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

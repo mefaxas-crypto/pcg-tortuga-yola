@@ -94,6 +94,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                 <TableHead>Material</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Allergens</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Presentation</TableHead>
                 <TableHead>Purchase Unit</TableHead>
@@ -109,6 +110,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -121,6 +123,9 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                   <TableCell>{item.materialCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.category}</TableCell>
+                   <TableCell className="max-w-[150px] truncate">
+                    {item.allergens?.join(', ')}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
