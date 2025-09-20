@@ -3,8 +3,7 @@
 import PageHeader from '@/components/PageHeader';
 import { RecipeForm } from '../../components/RecipeForm';
 import { Card, CardContent } from '@/components/ui/card';
-import { useEffect, useState }
-from 'react';
+import { useEffect, useState } from 'react';
 import type { Recipe } from '@/lib/types';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -15,7 +14,8 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchRecipe(id: string) {
+    const fetchRecipe = async () => {
+      const id = params.id;
       if (!id) return;
       setLoading(true);
       try {
@@ -32,15 +32,16 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    fetchRecipe(params.id);
+    fetchRecipe();
   }, [params.id]);
-
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={loading ? 'Loading...' : `Edit Recipe: ${recipe?.name}`} />
+      <PageHeader
+        title={loading ? 'Loading...' : `Edit Recipe: ${recipe?.name}`}
+      />
       <Card>
         <CardContent className="pt-6">
           {loading ? (
@@ -57,7 +58,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
             <RecipeForm mode="edit" recipe={recipe} />
           ) : (
             <div className="text-center text-muted-foreground py-12">
-                Recipe not found.
+              Recipe not found.
             </div>
           )}
         </CardContent>
