@@ -16,8 +16,8 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Implement Edit & Delete functionality for ingredients.
 
 *   **1.3 Managing Allergens:** A simple but necessary list for ingredients.
-    *   [ ] **NEXT UP:** Create a dedicated "Allergens" data model and management UI (likely in "Settings").
-    *   [ ] Update the "Add New Ingredient" form to use the new allergens data model (e.g., a multi-select dropdown).
+    *   [x] Create a dedicated "Allergens" data model and management UI (likely in "Settings").
+    *   [ ] **NEXT UP:** Update the "Add New Ingredient" form to use the new allergens data model (e.g., a multi-select dropdown).
 
 ## PHASE 2: LINKING DATA & CREATING VALUE
 
