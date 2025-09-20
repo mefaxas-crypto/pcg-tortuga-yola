@@ -1,3 +1,4 @@
+
 export type InventoryItem = {
   id: string;
   materialCode: string;
@@ -54,6 +55,8 @@ export type Recipe = {
   notes?: string;
   ingredients: RecipeIngredient[];
   totalCost: number;
+  contingencyPercentage?: number;
+  foodCostPercentage?: number;
 };
 
 export type AddRecipeData = Omit<Recipe, 'id'>;

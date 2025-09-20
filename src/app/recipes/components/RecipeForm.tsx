@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
+import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -57,6 +59,8 @@ const formSchema = z.object({
   yieldUnit: z.string().optional(),
   notes: z.string().optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, 'A recipe must have at least one ingredient.'),
+  contingencyPercentage: z.coerce.number().min(0).max(100).optional(),
+  foodCostPercentage: z.coerce.number().min(0).max(100).optional(),
 }).superRefine((data, ctx) => {
     if (!data.isSubRecipe && !data.category) {
         ctx.addIssue({
@@ -102,6 +106,8 @@ export function RecipeForm({
         yield: recipe.yield || 1,
         yieldUnit: recipe.yieldUnit || 'portion',
         isSubRecipe: recipe.isSubRecipe || false,
+        contingencyPercentage: recipe.contingencyPercentage || 5,
+        foodCostPercentage: recipe.foodCostPercentage || 30,
       } : 
       {
         recipeCode: '',
@@ -112,6 +118,8 @@ export function RecipeForm({
         yieldUnit: 'portion',
         notes: '',
         ingredients: [],
+        contingencyPercentage: 5,
+        foodCostPercentage: 30,
       },
   });
 
@@ -372,6 +380,15 @@ export function RecipeForm({
                             const unitPrice = selectedItem?.purchasePrice || 0;
                             const totalCost = (quantity || 0) * unitPrice;
 
+                             // This effect updates the total cost whenever quantity or the selected item changes.
+                            useEffect(() => {
+                                const newTotal = (form.getValues(`ingredients.${index}.quantity`) || 0) * (selectedItem?.purchasePrice || 0);
+                                if (form.getValues(`ingredients.${index}.totalCost`) !== newTotal) {
+                                    form.setValue(`ingredients.${index}.totalCost`, newTotal);
+                                }
+                            }, [quantity, selectedItem, index, form]);
+
+
                             return (
                                 <TableRow key={field.id} className="align-top">
                                     <TableCell className="pt-2 pb-3 text-muted-foreground">{selectedItem?.materialCode || '-'}</TableCell>
@@ -386,8 +403,9 @@ export function RecipeForm({
                                                     <FormControl>
                                                       <button
                                                         type="button"
+                                                        role="combobox"
                                                         className={cn(
-                                                          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                                                          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
                                                           !formField.value && "text-muted-foreground"
                                                         )}
                                                       >
@@ -468,8 +486,8 @@ export function RecipeForm({
                                                     {...quantityField}
                                                     onChange={(e) => {
                                                         const newQuantity = parseFloat(e.target.value);
-                                                        const newTotal = (newQuantity || 0) * (selectedItem?.purchasePrice || 0);
                                                         quantityField.onChange(isNaN(newQuantity) ? '' : newQuantity);
+                                                        const newTotal = (newQuantity || 0) * (selectedItem?.purchasePrice || 0);
                                                         form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                     }}
                                                     value={quantityField.value || ''}
@@ -516,12 +534,18 @@ export function RecipeForm({
                             Add Ingredient
                         </Button>
                         <div className="flex-grow text-right">
-                            <span className="text-sm text-muted-foreground">Total Recipe Cost: </span>
+                            <span className="text-sm text-muted-foreground">Total Ingredient Cost: </span>
                             <span className="text-lg font-bold">{formatCurrency(totalRecipeCost)}</span>
                         </div>
                     </div>
                 </CardFooter>
             </Card>
+
+            <RecipeFinancialsCard 
+                form={form}
+                totalRecipeCost={totalRecipeCost}
+                isSubRecipe={isSubRecipe}
+            />
         
           <FormField
             control={form.control}
