@@ -48,6 +48,7 @@ const recipeIngredientSchema = z.object({
 const formSchema = z.object({
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   category: z.string().min(1, 'Category is required.'),
+  yield: z.coerce.number().min(0, 'Yield must be a positive number.').optional(),
   notes: z.string().optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, 'A recipe must have at least one ingredient.'),
 });
@@ -77,6 +78,7 @@ export function RecipeFormSheet({
     defaultValues: {
       name: '',
       category: '',
+      yield: 1,
       notes: '',
       ingredients: [],
     },
@@ -90,11 +92,15 @@ export function RecipeFormSheet({
   useEffect(() => {
     if (open) {
       if (mode === 'edit' && recipe) {
-        form.reset(recipe);
+        form.reset({
+          ...recipe,
+          yield: recipe.yield || 1,
+        });
       } else {
         form.reset({
           name: '',
           category: '',
+          yield: 1,
           notes: '',
           ingredients: [{ inventoryItemId: '', quantity: 0, name: '', unit: '' }],
         });
@@ -172,19 +178,34 @@ export function RecipeFormSheet({
             className="flex flex-col h-full"
           >
             <fieldset disabled={loading} className="space-y-4 py-4 flex-grow overflow-y-auto pr-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipe Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Classic Bolognese Sauce" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recipe Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Classic Bolognese" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="yield"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yield (Portions)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 4" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
                <FormField
                   control={form.control}
                   name="category"

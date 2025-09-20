@@ -10,7 +10,7 @@ export type InventoryItem = {
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
   purchasePrice: number;
-  allergens: string[]; // This is now an array of strings
+  allergens?: string[]; // This is now an array of strings
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
@@ -44,9 +44,10 @@ export type Recipe = {
   id: string;
   name: string;
   category: string;
+  yield?: number; // How many portions the recipe makes
   notes?: string;
   ingredients: RecipeIngredient[];
-  totalCost?: number;
+  totalCost: number;
 };
 
 export type AddRecipeData = Omit<Recipe, 'id' | 'totalCost'>;
