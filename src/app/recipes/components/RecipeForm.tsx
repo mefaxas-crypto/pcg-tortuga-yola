@@ -28,12 +28,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -151,7 +153,8 @@ export function RecipeForm({
     }
 
     return () => unsubscribe();
-  }, [toast, mode, append]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast, mode]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -325,20 +328,6 @@ export function RecipeForm({
             />
           </div>
           
-           <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notes / Method</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-          
            <Card>
                 <CardHeader>
                     <CardTitle>Ingredients</CardTitle>
@@ -372,36 +361,66 @@ export function RecipeForm({
                                             name={`ingredients.${index}.inventoryItemId`}
                                             render={({ field }) => (
                                             <FormItem>
-                                                <Select 
-                                                onValueChange={(value) => {
-                                                    const item = inventory.find(i => i.id === value);
-                                                    if (item) {
-                                                        const newItemData = {
-                                                            ...field,
-                                                            inventoryItemId: item.id,
-                                                            name: item.name,
-                                                            materialCode: item.materialCode,
-                                                            unit: item.unit,
-                                                            unitPrice: item.purchasePrice,
-                                                            quantity: 1, // Default quantity
-                                                            totalCost: item.purchasePrice * 1
-                                                        };
-                                                        update(index, newItemData);
-                                                    }
-                                                }} 
-                                                defaultValue={field.value}
-                                                >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                    <SelectValue placeholder="Select ingredient" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {inventory.map((item) => (
-                                                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                                </Select>
+                                                <Popover>
+                                                  <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                      <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                          "w-full justify-between",
+                                                          !field.value && "text-muted-foreground"
+                                                        )}
+                                                      >
+                                                        {field.value
+                                                          ? inventory.find(
+                                                              (item) => item.id === field.value
+                                                            )?.name
+                                                          : "Select ingredient"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                      </Button>
+                                                    </FormControl>
+                                                  </PopoverTrigger>
+                                                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                    <Command>
+                                                      <CommandInput placeholder="Search ingredients..." />
+                                                      <CommandList>
+                                                        <CommandEmpty>No ingredient found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                          {inventory.map((item) => (
+                                                            <CommandItem
+                                                              value={item.name}
+                                                              key={item.id}
+                                                              onSelect={() => {
+                                                                const newItemData = {
+                                                                    ...field,
+                                                                    inventoryItemId: item.id,
+                                                                    name: item.name,
+                                                                    materialCode: item.materialCode,
+                                                                    unit: item.unit,
+                                                                    unitPrice: item.purchasePrice,
+                                                                    quantity: 1, // Default quantity
+                                                                    totalCost: item.purchasePrice * 1
+                                                                };
+                                                                update(index, newItemData);
+                                                              }}
+                                                            >
+                                                              <Check
+                                                                className={cn(
+                                                                  "mr-2 h-4 w-4",
+                                                                  item.id === field.value
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0"
+                                                                )}
+                                                              />
+                                                              {item.name}
+                                                            </CommandItem>
+                                                          ))}
+                                                        </CommandGroup>
+                                                      </CommandList>
+                                                    </Command>
+                                                  </PopoverContent>
+                                                </Popover>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -474,6 +493,20 @@ export function RecipeForm({
                     </div>
                 </CardFooter>
             </Card>
+        
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                  <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
         </fieldset>
 
         <div className="flex justify-end gap-2 pt-4">
