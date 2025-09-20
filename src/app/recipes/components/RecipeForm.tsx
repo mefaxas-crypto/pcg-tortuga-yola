@@ -380,15 +380,6 @@ export function RecipeForm({
                             const unitPrice = selectedItem?.purchasePrice || 0;
                             const totalCost = (quantity || 0) * unitPrice;
 
-                             // This effect updates the total cost whenever quantity or the selected item changes.
-                            useEffect(() => {
-                                const newTotal = (form.getValues(`ingredients.${index}.quantity`) || 0) * (selectedItem?.purchasePrice || 0);
-                                if (form.getValues(`ingredients.${index}.totalCost`) !== newTotal) {
-                                    form.setValue(`ingredients.${index}.totalCost`, newTotal);
-                                }
-                            }, [quantity, selectedItem, index, form]);
-
-
                             return (
                                 <TableRow key={field.id} className="align-top">
                                     <TableCell className="pt-2 pb-3 text-muted-foreground">{selectedItem?.materialCode || '-'}</TableCell>
@@ -487,7 +478,9 @@ export function RecipeForm({
                                                     onChange={(e) => {
                                                         const newQuantity = parseFloat(e.target.value);
                                                         quantityField.onChange(isNaN(newQuantity) ? '' : newQuantity);
-                                                        const newTotal = (newQuantity || 0) * (selectedItem?.purchasePrice || 0);
+                                                        const currentItem = inventory.find(i => i.id === form.getValues(`ingredients.${index}.inventoryItemId`));
+                                                        const unitPrice = currentItem?.purchasePrice || 0;
+                                                        const newTotal = (newQuantity || 0) * unitPrice;
                                                         form.setValue(`ingredients.${index}.totalCost`, newTotal);
                                                     }}
                                                     value={quantityField.value || ''}
