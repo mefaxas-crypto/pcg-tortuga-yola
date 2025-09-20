@@ -450,6 +450,7 @@ export function RecipeForm({
                                                                     quantity: newQuantity,
                                                                     totalCost: newTotal
                                                                 });
+                                                                form.clearErrors(`ingredients.${index}.inventoryItemId`);
                                                               }}
                                                             >
                                                               <Check
@@ -466,7 +467,10 @@ export function RecipeForm({
                                                         </CommandGroup>
                                                         <CommandSeparator />
                                                         <CommandGroup>
-                                                            <CommandItem onSelect={() => setIngredientSheetOpen(true)}>
+                                                            <CommandItem onSelect={(e) => {
+                                                                document.body.style.pointerEvents = '';
+                                                                setIngredientSheetOpen(true)
+                                                            }}>
                                                                 <PlusCircle className="mr-2 h-4 w-4" />
                                                                 Add New Ingredient
                                                             </CommandItem>
