@@ -255,7 +255,7 @@ export function RecipeForm({
                   name: item.name,
                   materialCode: item.materialCode,
                   unit: item.unit,
-                  unitPrice: item.unitCost,
+                  unitPrice: item.unitCost || 0,
                   quantity: newQuantity,
                   totalCost: newTotal
               });
@@ -492,13 +492,14 @@ export function RecipeForm({
                                                                     key={item.id}
                                                                     onSelect={() => {
                                                                         const newQuantity = 1;
-                                                                        const newTotal = newQuantity * (item.unitCost || 0);
+                                                                        const unitCost = item.unitCost || 0;
+                                                                        const newTotal = newQuantity * unitCost;
                                                                         update(index, {
                                                                             inventoryItemId: item.id,
                                                                             name: item.name,
                                                                             materialCode: item.materialCode,
                                                                             unit: item.unit,
-                                                                            unitPrice: item.unitCost,
+                                                                            unitPrice: unitCost,
                                                                             quantity: newQuantity,
                                                                             totalCost: newTotal
                                                                         });
@@ -586,12 +587,11 @@ export function RecipeForm({
                 </CardFooter>
             </Card>
 
-            <div className="relative z-20 space-y-6">
-              <RecipeFinancialsCard 
-                  form={form}
-                  totalRecipeCost={totalRecipeCost}
-                  isSubRecipe={isSubRecipe}
-              />
+            <RecipeFinancialsCard 
+                form={form}
+                totalRecipeCost={totalRecipeCost}
+                isSubRecipe={isSubRecipe}
+            />
           
             <FormField
               control={form.control}
@@ -606,7 +606,6 @@ export function RecipeForm({
               </FormItem>
               )}
             />
-          </div>
         </fieldset>
 
         <div className="flex justify-end gap-2 pt-4">
@@ -627,3 +626,5 @@ export function RecipeForm({
     </>
   );
 }
+
+    
