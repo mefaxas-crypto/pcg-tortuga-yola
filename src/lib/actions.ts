@@ -8,7 +8,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
-import type {Supplier} from './types';
+import type {AddInventoryItemData, Supplier} from './types';
 import {revalidatePath} from 'next/cache';
 
 // We are defining a specific type for adding a supplier
@@ -47,5 +47,25 @@ export async function deleteSupplier(supplierId: string) {
   } catch (e) {
     console.error('Error deleting document: ', e);
     throw new Error('Failed to delete supplier');
+  }
+}
+
+export async function addInventoryItem(itemData: AddInventoryItemData) {
+  try {
+    let status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+    if (itemData.quantity <= 0) {
+      status = 'Out of Stock';
+    } else if (itemData.quantity < itemData.parLevel) {
+      status = 'Low Stock';
+    } else {
+      status = 'In Stock';
+    }
+
+    const docRef = await addDoc(collection(db, 'inventory'), { ...itemData, status });
+    revalidatePath('/inventory');
+    return { success: true, id: docRef.id };
+  } catch (e) {
+    console.error('Error adding document: ', e);
+    throw new Error('Failed to add inventory item');
   }
 }

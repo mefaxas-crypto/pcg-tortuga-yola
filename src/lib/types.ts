@@ -10,6 +10,8 @@ export type InventoryItem = {
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
+export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status'>;
+
 export type Supplier = {
     id: string;
     name: string;
