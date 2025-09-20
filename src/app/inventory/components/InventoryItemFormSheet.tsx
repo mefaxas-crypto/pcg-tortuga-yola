@@ -56,7 +56,7 @@ type InventoryItemFormSheetProps = {
 // Placeholder data - we can build a management UI for these later
 const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
 const purchaseUnits = ['Case', 'Box', 'Bottle', 'Bag', 'Each', 'Unit'];
-const recipeUnits = ['kg', 'g', 'L', 'mL', 'unit'];
+const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit'];
 
 export function InventoryItemFormSheet({
   open,
