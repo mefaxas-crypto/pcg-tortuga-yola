@@ -46,6 +46,7 @@ export type Recipe = {
   name: string;
   category: string;
   yield?: number; // How many portions the recipe makes
+  yieldUnit?: string;
   notes?: string;
   ingredients: RecipeIngredient[];
   totalCost: number;

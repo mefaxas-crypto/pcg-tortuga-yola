@@ -43,6 +43,7 @@ const formSchema = z.object({
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   category: z.string().min(1, 'Category is required.'),
   yield: z.coerce.number().min(0, 'Yield must be a positive number.').optional(),
+  yieldUnit: z.string().optional(),
   notes: z.string().optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, 'A recipe must have at least one ingredient.'),
 });
@@ -54,6 +55,8 @@ type RecipeFormProps = {
 
 // Placeholder data
 const recipeCategories = ['Appetizer', 'Entree', 'Dessert', 'Beverage', 'Sub-recipe', 'Other'];
+const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit', 'portion'];
+
 
 export function RecipeForm({
   mode,
@@ -70,12 +73,14 @@ export function RecipeForm({
       {
         ...recipe,
         yield: recipe.yield || 1,
+        yieldUnit: recipe.yieldUnit || 'portion',
       } : 
       {
         recipeCode: '',
         name: '',
         category: '',
         yield: 1,
+        yieldUnit: 'portion',
         notes: '',
         ingredients: [{ inventoryItemId: '', quantity: 0, name: '', unit: '' }],
       },
@@ -142,12 +147,12 @@ export function RecipeForm({
         className="flex flex-col h-full space-y-6"
       >
         <fieldset disabled={loading} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <FormField
               control={form.control}
               name="recipeCode"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="md:col-span-1">
                   <FormLabel>Recipe Code</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., REC001" {...field} />
@@ -160,7 +165,7 @@ export function RecipeForm({
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
+                <FormItem className="md:col-span-3">
                   <FormLabel>Recipe Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Classic Bolognese" {...field} />
@@ -169,6 +174,43 @@ export function RecipeForm({
                 </FormItem>
               )}
             />
+             <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="yield"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yield</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 4" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="yieldUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {recipeUnits.map(unit => (
+                            <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
@@ -193,35 +235,8 @@ export function RecipeForm({
                   </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="yield"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Yield (Portions)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 4" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
           
-           <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
           <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
             <div className="space-y-4">
@@ -306,7 +321,20 @@ export function RecipeForm({
               </Button>
             </div>
           </div>
-
+           
+           <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </fieldset>
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
