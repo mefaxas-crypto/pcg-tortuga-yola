@@ -97,8 +97,6 @@ export function RecipeForm({
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
-  const commandInputRef = useRef<HTMLInputElement>(null);
-
 
   const { toast } = useToast();
   
@@ -242,30 +240,6 @@ export function RecipeForm({
     }
   }
 
-  const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, index: number) => {
-      if (e.key === 'Enter') {
-          e.preventDefault();
-          const visibleItems = inventory.filter(item => item.name.toLowerCase().includes((form.getValues(`ingredients.${index}.name`) || '').toLowerCase()));
-          if (visibleItems.length > 0) {
-              const item = visibleItems[0];
-              const newQuantity = 1;
-              const newTotal = newQuantity * (item.unitCost || 0);
-              update(index, {
-                  inventoryItemId: item.id,
-                  name: item.name,
-                  materialCode: item.materialCode,
-                  unit: item.unit,
-                  unitPrice: item.unitCost || 0,
-                  quantity: newQuantity,
-                  totalCost: newTotal
-              });
-              form.clearErrors(`ingredients.${index}.inventoryItemId`);
-              setOpenPopoverIndex(null);
-          }
-      }
-  };
-
-
   return (
     <>
     <Form {...form}>
@@ -397,7 +371,7 @@ export function RecipeForm({
                       <FormControl>
                       <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
+                      </Trigger>
                       </FormControl>
                       <SelectContent>
                       {recipeCategories.map(category => (
@@ -433,6 +407,7 @@ export function RecipeForm({
                             const selectedItem = inventory.find(i => i.id === selectedItemId);
                             const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
                             const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
+                            const searchValue = form.watch(`ingredients.${index}.name`);
 
                             return (
                                 <TableRow key={field.id} className="align-top">
@@ -443,12 +418,7 @@ export function RecipeForm({
                                             name={`ingredients.${index}.name`}
                                             render={({ field: nameField }) => (
                                             <FormItem>
-                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => {
-                                                    setOpenPopoverIndex(open ? index : null);
-                                                    if(open) {
-                                                        setTimeout(() => commandInputRef.current?.focus(), 100);
-                                                    }
-                                                }}>
+                                                <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
                                                              <Input
@@ -459,11 +429,10 @@ export function RecipeForm({
                                                         </FormControl>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                        <Command onKeyDown={(e) => handleCommandKeyDown(e, index)} shouldFilter={false}>
+                                                        <Command shouldFilter={false}>
                                                         <CommandInput 
-                                                            ref={commandInputRef}
-                                                            value={nameField.value}
-                                                            onValueChange={nameField.onChange}
+                                                            value={searchValue}
+                                                            onValueChange={(search) => form.setValue(`ingredients.${index}.name`, search)}
                                                             placeholder="Search ingredients..." 
                                                         />
                                                         <CommandList>
@@ -473,7 +442,8 @@ export function RecipeForm({
                                                                     <Button
                                                                         variant="link"
                                                                         className='mt-2'
-                                                                        onClick={() => {
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
                                                                             setOpenPopoverIndex(null);
                                                                             setIngredientSheetOpen(true);
                                                                         }}
@@ -485,7 +455,7 @@ export function RecipeForm({
                                                             </CommandEmpty>
                                                             <CommandGroup>
                                                             {inventory
-                                                                .filter(item => item.name.toLowerCase().includes((nameField.value || '').toLowerCase()))
+                                                                .filter(item => item.name.toLowerCase().includes((searchValue || '').toLowerCase()))
                                                                 .map((item) => (
                                                                 <CommandItem
                                                                     value={item.name}
