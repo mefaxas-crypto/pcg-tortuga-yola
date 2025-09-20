@@ -14,8 +14,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchRecipe() {
-      const id = params.id;
+    async function fetchRecipe(id: string) {
       if (!id) return;
       setLoading(true);
       try {
@@ -34,7 +33,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
       }
     }
 
-    fetchRecipe();
+    fetchRecipe(params.id);
   }, [params.id]);
 
 
