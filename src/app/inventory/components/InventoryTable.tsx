@@ -86,8 +86,8 @@ export function InventoryTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Material</TableHead>
                 <TableHead>Item</TableHead>
-                <TableHead>Material Code</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Quantity</TableHead>
@@ -100,8 +100,8 @@ export function InventoryTable() {
             <TableBody>
               {loading && Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -111,8 +111,8 @@ export function InventoryTable() {
               ))}
               {!loading && inventoryItems?.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.materialCode}</TableCell>
+                  <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
