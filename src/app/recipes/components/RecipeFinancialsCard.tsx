@@ -41,14 +41,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
       : 0;
 
   return (
-    <div
-      className={cn(
-        'transition-opacity duration-300',
-        isSubRecipe
-          ? 'opacity-30 pointer-events-none'
-          : 'opacity-100',
-      )}
-    >
+    
       <Card>
         <CardHeader>
           <CardTitle>Financials</CardTitle>
@@ -68,26 +61,36 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
                 {formatCurrency(costPerPortion)}
               </span>
             </div>
-            <div className="flex justify-between items-center border-b pb-2">
-              <span className="text-muted-foreground">
-                Contingency ({contingency}%)
-              </span>
-              <span className="font-medium text-green-600">
-                {formatCurrency(costPerPortion * (contingency / 100))}
-              </span>
-            </div>
-            <div className="flex justify-between items-center border-b-2 border-foreground/50 font-bold pb-2">
-              <span>Total Cost</span>
-              <span>{formatCurrency(totalCostWithContingency)}</span>
-            </div>
-            <div className="flex justify-between items-center text-lg font-bold text-primary pt-2">
-              <span>Suggested Price</span>
-              <span>{formatCurrency(suggestedPrice)}</span>
+            
+            <div className={cn('transition-opacity', isSubRecipe ? 'opacity-30' : 'opacity-100')}>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-muted-foreground">
+                  Contingency ({contingency}%)
+                </span>
+                <span className="font-medium text-primary">
+                  {formatCurrency(costPerPortion * (contingency / 100))}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b-2 border-foreground/50 font-bold pb-2 mt-4">
+                <span>Total Cost</span>
+                <span>{formatCurrency(totalCostWithContingency)}</span>
+              </div>
+              <div className="flex justify-between items-center text-lg font-bold text-green-600 pt-2">
+                <span>Suggested Price</span>
+                <span>{formatCurrency(suggestedPrice)}</span>
+              </div>
             </div>
           </div>
 
           {/* Column 2: Interactive Controls */}
-          <div className="space-y-8">
+          <div
+            className={cn(
+              'space-y-8 transition-opacity duration-300',
+              isSubRecipe
+                ? 'opacity-30 pointer-events-none'
+                : 'opacity-100',
+            )}
+          >
             <FormField
               control={form.control}
               name="contingencyPercentage"
@@ -102,6 +105,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
                           className="pr-6 text-right"
                           value={field.value}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          disabled={isSubRecipe}
                         />
                       </FormControl>
                        <Percent className="absolute right-1.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -113,6 +117,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
                       onValueChange={(values) => field.onChange(values[0])}
                       max={50}
                       step={1}
+                      disabled={isSubRecipe}
                     />
                   </FormControl>
                   <FormMessage />
@@ -133,6 +138,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
                           className="pr-6 text-right"
                           value={field.value}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          disabled={isSubRecipe}
                         />
                       </FormControl>
                        <Percent className="absolute right-1.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -144,6 +150,7 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
                       onValueChange={(values) => field.onChange(values[0])}
                       max={100}
                       step={1}
+                      disabled={isSubRecipe}
                     />
                   </FormControl>
                   <FormMessage />
@@ -153,6 +160,5 @@ export function RecipeFinancialsCard({ form, totalRecipeCost, isSubRecipe }: Rec
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 }

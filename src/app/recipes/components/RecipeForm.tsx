@@ -375,10 +375,9 @@ export function RecipeForm({
                     <TableBody>
                          {fields.map((field, index) => {
                             const selectedItemId = form.watch(`ingredients.${index}.inventoryItemId`);
-                            const quantity = form.watch(`ingredients.${index}.quantity`);
                             const selectedItem = inventory.find(i => i.id === selectedItemId);
                             const unitPrice = selectedItem?.purchasePrice || 0;
-                            const totalCost = (quantity || 0) * unitPrice;
+                            const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
 
                             return (
                                 <TableRow key={field.id} className="align-top">
@@ -526,10 +525,6 @@ export function RecipeForm({
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Ingredient
                         </Button>
-                        <div className="flex-grow text-right">
-                            <span className="text-sm text-muted-foreground">Total Ingredient Cost: </span>
-                            <span className="text-lg font-bold">{formatCurrency(totalRecipeCost)}</span>
-                        </div>
                     </div>
                 </CardFooter>
             </Card>
