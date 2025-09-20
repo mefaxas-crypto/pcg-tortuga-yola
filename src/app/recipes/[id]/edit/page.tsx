@@ -13,7 +13,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Use the 'use' hook to correctly unwrap the params promise
+  // The 'use' hook must be called at the top level.
   const resolvedParams = use(params);
   const { id } = resolvedParams;
 
