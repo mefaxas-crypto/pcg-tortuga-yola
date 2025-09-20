@@ -1,6 +1,5 @@
 'use client';
 
-import { suppliers } from '@/lib/data';
 import {
   Table,
   TableBody,
@@ -22,8 +21,30 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
+import type { Supplier } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function SuppliersTable() {
+  const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'suppliers'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const suppliersData: Supplier[] = [];
+      querySnapshot.forEach((doc) => {
+        suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
+      });
+      setSuppliers(suppliersData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -34,17 +55,29 @@ export function SuppliersTable() {
                 <TableHead>Name</TableHead>
                 <TableHead>Contact Person</TableHead>
                 <TableHead>Phone Number</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {suppliers.map((supplier) => (
+              {loading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-36" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                  </TableRow>
+              ))}
+              {!loading && suppliers?.map((supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.contactPerson}</TableCell>
                   <TableCell>{supplier.phoneNumber}</TableCell>
+                  <TableCell>{supplier.email}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -74,6 +107,11 @@ export function SuppliersTable() {
             </TableBody>
           </Table>
         </div>
+        {!loading && suppliers?.length === 0 && (
+          <div className="text-center text-muted-foreground py-12">
+            No suppliers found. Add your first one!
+          </div>
+        )}
       </CardContent>
     </Card>
   );

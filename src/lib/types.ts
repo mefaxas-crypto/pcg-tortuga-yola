@@ -13,6 +13,7 @@ export type InventoryItem = {
 export type Supplier = {
     id: string;
     name: string;
-    contactPerson: string;
-    phoneNumber: string;
+    contactPerson?: string;
+    phoneNumber?: string;
+    email?: string;
 };
