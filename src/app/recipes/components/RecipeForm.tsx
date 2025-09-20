@@ -190,20 +190,7 @@ export function RecipeForm({
                 </FormItem>
               )}
             />
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes / Method</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+          
           <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
             <div className="space-y-4">
@@ -288,6 +275,20 @@ export function RecipeForm({
               </Button>
             </div>
           </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
         </fieldset>
         <div className="flex justify-end gap-2 pt-4">
