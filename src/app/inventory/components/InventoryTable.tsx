@@ -91,6 +91,7 @@ export function InventoryTable() {
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Presentation</TableHead>
+                <TableHead>Purchase Unit</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -104,6 +105,7 @@ export function InventoryTable() {
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
@@ -125,6 +127,7 @@ export function InventoryTable() {
                   <TableCell>
                     {item.quantity} {item.unit}
                   </TableCell>
+                   <TableCell>{item.purchaseUnit}</TableCell>
                   <TableCell className="text-right">
                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.purchasePrice || 0)}
                   </TableCell>
