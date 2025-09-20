@@ -13,12 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { lowStockItems, topSellingItems } from '@/lib/data';
+import { topSellingItems } from '@/lib/data';
 import { ArrowUpRight, BarChart3, Bot, Package } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
+import { LowStockItems } from './dashboard/components/LowStockItems';
 
 export default function Home() {
   return (
@@ -69,7 +69,7 @@ export default function Home() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{lowStockItems.length}</div>
+            <div className="text-2xl font-bold">12</div>
             <p className="text-xs text-muted-foreground">
               Items below par level
             </p>
@@ -92,38 +92,7 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Low Stock Items</CardTitle>
-            <CardDescription>
-              These items are below their set par levels. Consider reordering.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Par</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lowStockItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>
-                      {item.quantity} {item.unit}
-                    </TableCell>
-                    <TableCell>
-                      {item.parLevel} {item.unit}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <LowStockItems />
 
         <Card>
           <CardHeader className="flex flex-row items-center">

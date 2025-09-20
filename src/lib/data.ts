@@ -2,9 +2,10 @@ import type { InventoryItem, Supplier } from './types';
 
 export const inventoryItems: InventoryItem[] = [];
 
-export const lowStockItems = inventoryItems.filter(
-  (item) => item.status === 'Low Stock'
-);
+// This is now fetched directly in the LowStockItems component
+// export const lowStockItems = inventoryItems.filter(
+//   (item) => item.status === 'Low Stock'
+// );
 
 export const topSellingItems = [
   { name: 'Filet Mignon (8oz)', category: 'Entrees', unitsSold: 42 },
