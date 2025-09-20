@@ -364,21 +364,15 @@ export function RecipeForm({
                                                 <Popover>
                                                   <PopoverTrigger asChild>
                                                     <FormControl>
-                                                      <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn(
-                                                          "w-full justify-between",
-                                                          !field.value && "text-muted-foreground"
-                                                        )}
-                                                      >
-                                                        {field.value
-                                                          ? inventory.find(
-                                                              (item) => item.id === field.value
-                                                            )?.name
-                                                          : "Select ingredient"}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                      </Button>
+                                                      <div className="relative">
+                                                        <Input
+                                                          placeholder="Select ingredient"
+                                                          value={field.value ? inventory.find(i => i.id === field.value)?.name : ''}
+                                                          readOnly
+                                                          className="pr-8"
+                                                        />
+                                                        <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
+                                                      </div>
                                                     </FormControl>
                                                   </PopoverTrigger>
                                                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
