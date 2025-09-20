@@ -12,13 +12,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
+  const { id } = params;
 
   useEffect(() => {
     async function fetchRecipe() {
-      if (!params.id) return;
+      if (!id) return;
       setLoading(true);
       try {
-        const docRef = doc(db, 'recipes', params.id);
+        const docRef = doc(db, 'recipes', id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -34,7 +35,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
     }
 
     fetchRecipe();
-  }, [params.id]);
+  }, [id]);
 
 
   return (
