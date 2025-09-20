@@ -124,7 +124,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.category}</TableCell>
                    <TableCell className="max-w-[150px] truncate">
-                    {item.allergens?.join(', ')}
+                    {Array.isArray(item.allergens) ? item.allergens.join(', ') : item.allergens}
                   </TableCell>
                   <TableCell>
                     <Badge
