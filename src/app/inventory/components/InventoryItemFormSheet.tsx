@@ -60,10 +60,33 @@ type InventoryItemFormSheetProps = {
   onClose: () => void;
 };
 
-// Placeholder data - we can build a management UI for these later
+// --- Standardized Unit Definitions ---
+
+// Categories help group units logically in dropdowns
 const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
-const purchaseUnits = ['Case', 'Box', 'Bottle', 'Bag', 'Each', 'Unit'];
-const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit'];
+
+// Units for purchasing from suppliers
+const purchaseUnits = [
+    // Common Cases and Containers
+    'Case', 'Box', 'Bottle', 'Bag', 'Jar', 'Can', 'Carton',
+    // By Weight
+    'kg', 'lb',
+    // By Volume
+    'L', 'gal',
+    // Individual Items
+    'Each', 'Unit', 'Pack'
+];
+
+// Units for use in recipes and internal tracking
+const recipeUnits = [
+    // Weight
+    'g', 'kg', 'oz', 'lb',
+    // Volume
+    'mL', 'L', 'fl. oz', 'cup', 'tbsp', 'tsp',
+    // Individual Items
+    'unit', 'each', 'slice', 'portion'
+];
+
 
 export function InventoryItemFormSheet({
   open,
@@ -291,7 +314,7 @@ export function InventoryItemFormSheet({
                       <FormItem>
                       <FormLabel>Quantity</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} />
+                          <Input type="number" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -351,7 +374,7 @@ export function InventoryItemFormSheet({
                     <FormItem>
                       <FormLabel>Purchase Price</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} />
+                        <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -366,7 +389,7 @@ export function InventoryItemFormSheet({
                     <FormItem>
                       <FormLabel>Conversion Factor</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.001" placeholder="e.g., 5000" {...field} />
+                        <Input type="number" step="0.001" placeholder="e.g., 5000" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormDescription>How many recipe units are in one purchase unit?</FormDescription>
                       <FormMessage />
@@ -381,7 +404,7 @@ export function InventoryItemFormSheet({
                     <FormItem>
                       <FormLabel>Unit Cost (Auto-calculated)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} readOnly className="bg-muted/50" />
+                        <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} readOnly className="bg-muted/50" value={field.value || ''} />
                       </FormControl>
                       <FormDescription>The cost for one recipe unit (e.g., cost per gram).</FormDescription>
                       <FormMessage />
@@ -395,7 +418,7 @@ export function InventoryItemFormSheet({
                   <FormItem>
                     <FormLabel>Par Level</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
