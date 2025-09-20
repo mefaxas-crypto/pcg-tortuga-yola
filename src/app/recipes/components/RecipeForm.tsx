@@ -408,7 +408,7 @@ export function RecipeForm({
                                         <FormField
                                             control={form.control}
                                             name={`ingredients.${index}.inventoryItemId`}
-                                            render={({ field }) => (
+                                            render={({ field: formField }) => (
                                             <FormItem>
                                                 <Popover>
                                                   <PopoverTrigger asChild>
@@ -427,7 +427,7 @@ export function RecipeForm({
                                                       </div>
                                                     </FormControl>
                                                   </PopoverTrigger>
-                                                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                     <Command>
                                                       <CommandInput placeholder="Search ingredients..." />
                                                       <CommandList>
@@ -441,7 +441,7 @@ export function RecipeForm({
                                                                 const newQuantity = 1;
                                                                 const newTotal = newQuantity * (item.purchasePrice || 0);
                                                                 update(index, {
-                                                                    ...field,
+                                                                    ...formField,
                                                                     inventoryItemId: item.id,
                                                                     name: item.name,
                                                                     materialCode: item.materialCode,
@@ -456,7 +456,7 @@ export function RecipeForm({
                                                               <Check
                                                                 className={cn(
                                                                   "mr-2 h-4 w-4",
-                                                                  item.id === field.value
+                                                                  item.id === formField.value
                                                                     ? "opacity-100"
                                                                     : "opacity-0"
                                                                 )}
@@ -467,9 +467,10 @@ export function RecipeForm({
                                                         </CommandGroup>
                                                         <CommandSeparator />
                                                         <CommandGroup>
-                                                            <CommandItem onSelect={(e) => {
-                                                                document.body.style.pointerEvents = '';
-                                                                setIngredientSheetOpen(true)
+                                                            <CommandItem onSelect={() => {
+                                                                setIngredientSheetOpen(true);
+                                                                // Close popover
+                                                                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
                                                             }}>
                                                                 <PlusCircle className="mr-2 h-4 w-4" />
                                                                 Add New Ingredient
@@ -555,18 +556,18 @@ export function RecipeForm({
                 </CardFooter>
             </Card>
         
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-              <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                  <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-              </FormItem>
-              )}
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notes / Method</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
           />
         </fieldset>
 
