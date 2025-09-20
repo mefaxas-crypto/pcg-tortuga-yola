@@ -168,33 +168,57 @@ export function RecipeForm({
         className="flex flex-col h-full space-y-6"
       >
         <fieldset disabled={loading} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <FormField
+                control={form.control}
+                name="recipeCode"
+                render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                    <FormLabel>Recipe Code</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., REC001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem className="sm:col-span-3">
+                    <FormLabel>Recipe Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., Classic Bolognese" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <FormField
               control={form.control}
-              name="recipeCode"
+              name="isSubRecipe"
               render={({ field }) => (
-                <FormItem className="md:col-span-1">
-                  <FormLabel>Recipe Code</FormLabel>
+                <FormItem className="flex flex-row items-center justify-end rounded-lg border p-3 shadow-sm gap-3 h-full">
+                  <div className="space-y-0.5 text-right">
+                    <FormLabel>Sub-recipe</FormLabel>
+                    <FormDescription className="text-xs">
+                      Components used in other recipes.
+                    </FormDescription>
+                  </div>
                   <FormControl>
-                    <Input placeholder="e.g., REC001" {...field} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="md:col-span-3">
-                  <FormLabel>Recipe Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Classic Bolognese" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </div>
+           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start">
              <div className="md:col-span-2 grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -233,26 +257,6 @@ export function RecipeForm({
                 />
               </div>
           </div>
-            <FormField
-              control={form.control}
-              name="isSubRecipe"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-start rounded-lg border p-3 shadow-sm gap-4">
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-0.5">
-                    <FormLabel>Mark as sub-recipe</FormLabel>
-                    <FormDescription>
-                      Sub-recipes are components used in other recipes, not sold directly on a menu.
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
           <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity", isSubRecipe ? "opacity-50 pointer-events-none" : "opacity-100")}>
             {/* This is a placeholder. It will be functional in a future step. */}
             <FormItem>
@@ -293,6 +297,20 @@ export function RecipeForm({
             />
           </div>
           
+          <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes / Method</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
            <div>
             <h3 className="text-lg font-medium mb-2">Ingredients</h3>
             <div className="space-y-4">
@@ -377,20 +395,6 @@ export function RecipeForm({
               </Button>
             </div>
           </div>
-
-          <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes / Method</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add preparation instructions or notes..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
            
         </fieldset>
         <div className="flex justify-end gap-2 pt-4">
