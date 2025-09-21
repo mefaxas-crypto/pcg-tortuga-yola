@@ -39,7 +39,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { volumeUnits, weightUnits, eachUnits } from '@/lib/conversions';
 import { SupplierFormSheet } from '@/app/suppliers/components/SupplierFormSheet';
 import { PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -49,7 +48,7 @@ const formSchema = z.object({
   name: z.string().min(2, 'Ingredient name must be at least 2 characters.'),
   category: z.string().min(1, 'Category is required.'),
   quantity: z.coerce.number().min(0, 'Quantity cannot be negative.'),
-  unit: z.string().min(1, 'Recipe unit is required.'),
+  unit: z.string().optional(),
   purchaseUnit: z.string().min(1, 'Presentation/Purchase Unit is required.'),
   conversionFactor: z.coerce.number().min(0.0001, 'Conversion factor must be positive.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
@@ -77,12 +76,6 @@ const purchaseUnits = [
     'kg', 'lb', 'l', 'gal', 'Each', 'Unit', 'Pack',
     'Butchery', 'Production',
 ];
-
-const recipeUnits = [
-    ...Object.keys(weightUnits),
-    ...Object.keys(volumeUnits),
-    ...Object.keys(eachUnits)
-].sort();
 
 
 export function InventoryItemFormSheet({
@@ -121,11 +114,11 @@ export function InventoryItemFormSheet({
   const conversionFactor = form.watch('conversionFactor');
 
   useEffect(() => {
-    if (!isInternalCreation && purchasePrice !== undefined && conversionFactor > 0) {
+    if (purchasePrice !== undefined && conversionFactor > 0) {
       const newUnitCost = purchasePrice / conversionFactor;
       form.setValue('unitCost', newUnitCost, { shouldValidate: true });
     }
-  }, [purchasePrice, conversionFactor, form, isInternalCreation]);
+  }, [purchasePrice, conversionFactor, form]);
 
 
   useEffect(() => {
@@ -206,15 +199,21 @@ export function InventoryItemFormSheet({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
+        const dataToSave = {
+            ...values,
+            // Set a default unit if not provided, for background calculations
+            unit: values.unit || (values.category === 'Beverages' ? 'ml' : 'g')
+        }
+
         if (mode === 'edit' && item) {
-            await editInventoryItem(item.id, values);
+            await editInventoryItem(item.id, dataToSave);
              toast({
                 title: 'Ingredient Updated',
                 description: `"${values.name}" has been updated.`,
             });
             onClose();
         } else {
-            const newItem = await addInventoryItem(values);
+            const newItem = await addInventoryItem(dataToSave);
             toast({
                 title: 'Ingredient Added',
                 description: `"${values.name}" has been added to your inventory.`,
@@ -243,7 +242,7 @@ export function InventoryItemFormSheet({
   }));
 
   const formTitle = isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient');
-  const formDescription = isInternalCreation ? 'Enter details for this new cut. Cost will be calculated from the butchering log.' : 'Enter the details of the new ingredient.';
+  const formDescription = isInternalCreation ? 'Enter details for this new cut. The supplier will be set to "In-house" automatically.' : 'Enter the details of the new ingredient.';
 
   return (
     <>
@@ -316,65 +315,43 @@ export function InventoryItemFormSheet({
                 <Separator />
                 <h4 className="text-lg font-medium">Purchase Info</h4>
 
-                {!isInternalCreation ? (
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                        <FormField
-                            control={form.control}
-                            name="purchaseUnit"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Presentation</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="e.g., Case, Box, 5L Can" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {purchaseUnits.map(unit => (
-                                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="unit"
-                            render={({ field }) => (
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <FormField
+                        control={form.control}
+                        name="purchaseUnit"
+                        render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Recipe Unit</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                            <FormLabel>Presentation</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
                                 <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="e.g., g, ml, each" />
-                                    </SelectTrigger>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="e.g., Case, Box, 5L Can" />
+                                </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {recipeUnits.map(unit => (
+                                {purchaseUnits.map(unit => (
                                     <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                                    ))}
+                                ))}
                                 </SelectContent>
-                                </Select>
-                                <FormMessage />
+                            </Select>
+                            <FormMessage />
                             </FormItem>
-                            )}
+                        )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="purchasePrice"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Presentation Cost</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                    <FormField
+                        control={form.control}
+                        name="purchasePrice"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Presentation Cost</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} disabled={isInternalCreation} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {!isInternalCreation && (
                         <FormField
                             control={form.control}
                             name="supplierId"
@@ -401,58 +378,40 @@ export function InventoryItemFormSheet({
                             </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="parLevel"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Par Stock</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} value={field.value || ''} />
-                                </FormControl>
-                                <FormDescription className='text-xs'>Re-order point in Recipe Units</FormDescription>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        {/* Hidden but required field for conversion */}
-                        <FormField
-                            control={form.control}
-                            name="conversionFactor"
-                            render={({ field }) => (
-                                <FormItem className="hidden">
-                                <FormLabel>Conversion Factor</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
+                    )}
+                    <FormField
+                        control={form.control}
+                        name="parLevel"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Par Stock</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormDescription className='text-xs'>Re-order point in base units (g, ml, or each)</FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
                         />
-                    </div>
-                ): (
-                    <p className="text-sm text-muted-foreground">Purchase information for yielded items is determined by the butchering log. You can set the Par Stock and Allergens now.</p>
-                )}
+                    {/* Hidden but required field for conversion */}
+                    <FormField
+                        control={form.control}
+                        name="conversionFactor"
+                        render={({ field }) => (
+                            <FormItem className="hidden">
+                            <FormLabel>Conversion Factor</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
                  
                  <Separator />
 
                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    {isInternalCreation && (
-                         <FormField
-                            control={form.control}
-                            name="parLevel"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Par Stock</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} value={field.value || ''} />
-                                </FormControl>
-                                <FormDescription className='text-xs'>Re-order point in Recipe Units</FormDescription>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                    )}
                     <FormField
                         control={form.control}
                         name="allergens"
@@ -497,5 +456,3 @@ export function InventoryItemFormSheet({
     </>
   );
 }
-
-    
