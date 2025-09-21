@@ -800,8 +800,6 @@ export async function logButchering(data: ButcheringData) {
           throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity} ${primaryItem.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit} ${primaryItem.purchaseUnit}`);
       }
 
-      const costOfButcheredPortion = primaryItem.purchasePrice * (quantityUsedInPurchaseUnit / primaryItem.purchaseQuantity);
-
       // --- 2. WRITE PHASE ---
       const newPrimaryQuantity = primaryItem.quantity - quantityUsedInPurchaseUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
@@ -810,6 +808,8 @@ export async function logButchering(data: ButcheringData) {
         quantity: newPrimaryQuantity,
         status: newPrimaryStatus,
       });
+
+      const costOfButcheredPortion = (primaryItem.purchasePrice / primaryItem.purchaseQuantity) * quantityUsedInPurchaseUnit;
       
       const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
 
@@ -824,17 +824,29 @@ export async function logButchering(data: ButcheringData) {
         
         const costOfThisYield = costOfButcheredPortion * (yieldedItemData.costDistributionPercentage / 100);
         
-        const quantityToAddInPurchaseUnit = yieldedItemData.weight; // The form's 'weight' is the quantity in the item's purchase unit
+        const quantityToAddInPurchaseUnit = yieldedItemData.weight;
         const newQuantity = yieldedItem.quantity + quantityToAddInPurchaseUnit;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
         
-        // Calculate new purchase price based on the distributed cost for the quantity added
-        const newPurchasePrice = quantityToAddInPurchaseUnit > 0 ? costOfThisYield / quantityToAddInPurchaseUnit : 0;
+        const newPurchasePriceForYield = quantityToAddInPurchaseUnit > 0 ? costOfThisYield / quantityToAddInPurchaseUnit : 0;
         
+        let newUnitCost = 0;
+        if (yieldedItem.purchaseUnit === 'un.') {
+            if (yieldedItem.recipeUnit && yieldedItem.recipeUnitConversion > 0) {
+                const totalRecipeUnitsInPurchase = yieldedItem.purchaseQuantity * yieldedItem.recipeUnitConversion;
+                newUnitCost = totalRecipeUnitsInPurchase > 0 ? newPurchasePriceForYield / totalRecipeUnitsInPurchase : 0;
+            }
+        } else {
+            const recipeUnitConversion = convert(1, yieldedItem.purchaseUnit as Unit, yieldedItem.recipeUnit as Unit);
+            const totalBaseUnits = yieldedItem.purchaseQuantity * recipeUnitConversion;
+            newUnitCost = totalBaseUnits > 0 ? newPurchasePriceForYield / totalBaseUnits : 0;
+        }
+
         transaction.update(yieldedItemSnap.ref, {
             quantity: newQuantity,
             status: newStatus,
-            purchasePrice: isFinite(newPurchasePrice) ? newPurchasePrice : yieldedItem.purchasePrice, // Keep old price if new is not valid
+            purchasePrice: isFinite(newPurchasePriceForYield) ? newPurchasePriceForYield : yieldedItem.purchasePrice,
+            unitCost: isFinite(newUnitCost) ? newUnitCost : yieldedItem.unitCost,
         });
 
         yieldedItemsForLog.push({
