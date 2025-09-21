@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -497,7 +498,8 @@ export async function logSale(saleData: AddSaleData) {
     return { success: true };
   } catch (error) {
     console.error('Error logging sale and depleting inventory: ', error);
-    throw new Error('Failed to log sale.');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to log sale: ${errorMessage}`);
   }
 }
 
@@ -508,8 +510,20 @@ export async function logProduction(data: LogProductionData) {
       // --- 1. READ PHASE ---
       const productionLogRef = doc(collection(db, 'productionLogs'));
       const subRecipeRefs = data.items.map(item => doc(db, 'recipes', item.recipeId));
-      const subRecipeSnaps = await Promise.all(subRecipeRefs.map(ref => transaction.get(ref)));
+      
+      const producedItemQueries = data.items.map(item => {
+        const subRecipeRef = subRecipeRefs.find(ref => ref.id === item.recipeId);
+        if (!subRecipeRef) return null;
+        // We need to fetch the recipe to get its code to find the inventory item
+        return getDoc(subRecipeRef).then(snap => {
+            if (!snap.exists()) return null;
+            const recipeCode = snap.data()?.recipeCode;
+            return query(collection(db, 'inventory'), where('materialCode', '==', recipeCode));
+        });
+      });
 
+      const subRecipeSnaps = await Promise.all(subRecipeRefs.map(ref => transaction.get(ref)));
+      
       const allIngredientRefs: DocumentReference[] = [];
       const ingredientRefMap = new Map<string, Recipe['ingredients']>();
 
@@ -527,13 +541,12 @@ export async function logProduction(data: LogProductionData) {
         }
       }
       
-      const producedItemQueries = data.items.map(item =>
-        query(collection(db, 'inventory'), where('materialCode', '==', subRecipeSnaps.find(s => s.id === item.recipeId)?.data()?.recipeCode))
+      const resolvedProducedItemQueries = await Promise.all(producedItemQueries);
+      const producedItemQuerySnaps = await Promise.all(
+          resolvedProducedItemQueries.map(q => q ? getDocs(q) : Promise.resolve(null))
       );
-      
-      const producedItemQuerySnaps = await Promise.all(producedItemQueries.map(q => getDocs(q)));
 
-      const producedItemDocRefs = producedItemQuerySnaps.map(snap => (!snap.empty ? snap.docs[0].ref : null));
+      const producedItemDocRefs = producedItemQuerySnaps.map(snap => (snap && !snap.empty ? snap.docs[0].ref : null));
 
       const ingredientSnaps = await Promise.all(allIngredientRefs.map(ref => transaction.get(ref)));
       const producedItemSnaps = await Promise.all(producedItemDocRefs.map(ref => ref ? transaction.get(ref) : Promise.resolve(null)));
@@ -561,8 +574,10 @@ export async function logProduction(data: LogProductionData) {
 
           let quantityToDeplete;
           try {
+            // Deplete by the number of batches produced
+            const totalIngredientNeeded = ingredient.quantity * item.quantityProduced;
             quantityToDeplete = convert(
-                ingredient.quantity * item.quantityProduced,
+                totalIngredientNeeded,
                 ingredient.unit as Unit,
                 invItem.unit as Unit
             );
@@ -578,32 +593,34 @@ export async function logProduction(data: LogProductionData) {
 
         // --- Increase stock of produced sub-recipe ---
         const producedItemInvSnap = producedItemSnaps[i];
+        const totalYieldQuantity = item.quantityProduced * (subRecipe.yield || 1);
+
         if (!producedItemInvSnap || !producedItemInvSnap.exists()) {
           console.warn(`Sub-recipe ${subRecipe.name} not found in inventory. Creating new entry.`);
           const newInvItemRef = doc(collection(db, 'inventory'));
-          const newQuantity = item.quantityProduced;
+          
           transaction.set(newInvItemRef, {
             materialCode: subRecipe.recipeCode,
             name: subRecipe.name,
             category: subRecipe.category,
-            quantity: newQuantity,
-            unit: 'un.',
-            purchaseUnit: 'un.',
-            purchaseQuantity: 1,
+            quantity: totalYieldQuantity, // Use total yield
+            unit: subRecipe.yieldUnit || 'ml', // Use the recipe's yield unit
+            purchaseUnit: subRecipe.yieldUnit || 'ml',
+            purchaseQuantity: subRecipe.yield || 1,
             parLevel: 0,
             supplierId: '',
             supplier: 'In-house',
-            purchasePrice: subRecipe.totalCost,
-            unitCost: subRecipe.totalCost / (subRecipe.yield || 1),
+            purchasePrice: subRecipe.totalCost, // Cost of one batch
+            unitCost: subRecipe.totalCost / (subRecipe.yield || 1), // Cost per yield unit (e.g., per ml)
             allergens: [],
-            status: getStatus(newQuantity, 0),
-            recipeUnit: subRecipe.yieldUnit || 'un.',
-            recipeUnitConversion: subRecipe.yield || 1,
+            status: getStatus(totalYieldQuantity, 0),
+            recipeUnit: subRecipe.yieldUnit || 'ml',
+            recipeUnitConversion: 1, // It's already in its base unit
           });
         } else {
           const producedItem = producedItemInvSnap.data() as InventoryItem;
-          const quantityToAdd = item.quantityProduced;
-          const newQuantity = producedItem.quantity + quantityToAdd;
+          
+          const newQuantity = producedItem.quantity + totalYieldQuantity;
           const newStatus = getStatus(newQuantity, producedItem.parLevel);
           transaction.update(producedItemInvSnap.ref, { quantity: newQuantity, status: newStatus });
         }
@@ -616,7 +633,7 @@ export async function logProduction(data: LogProductionData) {
         producedItems: data.items.map(item => ({
           recipeId: item.recipeId,
           recipeName: item.name,
-          quantityProduced: item.quantityProduced,
+          quantityProduced: item.quantityProduced * (subRecipeSnaps.find(s=>s.id === item.recipeId)?.data()?.yield || 1),
           yieldUnit: item.yieldUnit,
         })),
       });
@@ -644,6 +661,8 @@ export async function logButchering(data: ButcheringData) {
         query(collection(db, 'inventory'), where('materialCode', '==', item.materialCode))
       );
       
+      // Firestore transactions don't support getDocs directly inside.
+      // So we have to read the query results outside and then get the docs inside.
       const yieldedQuerySnaps = await Promise.all(yieldedItemQueries.map(q => getDocs(q)));
 
       const yieldedItemRefs = yieldedQuerySnaps.map(snap => !snap.empty ? snap.docs[0].ref : null);
@@ -653,13 +672,13 @@ export async function logButchering(data: ButcheringData) {
 
       const allSnaps = await Promise.all(validRefsToRead.map(ref => transaction.get(ref)));
 
-      const primaryItemSnap = allSnaps[0];
-      if (!primaryItemSnap.exists()) {
+      const primaryItemSnap = allSnaps.find(snap => snap.id === primaryItemRef.id);
+      if (!primaryItemSnap || !primaryItemSnap.exists()) {
         throw new Error('Primary butchering item not found in inventory.');
       }
       const primaryItem = primaryItemSnap.data() as InventoryItem;
 
-      const yieldedItemSnaps = allSnaps.slice(1);
+      const yieldedItemSnaps = allSnaps.filter(snap => snap.id !== primaryItemRef.id);
       
       // --- 2. CALCULATION/LOGIC PHASE ---
       const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
@@ -679,9 +698,9 @@ export async function logButchering(data: ButcheringData) {
         status: newPrimaryStatus,
       });
       
-      for (let i = 0; i < yieldedItemSnaps.length; i++) {
-        const yieldedItemSnap = yieldedItemSnaps[i];
-        const yieldedItemData = data.yieldedItems[i];
+      for (const yieldedItemData of data.yieldedItems) {
+        const yieldedItemSnap = yieldedItemSnaps.find(s => s.data()?.materialCode === yieldedItemData.materialCode);
+        
         if (!yieldedItemSnap || !yieldedItemSnap.exists()) {
           throw new Error(`Yielded item "${yieldedItemData.name}" could not be found. Please ensure it exists before logging butchery.`);
         }
@@ -762,4 +781,3 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
-

@@ -110,7 +110,7 @@ export function ProductionLogHistory() {
                             className="align-top text-muted-foreground"
                             rowSpan={log.producedItems.length}
                           >
-                            {format(log.logDate, 'P p')}
+                            {log.logDate ? format(log.logDate, 'P p') : 'Processing...'}
                           </TableCell>
                           <TableCell
                             className="align-top text-muted-foreground"
@@ -124,7 +124,7 @@ export function ProductionLogHistory() {
                         {item.recipeName}
                       </TableCell>
                       <TableCell className="text-right">
-                        {item.quantityProduced} {item.yieldUnit}
+                        {item.quantityProduced.toFixed(2)} {item.yieldUnit}
                       </TableCell>
                     </TableRow>
                   ))
