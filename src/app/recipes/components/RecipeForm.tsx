@@ -229,7 +229,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
           name: data.name,
           type: 'inventory',
           code: data.materialCode,
-          baseUnit: data.unit, // This is the smallest unit for tracking (g, ml, un)
+          baseUnit: data.recipeUnit, // Use recipeUnit as the base for costing
           costPerBaseUnit: data.unitCost,
           defaultRecipeUnit: data.recipeUnit || data.unit,
          });
@@ -338,22 +338,29 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     const details = itemDetails[itemId];
     if (!details) return 0;
     try {
-      // Calculate the cost of 1 displayUnit by converting it to the base unit
+      // Calculate how many base units are in one display unit.
       const oneDisplayUnitInBaseUnit = convert(1, displayUnit as Unit, details.baseUnit as Unit);
+      // The cost of the display unit is that amount times the cost of a single base unit.
       return oneDisplayUnitInBaseUnit * details.costPerBaseUnit;
     } catch (error) {
-      // This might happen if units are incompatible, though our convert function is now more lenient.
+      // This might happen if units are incompatible.
       console.error("Could not calculate unit cost:", error);
       return 0;
     }
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 4,
-    }).format(value || 0);
+    const options: Intl.NumberFormatOptions = {
+        style: 'currency',
+        currency: 'USD',
+    };
+    if (value > 0 && value < 0.01) {
+        options.minimumFractionDigits = 4;
+    } else {
+        options.minimumFractionDigits = 2;
+        options.maximumFractionDigits = 2;
+    }
+    return new Intl.NumberFormat('en-US', options).format(value || 0);
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
