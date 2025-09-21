@@ -22,12 +22,14 @@ import { allUnits } from '@/lib/conversions';
 import { Save } from 'lucide-react';
 import { updatePhysicalInventory } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function PhysicalCountTable() {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[] | null>(null);
   const [physicalCounts, setPhysicalCounts] = useState<Record<string, number | undefined>>({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,6 +78,19 @@ export function PhysicalCountTable() {
       }))
       .filter(item => item.physicalQuantity !== undefined && item.physicalQuantity !== item.theoreticalQuantity) as PhysicalCountItem[];
   }, [inventoryItems, physicalCounts]);
+  
+  const categories = useMemo(() => {
+    if (!inventoryItems) return [];
+    const uniqueCategories = new Set(inventoryItems.map(item => item.category));
+    return ['all', ...Array.from(uniqueCategories).sort()];
+  }, [inventoryItems]);
+
+  const filteredItems = useMemo(() => {
+    if (!inventoryItems) return [];
+    if (categoryFilter === 'all') return inventoryItems;
+    return inventoryItems.filter(item => item.category === categoryFilter);
+  }, [inventoryItems, categoryFilter]);
+
 
   const handleSaveChanges = async () => {
     if (changedItems.length === 0) {
@@ -109,10 +124,28 @@ export function PhysicalCountTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Physical Inventory Count</CardTitle>
-        <CardDescription>
-            Enter the physical quantity for each item to calculate the variance against the theoretical (system) count.
-        </CardDescription>
+        <div className='flex flex-col md:flex-row md:items-start md:justify-between gap-4'>
+            <div>
+                <CardTitle>Physical Inventory Count</CardTitle>
+                <CardDescription className='mt-2'>
+                    Enter the physical quantity for each item to calculate the variance against the theoretical (system) count.
+                </CardDescription>
+            </div>
+             <div className='w-full md:w-64'>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Filter by category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {categories.map(category => (
+                            <SelectItem key={category} value={category} className='capitalize'>
+                                {category === 'all' ? 'All Categories' : category}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="relative w-full overflow-auto max-h-[60vh]">
@@ -120,6 +153,7 @@ export function PhysicalCountTable() {
             <TableHeader className='sticky top-0 bg-card z-10'>
               <TableRow>
                 <TableHead>Item Name</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead className='w-[150px] text-right'>Theoretical Count</TableHead>
                 <TableHead className='w-[150px] text-right'>Physical Count</TableHead>
                 <TableHead className='w-[150px] text-right'>Variance</TableHead>
@@ -130,13 +164,14 @@ export function PhysicalCountTable() {
               {loading && Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                   </TableRow>
               ))}
-              {!loading && inventoryItems?.map((item) => {
+              {!loading && filteredItems?.map((item) => {
                 const theoretical = item.quantity;
                 const physical = physicalCounts[item.id];
                 const variance = physical !== undefined ? physical - theoretical : 0;
@@ -144,6 +179,7 @@ export function PhysicalCountTable() {
                 return (
                     <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.category}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{theoretical.toFixed(2)}</TableCell>
                         <TableCell>
                             <Input 
@@ -168,9 +204,9 @@ export function PhysicalCountTable() {
             </TableBody>
           </Table>
         </div>
-        {!loading && inventoryItems?.length === 0 && (
+        {!loading && filteredItems?.length === 0 && (
           <div className="py-12 text-center text-muted-foreground">
-            No ingredients found.
+            {categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`}
           </div>
         )}
       </CardContent>
