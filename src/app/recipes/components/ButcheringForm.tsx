@@ -163,6 +163,45 @@ export function ButcheringForm() {
     }
   }, [activeTemplate, inventory, replace]);
 
+    const { totalYieldWeight, yieldPercentage, lossPercentage } = useMemo(() => {
+    if (quantityUsed <= 0 || yieldedItems.length === 0) {
+      return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
+    }
+
+    try {
+      const quantityUsedInGrams = convert(quantityUsed, quantityUnit as Unit, 'g');
+      
+      const totalYieldInGrams = yieldedItems.reduce((sum, item) => {
+        if (item.weight <= 0 || !item.fullDetails) return sum;
+
+        const details = item.fullDetails;
+        let itemWeightInGrams = 0;
+
+        if (details.unit === 'un.') {
+          // It's a 'unit' item, we need to convert its yield (e.g. 6oz) to grams
+          const weightPerUnit = convert(details.recipeUnitConversion, details.recipeUnit as Unit, 'g');
+          itemWeightInGrams = item.weight * weightPerUnit;
+        } else {
+          // It's already a weight item, just convert to grams
+          itemWeightInGrams = convert(item.weight, item.unit as Unit, 'g');
+        }
+        return sum + itemWeightInGrams;
+      }, 0);
+      
+      const yieldPercentage = (totalYieldInGrams / quantityUsedInGrams) * 100;
+      
+      return {
+        totalYieldWeight: totalYieldInGrams / 1000, // convert back to kg for display
+        yieldPercentage: isFinite(yieldPercentage) ? yieldPercentage : 0,
+        lossPercentage: 100 - (isFinite(yieldPercentage) ? yieldPercentage : 0),
+      };
+    } catch (error) {
+      console.error("Error calculating yield:", error);
+      return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
+    }
+
+  }, [yieldedItems, quantityUsed, quantityUnit]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
@@ -399,6 +438,22 @@ export function ButcheringForm() {
               </TableBody>
             </Table>
           </div>
+          
+            <div className="p-4 space-y-2 rounded-lg border">
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Total Yield Weight:</span>
+                    <span className="font-medium">{totalYieldWeight.toFixed(3)} kg</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Total Yield %:</span>
+                    <span className="font-medium text-green-600">{yieldPercentage.toFixed(2)}%</span>
+                </div>
+                 <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Loss %:</span>
+                    <span className="font-medium text-destructive">{lossPercentage.toFixed(2)}%</span>
+                </div>
+            </div>
+
           <div className='flex flex-col sm:flex-row justify-between items-start gap-4'>
             <div className="flex items-center gap-2">
                 {primaryItemId && (
