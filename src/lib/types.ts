@@ -42,7 +42,6 @@ export type RecipeIngredient = {
   materialCode: string;
   quantity: number;
   unit: string;
-  unitPrice: number;
   totalCost: number;
 };
 

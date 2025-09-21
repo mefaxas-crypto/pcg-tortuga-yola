@@ -39,15 +39,14 @@ import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Check } from 'lucide-react';
-import { allUnits } from '@/lib/conversions';
+import { allUnits, convert, Unit } from '@/lib/conversions';
 
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
   name: z.string(), // Populated from selected item
   materialCode: z.string(), // Populated from selected item
-  unit: z.string(),   // Populated from selected item
-  unitPrice: z.coerce.number(), // Populated from selected item
+  unit: z.string(),   // This is the RECIPE unit, chosen by the user
   quantity: z.coerce.number().min(0.001, 'Quantity must be positive.'),
   totalCost: z.coerce.number(), // Calculated field
 });
@@ -83,12 +82,19 @@ type RecipeFormProps = {
 // Placeholder data
 const recipeCategories = ['Appetizer', 'Entree', 'Dessert', 'Beverage', 'Other'];
 const recipeUnits = ['kg', 'g', 'lb', 'oz', 'L', 'mL', 'fl. oz', 'unit', 'portion'];
-const initialIngredient = { inventoryItemId: '', name: '', materialCode: '', unit: '', unitPrice: 0, quantity: 0, totalCost: 0 };
+const initialIngredient = { inventoryItemId: '', name: '', materialCode: '', unit: '', quantity: 0, totalCost: 0 };
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
 }
 
+// Store original inventory item details to avoid data loss on form updates
+type InventoryItemDetails = {
+    [inventoryItemId: string]: {
+        baseUnit: Unit;
+        baseUnitCost: number;
+    };
+};
 
 export function RecipeForm({
   mode,
@@ -100,6 +106,7 @@ export function RecipeForm({
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
   const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
+  const [inventoryItemDetails, setInventoryItemDetails] = useState<InventoryItemDetails>({});
   
   const { toast } = useToast();
   
@@ -142,6 +149,24 @@ export function RecipeForm({
     return ingredients.reduce((total, item) => total + (item.totalCost || 0), 0);
   }, [ingredients]);
   
+  // Effect to store inventory details when form loads (for edit mode)
+  useEffect(() => {
+    if (inventory.length > 0 && recipe?.ingredients) {
+        const details: InventoryItemDetails = {};
+        recipe.ingredients.forEach(ing => {
+            const inventoryItem = inventory.find(item => item.id === ing.inventoryItemId);
+            if (inventoryItem) {
+                details[inventoryItem.id] = {
+                    baseUnit: inventoryItem.unit as Unit,
+                    baseUnitCost: inventoryItem.unitCost,
+                };
+            }
+        });
+        setInventoryItemDetails(details);
+    }
+  }, [inventory, recipe]);
+
+
   useEffect(() => {
     const qInventory = query(collection(db, 'inventory'));
     const unsubscribeInventory = onSnapshot(qInventory, (querySnapshot) => {
@@ -181,16 +206,50 @@ export function RecipeForm({
     }
   }, [toast]);
 
+  const recalculateCost = (index: number, quantity: number, recipeUnit: Unit) => {
+    const inventoryItemId = form.getValues(`ingredients.${index}.inventoryItemId`);
+    const itemDetails = inventoryItemDetails[inventoryItemId];
+
+    if (!itemDetails) return 0;
+
+    const { baseUnit, baseUnitCost } = itemDetails;
+
+    try {
+        // How many recipe units are in one base unit?
+        const conversionFactor = convert(1, baseUnit, recipeUnit);
+        // Cost per recipe unit
+        const costPerRecipeUnit = baseUnitCost / conversionFactor;
+        return quantity * costPerRecipeUnit;
+    } catch (error) {
+        console.error(`Could not convert from ${baseUnit} to ${recipeUnit}.`, error);
+        toast({
+            variant: 'destructive',
+            title: 'Conversion Error',
+            description: `Cannot convert from '${baseUnit}' to '${recipeUnit}'. Please check units.`
+        });
+        return 0; // Return 0 if conversion fails
+    }
+  };
+
+
   const handleIngredientSelect = (index: number, item: InventoryItem) => {
+      // Store the original unit and cost for this item
+      setInventoryItemDetails(prev => ({
+        ...prev,
+        [item.id]: { baseUnit: item.unit as Unit, baseUnitCost: item.unitCost }
+      }));
+
       const quantity = form.getValues(`ingredients.${index}.quantity`) || 0;
+      
+      const newTotalCost = recalculateCost(index, quantity, item.unit as Unit);
+
       update(index, {
         inventoryItemId: item.id,
         name: item.name,
         materialCode: item.materialCode,
-        unit: item.unit,
-        unitPrice: item.unitCost,
+        unit: item.unit, // Default to inventory item's unit initially
         quantity: quantity,
-        totalCost: quantity * (item.unitCost || 0),
+        totalCost: newTotalCost,
       });
       setOpenPopoverIndex(null);
   };
@@ -202,7 +261,7 @@ export function RecipeForm({
             ...values,
             category: values.isSubRecipe ? 'Sub-recipe' : values.category!,
             totalCost: totalRecipeCost,
-            ingredients: values.ingredients.filter(ing => ing.inventoryItemId) // Filter out empty rows
+            ingredients: values.ingredients.map(({ unitPrice, ...ing }) => ing) // Remove unitPrice before saving
         };
 
         if (dataToSave.ingredients.length === 0) {
@@ -405,14 +464,19 @@ export function RecipeForm({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             {fields.map((field, index) => (
+                             {fields.map((field, index) => {
+                                const inventoryItemId = form.watch(`ingredients.${index}.inventoryItemId`);
+                                const itemDetails = inventoryItemDetails[inventoryItemId];
+                                const unitPrice = itemDetails?.baseUnitCost ?? 0;
+                                
+                                return (
                                 <TableRow key={field.id}>
                                     <TableCell>
                                         <FormField
                                         control={form.control}
                                         name={`ingredients.${index}.materialCode`}
                                         render={({ field }) => (
-                                            <Input {...field} disabled />
+                                            <Input {...field} disabled className="bg-muted/30"/>
                                         )}
                                         />
                                     </TableCell>
@@ -459,18 +523,18 @@ export function RecipeForm({
                                                             </CommandItem>
                                                         ))}
                                                         </CommandGroup>
+                                                         <CommandGroup className="border-t">
+                                                            <CommandItem
+                                                            onSelect={() => {
+                                                                setIngredientSheetOpen(true);
+                                                                setOpenPopoverIndex(null);
+                                                            }}
+                                                                >
+                                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                                Add New Ingredient to Inventory
+                                                            </CommandItem>
+                                                        </CommandGroup>
                                                     </CommandList>
-                                                     <CommandGroup className="border-t">
-                                                        <CommandItem
-                                                          onSelect={() => {
-                                                              setIngredientSheetOpen(true);
-                                                              setOpenPopoverIndex(null);
-                                                          }}
-                                                            >
-                                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                                            Add New Ingredient to Inventory
-                                                        </CommandItem>
-                                                    </CommandGroup>
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
@@ -485,10 +549,11 @@ export function RecipeForm({
                                                 {...field}
                                                 value={field.value || ''}
                                                 onChange={(e) => {
-                                                    const quantity = Number(e.target.value)
+                                                    const quantity = Number(e.target.value) || 0;
                                                     field.onChange(quantity);
-                                                    const unitPrice = form.getValues(`ingredients.${index}.unitPrice`);
-                                                    form.setValue(`ingredients.${index}.totalCost`, quantity * (unitPrice || 0));
+                                                    const recipeUnit = form.getValues(`ingredients.${index}.unit`) as Unit;
+                                                    const newTotalCost = recalculateCost(index, quantity, recipeUnit);
+                                                    form.setValue(`ingredients.${index}.totalCost`, newTotalCost);
                                                 }}
                                             />
                                         )}
@@ -499,7 +564,15 @@ export function RecipeForm({
                                         control={form.control}
                                         name={`ingredients.${index}.unit`}
                                         render={({ field }) => (
-                                          <Select onValueChange={field.onChange} value={field.value}>
+                                          <Select 
+                                            onValueChange={(value) => {
+                                                field.onChange(value);
+                                                const quantity = form.getValues(`ingredients.${index}.quantity`);
+                                                const newTotalCost = recalculateCost(index, quantity, value as Unit);
+                                                form.setValue(`ingredients.${index}.totalCost`, newTotalCost);
+                                            }} 
+                                            value={field.value}
+                                          >
                                             <FormControl>
                                               <SelectTrigger>
                                                 <SelectValue placeholder="Unit" />
@@ -515,13 +588,13 @@ export function RecipeForm({
                                         />
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <FormField
-                                        control={form.control}
-                                        name={`ingredients.${index}.unitPrice`}
-                                        render={({ field }) => (
-                                            <span>{formatCurrency(field.value)}</span>
+                                        {itemDetails ? (
+                                            <span>
+                                                {formatCurrency(unitPrice)} / {itemDetails.baseUnit}
+                                            </span>
+                                        ) : (
+                                            <span>-</span>
                                         )}
-                                        />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <FormField
@@ -543,6 +616,7 @@ export function RecipeForm({
                                         </Button>
                                     </TableCell>
                                 </TableRow>
+                                )}}
                             ))}
                         </TableBody>
                     </Table>
@@ -555,7 +629,7 @@ export function RecipeForm({
                         onClick={() => append(initialIngredient)}
                     >
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Ingredient Row
+                        Add Ingredient
                     </Button>
                 </CardFooter>
             </Card>
