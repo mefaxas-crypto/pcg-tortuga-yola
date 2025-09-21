@@ -38,7 +38,7 @@ import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -439,12 +439,12 @@ export function RecipeForm({
                                     <TableCell className="pt-2 pb-3">
                                       <Popover
                                         open={openPopoverIndex === index}
-                                        onOpenChange={(isOpen) => {
-                                          if (!isOpen) setOpenPopoverIndex(null)
+                                        onOpenChange={(open) => {
+                                          if (!open) setOpenPopoverIndex(null)
                                         }}
                                       >
                                         <PopoverTrigger asChild>
-                                          <FormControl>
+                                           <FormControl>
                                             <Input
                                                 placeholder="Search ingredients..."
                                                 value={currentSearchQuery}
@@ -452,12 +452,10 @@ export function RecipeForm({
                                                     const newQueries = [...searchQueries];
                                                     newQueries[index] = e.target.value;
                                                     setSearchQueries(newQueries);
-                                                    form.setValue(`ingredients.${index}.inventoryItemId`, ''); // Reset if user types
-                                                    
                                                     if (e.target.value) {
-                                                        setOpenPopoverIndex(index);
+                                                      setOpenPopoverIndex(index);
                                                     } else {
-                                                        setOpenPopoverIndex(null);
+                                                      setOpenPopoverIndex(null);
                                                     }
                                                 }}
                                                 onFocus={() => {
@@ -469,17 +467,42 @@ export function RecipeForm({
                                         </PopoverTrigger>
                                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                             <Command>
+                                                <CommandInput
+                                                    placeholder="Search ingredients..."
+                                                />
                                                 <CommandList>
+                                                    <CommandEmpty>No results found.</CommandEmpty>
                                                     <CommandGroup>
-                                                        <CommandItem
-                                                            onSelect={() => {
-                                                              setIngredientSheetOpen(true);
-                                                              setOpenPopoverIndex(null);
-                                                            }}
-                                                        >
-                                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                                            Add New Ingredient
-                                                        </CommandItem>
+                                                        {inventory
+                                                            .filter((item) => 
+                                                                !searchQueries[index] ||
+                                                                item.name.toLowerCase().includes(searchQueries[index].toLowerCase()) ||
+                                                                item.materialCode.toLowerCase().includes(searchQueries[index].toLowerCase())
+                                                            )
+                                                            .map((item) => (
+                                                                <CommandItem
+                                                                    key={item.id}
+                                                                    value={`${item.name} ${item.materialCode}`}
+                                                                    onSelect={() => {
+                                                                        const quantity = form.getValues(`ingredients.${index}.quantity`) || 1;
+                                                                        update(index, {
+                                                                            inventoryItemId: item.id,
+                                                                            name: item.name,
+                                                                            materialCode: item.materialCode,
+                                                                            unit: item.unit,
+                                                                            unitPrice: item.unitCost,
+                                                                            quantity: quantity,
+                                                                            totalCost: quantity * item.unitCost,
+                                                                        });
+                                                                        const newQueries = [...searchQueries];
+                                                                        newQueries[index] = item.name;
+                                                                        setSearchQueries(newQueries);
+                                                                        setOpenPopoverIndex(null);
+                                                                    }}
+                                                                >
+                                                                    {item.name}
+                                                                </CommandItem>
+                                                            ))}
                                                     </CommandGroup>
                                                 </CommandList>
                                             </Command>
@@ -554,6 +577,15 @@ export function RecipeForm({
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Ingredient
                         </Button>
+                         <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIngredientSheetOpen(true)}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add New Ingredient to Inventory
+                        </Button>
                     </div>
                 </CardFooter>
             </Card>
@@ -597,3 +629,5 @@ export function RecipeForm({
     </>
   );
 }
+
+    
