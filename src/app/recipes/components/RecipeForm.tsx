@@ -37,6 +37,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -120,7 +121,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       name: '',
       isSubRecipe: false,
       category: '',
-      menuId: '',
+      menuId: 'none',
       yield: 1,
       yieldUnit: 'portion',
       notes: '',
@@ -505,5 +506,3 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
-
-    
