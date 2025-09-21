@@ -184,7 +184,8 @@ export type ProductionLog = {
     producedItems: {
         recipeId: string;
         recipeName: string;
-        quantityProduced: number;
+        quantityProduced: number; // i.e., number of batches
+        yieldPerBatch: number;
         yieldUnit: string;
     }[];
 }

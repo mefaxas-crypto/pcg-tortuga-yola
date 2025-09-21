@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -82,7 +83,7 @@ export function ProductionLogHistory() {
                 <TableHead>Date</TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>Item Produced</TableHead>
-                <TableHead className="text-right">Batches</TableHead>
+                <TableHead className="text-right">Total Produced</TableHead>
                 <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -116,19 +117,29 @@ export function ProductionLogHistory() {
                     <TableCell className="align-top text-muted-foreground pt-3.5">
                       {log.user}
                     </TableCell>
-                    <TableCell colSpan={1} className='p-0'>
+                    <TableCell colSpan={1} className='p-0 align-top'>
                       <div className='divide-y'>
                       {log.producedItems.map((item, index) => (
-                        <div key={index} className='flex justify-between items-center py-2 px-4'>
+                        <div key={index} className='flex flex-col py-2 px-4'>
                           <span className="font-medium">{item.recipeName}</span>
-                          <span className="text-right text-muted-foreground">
-                            {item.quantityProduced.toFixed(2)}
+                           <span className="text-xs text-muted-foreground">
+                            {item.quantityProduced} x {item.yieldPerBatch} {item.yieldUnit}
                           </span>
                         </div>
                       ))}
                       </div>
                     </TableCell>
-                     <TableCell colSpan={0} className='p-0'></TableCell>
+                     <TableCell className='p-0 align-top'>
+                        <div className='divide-y'>
+                             {log.producedItems.map((item, index) => (
+                                <div key={index} className='flex justify-end items-center py-2 px-4 h-[61px]'>
+                                    <span className="text-right font-medium">
+                                        {(item.quantityProduced * item.yieldPerBatch).toFixed(2)} {item.yieldUnit}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                     </TableCell>
                     <TableCell className="align-middle text-right">
                        <UndoProductionLogDialog logId={log.id} logDate={log.logDate}>
                           <Button variant="outline" size="sm">

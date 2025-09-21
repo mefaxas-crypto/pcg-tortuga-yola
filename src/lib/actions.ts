@@ -582,7 +582,7 @@ export async function logProduction(data: LogProductionData) {
 
         for (const ingredient of subRecipe.ingredients) {
           const invItemId = ingredient.ingredientType === 'recipe' ? ingredient.itemCode : ingredient.itemId;
-          if(!invItemId || invItemId === 'N/A') {
+          if(!invItemId) {
               throw new Error(`Recipe "${subRecipe.name}" contains an ingredient with an invalid code. Please fix the recipe.`);
           }
           inventoryRefsToFetch.set(invItemId, doc(db, 'inventory', invItemId));
@@ -648,6 +648,7 @@ export async function logProduction(data: LogProductionData) {
             recipeId: item.recipeId,
             recipeName: item.name,
             quantityProduced: item.quantityProduced,
+            yieldPerBatch: item.yield,
             yieldUnit: item.yieldUnit,
         })),
       });
@@ -690,13 +691,13 @@ export async function undoProductionLog(logId: string) {
       for (const recipeSnap of recipeSnaps) {
         if (recipeSnap.exists()) {
           const recipe = recipeSnap.data() as Recipe;
-          if(!recipe.internalCode || recipe.internalCode === 'N/A') {
+          if(!recipe.internalCode) {
               throw new Error(`Recipe "${recipe.name}" has an invalid internal code.`);
           }
           invItemRefsToFetch.add(doc(db, 'inventory', recipe.internalCode));
           recipe.ingredients.forEach(ing => {
             const invItemId = ing.ingredientType === 'recipe' ? ing.itemCode : ing.itemId;
-             if(!invItemId || invItemId === 'N/A') {
+             if(!invItemId) {
                 throw new Error(`An ingredient in recipe "${recipe.name}" has an invalid code.`);
             }
             invItemRefsToFetch.add(doc(db, 'inventory', invItemId));
