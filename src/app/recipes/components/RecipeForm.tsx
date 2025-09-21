@@ -70,7 +70,9 @@ import { cn } from '@/lib/utils';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
 const formSchema = z.object({
-  recipeCode: z.string().min(1, 'Recipe code is required.'),
+  recipeCode: z.string().min(1, 'Recipe code is required.').refine(val => !val.includes('/') && val.toLowerCase() !== 'n/a', {
+    message: 'Recipe code cannot be "N/A" or contain slashes.',
+  }),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   isSubRecipe: z.boolean(),
   category: z.string(),
@@ -99,6 +101,13 @@ const formSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['category'],
       message: 'Category is required.',
+    });
+  }
+  if (data.isSubRecipe && !data.recipeCode) {
+    ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recipeCode'],
+        message: 'Recipe code is required for sub-recipes as it becomes its inventory ID.',
     });
   }
 });
@@ -370,7 +379,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       ...values,
       category: values.isSubRecipe ? 'Sub-recipe' : values.category,
       totalCost: totalRecipeCost,
-      menuId: values.menuId === 'none' ? '' : values.menuId,
+      menuId: values.isSubRecipe || values.menuId === 'none' ? '' : values.menuId,
     };
 
     try {
@@ -446,8 +455,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                   <FormItem>
                     <FormLabel>Recipe Code</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., APP001" {...field} />
+                      <Input placeholder="e.g., SUB001" {...field} />
                     </FormControl>
+                    <FormDescription>A unique code for this recipe. If it's a sub-recipe, this will be its inventory ID.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
