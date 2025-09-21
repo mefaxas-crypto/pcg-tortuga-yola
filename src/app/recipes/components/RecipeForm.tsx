@@ -333,11 +333,26 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     update(index, { ...ingredient, quantity, unit, totalCost: newTotalCost });
   };
+  
+  const getUnitCost = (itemId: string, displayUnit: string): number => {
+    const details = itemDetails[itemId];
+    if (!details) return 0;
+    try {
+      // Calculate the cost of 1 displayUnit by converting it to the base unit
+      const oneDisplayUnitInBaseUnit = convert(1, displayUnit as Unit, details.baseUnit as Unit);
+      return oneDisplayUnitInBaseUnit * details.costPerBaseUnit;
+    } catch (error) {
+      // This might happen if units are incompatible, though our convert function is now more lenient.
+      console.error("Could not calculate unit cost:", error);
+      return 0;
+    }
+  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 4,
     }).format(value || 0);
   };
 
@@ -593,6 +608,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     <TableHead>Ingredient</TableHead>
                     <TableHead className="w-[120px]">Quantity</TableHead>
                     <TableHead className="w-[150px]">Unit</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
                     <TableHead className="text-right">Total Cost</TableHead>
                     <TableHead className="w-[50px]">
                       <span className="sr-only">Actions</span>
@@ -600,7 +616,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {fields.map((field, index) => (
+                  {fields.map((field, index) => {
+                    const unitCost = getUnitCost(field.itemId, field.unit);
+                    return (
                     <TableRow key={field.id}>
                       <TableCell className="text-muted-foreground">
                         {field.itemCode}
@@ -637,6 +655,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatCurrency(unitCost)}
+                      </TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(field.totalCost)}
                       </TableCell>
@@ -651,10 +672,10 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                    {fields.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                            <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                                 No ingredients added yet.
                             </TableCell>
                         </TableRow>
@@ -766,5 +787,3 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
-
-    
