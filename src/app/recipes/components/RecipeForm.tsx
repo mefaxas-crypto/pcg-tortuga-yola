@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
@@ -37,8 +37,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -96,9 +94,7 @@ export function RecipeForm({
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
-  const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
-  const [searchQueries, setSearchQueries] = useState<string[]>([]);
-
+  
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -132,16 +128,6 @@ export function RecipeForm({
     name: 'ingredients',
   });
 
-  useEffect(() => {
-    const initialSearchQueries = fields.map((field, index) => {
-      const ingredient = recipe?.ingredients[index];
-      return ingredient ? ingredient.name : '';
-    });
-    setSearchQueries(initialSearchQueries);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fields, recipe]);
-
-
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
 
@@ -159,7 +145,6 @@ export function RecipeForm({
         unitPrice: 0,
         totalCost: 0
     });
-    setSearchQueries([...searchQueries, '']);
   };
   
   useEffect(() => {
@@ -383,7 +368,7 @@ export function RecipeForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                       {recipeCategories.map(category => (
@@ -418,8 +403,7 @@ export function RecipeForm({
                             const selectedItem = inventory.find(i => i.id === form.watch(`ingredients.${index}.inventoryItemId`));
                             const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
                             const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
-                            const currentSearchQuery = searchQueries[index] || '';
-
+                            
                             return (
                                 <TableRow key={field.id} className="align-top">
                                     <TableCell className="pt-2 pb-3 text-muted-foreground">{selectedItem?.materialCode || '-'}</TableCell>
@@ -429,71 +413,9 @@ export function RecipeForm({
                                             name={`ingredients.${index}.inventoryItemId`}
                                             render={({ field: inventoryItemField }) => (
                                                 <FormItem>
-                                                    <Popover
-                                                      open={openPopoverIndex === index}
-                                                      onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}
-                                                    >
-                                                      <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                          <Input
-                                                            placeholder="Search ingredients..."
-                                                            value={currentSearchQuery}
-                                                            onChange={(e) => {
-                                                              const newQueries = [...searchQueries];
-                                                              newQueries[index] = e.target.value;
-                                                              setSearchQueries(newQueries);
-                                                              form.setValue(`ingredients.${index}.inventoryItemId`, '');
-                                                              setOpenPopoverIndex(index);
-                                                            }}
-                                                            className="w-full"
-                                                          />
-                                                        </FormControl>
-                                                      </PopoverTrigger>
-                                                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                        <Command>
-                                                            <CommandInput placeholder="Search..." value={currentSearchQuery} onValueChange={(search) => {
-                                                              const newQueries = [...searchQueries];
-                                                              newQueries[index] = search;
-                                                              setSearchQueries(newQueries);
-                                                            }}/>
-                                                            <CommandList>
-                                                                <CommandEmpty>No ingredients found.</CommandEmpty>
-                                                                <CommandGroup>
-                                                                    {inventory.filter(item => item.name.toLowerCase().includes(currentSearchQuery.toLowerCase())).map((item) => (
-                                                                    <CommandItem
-                                                                        key={item.id}
-                                                                        value={item.name}
-                                                                        onSelect={() => {
-                                                                            form.setValue(`ingredients.${index}.inventoryItemId`, item.id);
-                                                                            form.setValue(`ingredients.${index}.name`, item.name);
-                                                                            form.setValue(`ingredients.${index}.materialCode`, item.materialCode);
-                                                                            form.setValue(`ingredients.${index}.unit`, item.unit);
-                                                                            form.setValue(`ingredients.${index}.unitPrice`, item.unitCost);
-                                                                            
-                                                                            const quantity = form.getValues(`ingredients.${index}.quantity`) || 0;
-                                                                            form.setValue(`ingredients.${index}.totalCost`, quantity * item.unitCost);
-
-                                                                            const newQueries = [...searchQueries];
-                                                                            newQueries[index] = item.name;
-                                                                            setSearchQueries(newQueries);
-
-                                                                            setOpenPopoverIndex(null);
-                                                                        }}
-                                                                    >
-                                                                        <Check
-                                                                          className={cn(
-                                                                              "mr-2 h-4 w-4",
-                                                                              inventoryItemField.value === item.id ? "opacity-100" : "opacity-0"
-                                                                          )}
-                                                                        />
-                                                                        {item.name}
-                                                                    </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                      </PopoverContent>
-                                                    </Popover>
+                                                    <FormControl>
+                                                        <Input placeholder="Search ingredient..." />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
