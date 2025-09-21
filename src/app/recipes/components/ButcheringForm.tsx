@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -444,6 +445,7 @@ export function ButcheringForm() {
         onClose={handleNewItemSheetClose}
         onItemCreated={handleNewItemCreated}
         mode="add"
+        isInternalCreation={true}
     />
     </>
   );

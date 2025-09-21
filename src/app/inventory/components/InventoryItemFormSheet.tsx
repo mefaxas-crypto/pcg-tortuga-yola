@@ -62,6 +62,7 @@ type InventoryItemFormSheetProps = {
   item?: InventoryItem;
   onClose: () => void;
   onItemCreated?: (newItem: InventoryItem) => void;
+  isInternalCreation?: boolean;
 };
 
 // --- Standardized Unit Definitions ---
@@ -98,14 +99,12 @@ export function InventoryItemFormSheet({
   item,
   onClose,
   onItemCreated,
+  isInternalCreation = false,
 }: InventoryItemFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
   const { toast } = useToast();
-  
-  // A flag to determine if the form is for a butchered/produced item.
-  const isInternalCreation = !!onItemCreated;
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -231,6 +230,7 @@ export function InventoryItemFormSheet({
   
   const handleClose = () => {
     if (!loading) {
+      form.reset();
       onClose();
     }
   };
@@ -253,9 +253,8 @@ export function InventoryItemFormSheet({
             });
             if(onItemCreated && newItem) {
                 onItemCreated(newItem);
-            } else {
-                onClose();
             }
+            handleClose();
         }
       
     } catch (error) {
@@ -508,7 +507,7 @@ export function InventoryItemFormSheet({
             </fieldset>
             <SheetFooter className="mt-4">
               <SheetClose asChild>
-                <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
                   Cancel
                 </Button>
               </SheetClose>
