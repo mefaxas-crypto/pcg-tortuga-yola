@@ -27,12 +27,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
 import { allUnits } from '@/lib/conversions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type InventoryTableProps = {
   onEdit: (item: InventoryItem) => void;
@@ -41,6 +42,7 @@ type InventoryTableProps = {
 export function InventoryTable({ onEdit }: InventoryTableProps) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   useEffect(() => {
     const q = query(collection(db, 'inventory'));
@@ -62,6 +64,18 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
 
     return () => unsubscribe();
   }, []);
+
+  const categories = useMemo(() => {
+    if (!inventoryItems) return [];
+    const uniqueCategories = new Set(inventoryItems.map(item => item.category));
+    return ['all', ...Array.from(uniqueCategories).sort()];
+  }, [inventoryItems]);
+
+  const filteredItems = useMemo(() => {
+    if (!inventoryItems) return [];
+    if (categoryFilter === 'all') return inventoryItems;
+    return inventoryItems.filter(item => item.category === categoryFilter);
+  }, [inventoryItems, categoryFilter]);
   
   const getStatusBadge = (status: InventoryItem['status']) => {
     switch (status) {
@@ -91,7 +105,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col md:flex-row gap-4">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -99,6 +113,20 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
               placeholder="Search items..."
               className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
             />
+          </div>
+          <div className='w-full md:w-64'>
+             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Filter by category..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories.map(category => (
+                        <SelectItem key={category} value={category} className='capitalize'>
+                            {category === 'all' ? 'All Categories' : category}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="relative w-full overflow-auto">
@@ -132,7 +160,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
               ))}
-              {!loading && inventoryItems?.map((item) => (
+              {!loading && filteredItems?.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className='text-muted-foreground'>{item.materialCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
@@ -146,7 +174,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {item.quantity} {getUnitLabel(item.unit)}
+                    {item.quantity} {getUnitLabel(item.purchaseUnit)}
                   </TableCell>
                    <TableCell>{item.purchaseQuantity} {getUnitLabel(item.purchaseUnit)}</TableCell>
                    <TableCell>
@@ -186,9 +214,9 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
             </TableBody>
           </Table>
         </div>
-         {!loading && inventoryItems?.length === 0 && (
+         {!loading && filteredItems?.length === 0 && (
           <div className="py-12 text-center text-muted-foreground">
-            No ingredients found. Add your first one!
+             {categoryFilter === 'all' ? 'No ingredients found. Add your first one!' : `No ingredients found in the "${categoryFilter}" category.`}
           </div>
         )}
       </CardContent>
