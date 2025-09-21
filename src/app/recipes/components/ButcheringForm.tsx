@@ -116,7 +116,7 @@ export function ButcheringForm() {
   }, [primaryItemId, inventory]);
 
 
-  const totalYieldedWeight = yieldedItems.reduce((sum, item) => sum + (item.weight || 0), 0);
+  const totalYieldedWeight = yieldedItems.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
   const yieldPercentage = quantityUsed > 0 ? (totalYieldedWeight / quantityUsed) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
 
