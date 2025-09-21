@@ -61,6 +61,13 @@ export type Allergen = {
 
 export type AddAllergenData = Omit<Allergen, 'id'>;
 
+export type IngredientCategory = {
+    id: string;
+    name: string;
+};
+
+export type AddIngredientCategoryData = Omit<IngredientCategory, 'id'>;
+
 export type RecipeIngredient = {
   itemId: string; // Can be an inventory item ID or a sub-recipe ID
   ingredientType: 'inventory' | 'recipe';

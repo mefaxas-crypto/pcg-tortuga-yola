@@ -1,9 +1,4 @@
 
-
-
-
-
-
 'use server';
 
 import {
@@ -23,6 +18,7 @@ import {
 import {db} from './firebase';
 import type {
   AddAllergenData,
+  AddIngredientCategoryData,
   AddMenuData,
   AddRecipeData,
   AddSaleData,
@@ -323,6 +319,32 @@ export async function deleteAllergen(allergenId: string) {
     throw new Error('Failed to delete allergen');
   }
 }
+
+// Ingredient Category Actions
+export async function addIngredientCategory(categoryData: AddIngredientCategoryData) {
+    try {
+        const docRef = await addDoc(collection(db, 'ingredientCategories'), categoryData);
+        revalidatePath('/settings/categories');
+        revalidatePath('/inventory');
+        return { success: true, id: docRef.id };
+    } catch (e) {
+        console.error('Error adding ingredient category: ', e);
+        throw new Error('Failed to add ingredient category');
+    }
+}
+
+export async function deleteIngredientCategory(categoryId: string) {
+    try {
+        await deleteDoc(doc(db, 'ingredientCategories', categoryId));
+        revalidatePath('/settings/categories');
+        revalidatePath('/inventory');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting ingredient category: ', e);
+        throw new Error('Failed to delete ingredient category');
+    }
+}
+
 
 // Recipe Actions
 export async function addRecipe(recipeData: AddRecipeData) {

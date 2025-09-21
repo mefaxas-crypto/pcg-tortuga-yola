@@ -28,7 +28,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem, editInventoryItem } from '@/lib/actions';
 import { useEffect, useState } from 'react';
-import type { Supplier, InventoryItem, Allergen } from '@/lib/types';
+import type { Supplier, InventoryItem, Allergen, IngredientCategory } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -70,7 +70,6 @@ type InventoryItemFormSheetProps = {
   isInternalCreation?: boolean;
 };
 
-const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
 const availableUnits = Object.keys(allUnits).map(key => ({
     value: key,
     label: allUnits[key as keyof typeof allUnits].name
@@ -87,6 +86,7 @@ export function InventoryItemFormSheet({
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
+  const [categories, setCategories] = useState<IngredientCategory[]>([]);
   const [isNewSupplierSheetOpen, setNewSupplierSheetOpen] = useState(false);
   const [isConversionDialogOpen, setConversionDialogOpen] = useState(false);
   const [pendingFormValues, setPendingFormValues] = useState<z.infer<typeof formSchema> | null>(null);
@@ -137,7 +137,6 @@ export function InventoryItemFormSheet({
       } else if (isInternalCreation) {
         form.reset({
           ...commonReset,
-          category: 'Meat', // Default category for butchered items
           purchaseUnit: 'kg',
           supplierId: '',
         });
@@ -166,9 +165,19 @@ export function InventoryItemFormSheet({
       setAllergens(allergensData.sort((a, b) => a.name.localeCompare(b.name)));
     });
 
+    const qCategories = query(collection(db, 'ingredientCategories'));
+    const unsubscribeCategories = onSnapshot(qCategories, (querySnapshot) => {
+        const categoriesData: IngredientCategory[] = [];
+        querySnapshot.forEach((doc) => {
+            categoriesData.push({ id: doc.id, ...doc.data() } as IngredientCategory);
+        });
+        setCategories(categoriesData.sort((a, b) => a.name.localeCompare(b.name)));
+    });
+
     return () => {
       unsubscribeSuppliers();
       unsubscribeAllergens();
+      unsubscribeCategories();
     };
   }, []);
   
@@ -219,14 +228,11 @@ export function InventoryItemFormSheet({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // If the purchase unit is 'un.' and there is no conversion factor defined yet,
-    // we must ask the user for it before we can save the item.
     if (values.purchaseUnit === 'un.' && !values.recipeUnitConversion) {
       setPendingFormValues(values);
       setConversionDialogOpen(true);
       return;
     }
-    // For standard units, or 'un.' items that already have a conversion, proceed directly.
     await completeSubmission(values);
   }
 
@@ -309,7 +315,7 @@ export function InventoryItemFormSheet({
                             </FormControl>
                             <SelectContent>
                             {categories.map(category => (
-                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                                <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>

@@ -1,7 +1,7 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Settings } from 'lucide-react';
+import { List, Settings, Shapes } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -24,6 +24,22 @@ export default function SettingsPage() {
               <Link href="/settings/allergens">Manage Allergens</Link>
             </Button>
           </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                <Shapes />
+                Category Management
+                </CardTitle>
+                <CardDescription>
+                Manage the categories for your inventory items.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild>
+                <Link href="/settings/categories">Manage Categories</Link>
+                </Button>
+            </CardContent>
         </Card>
          <Card>
           <CardHeader>
