@@ -1,6 +1,5 @@
 
 
-
 'use server';
 
 import {
@@ -502,9 +501,9 @@ export async function logButchering(data: ButcheringData) {
       // 2. Deplete the primary item's stock
       const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.unit as Unit);
       
-      if (primaryItem.quantity < quantityToDeplete) {
-        throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDeplete} ${primaryItem.unit}.`);
-      }
+      // if (primaryItem.quantity < quantityToDeplete) {
+      //   throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDeplete} ${primaryItem.unit}.`);
+      // }
 
       const newPrimaryQuantity = primaryItem.quantity - quantityToDeplete;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
