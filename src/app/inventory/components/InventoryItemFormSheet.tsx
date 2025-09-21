@@ -100,7 +100,7 @@ export function InventoryItemFormSheet({
       name: '',
       category: '',
       purchaseQuantity: 1,
-      purchaseUnit: 'kg',
+      purchaseUnit: '',
       purchasePrice: 0,
       parLevel: 0,
       supplierId: '',
@@ -114,7 +114,7 @@ export function InventoryItemFormSheet({
       name: '',
       category: '',
       purchaseQuantity: 1,
-      purchaseUnit: 'kg',
+      purchaseUnit: '',
       purchasePrice: 0,
       parLevel: 0,
       supplierId: '',
@@ -218,8 +218,8 @@ export function InventoryItemFormSheet({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // If purchase unit is 'un' and we are adding a new item, we need conversion factor.
-    if (values.purchaseUnit === 'un' && mode === 'add') {
+    // If purchase unit is 'un.' and we are adding a new item, we need conversion factor.
+    if (values.purchaseUnit === 'un.' && mode === 'add' && !values.recipeUnitConversion) {
       setPendingFormValues(values);
       setConversionDialogOpen(true);
       return;

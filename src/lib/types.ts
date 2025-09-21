@@ -8,9 +8,9 @@ export type InventoryItem = {
   name: string;
   category: string;
   quantity: number; // Current stock in the `unit` of tracking
-  unit: Unit; // The unit for inventory tracking (e.g., 'un' for bottles, 'g' for bulk flour)
+  unit: Unit; // The unit for inventory tracking (e.g., 'un.' for bottles, 'kg' for bulk flour), same as purchaseUnit
   purchaseQuantity: number; // e.g., 1 for a case, 10 for a kg bag
-  purchaseUnit: Unit; // The unit of the purchase (e.g., 'un' for case, 'kg' for bag)
+  purchaseUnit: Unit; // The unit of the purchase (e.g., 'un.' for case, 'kg' for bag)
   purchasePrice: number; // Price for one purchaseQuantity
   parLevel: number; // Re-order point in the `purchaseUnit`
   supplier: string; // Supplier Name

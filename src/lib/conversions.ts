@@ -20,10 +20,29 @@ export const allUnits = {
   'lt':   { name: 'Lt',      type: 'volume', factor: 1000 },
   'ml':   { name: 'mL',      type: 'volume', factor: 1 },
   'floz': { name: 'fl. oz',  type: 'volume', factor: 29.5735 },
-  'un.':   { name: 'un.',     type: 'each',   factor: 1 },
+  'un.':  { name: 'un.',     type: 'each',   factor: 1 },
 };
 
 export type Unit = keyof typeof allUnits;
+
+
+/**
+ * Determines the fundamental base unit for a given unit (e.g., 'kg' -> 'g').
+ * @param unit The unit to find the base for.
+ * @returns The base unit ('g', 'ml', or 'un.').
+ */
+export function getBaseUnit(unit: Unit): Unit {
+    const unitInfo = allUnits[unit];
+    if (!unitInfo) {
+        // Fallback for safety, though this should ideally not be reached
+        // if all inputs are validated against `allUnits`.
+        return 'un.';
+    }
+    if (unitInfo.type === 'weight') return BASE_WEIGHT_UNIT;
+    if (unitInfo.type === 'volume') return BASE_VOLUME_UNIT;
+    return 'un.'; // For 'each' type
+}
+
 
 /**
  * Converts a value from one unit to another.
@@ -53,7 +72,7 @@ export function convert(
 
   // --- Direct Conversion (Weight-Weight, Volume-Volume, Each-Each) ---
   if (from.type === to.type) {
-    if (from.type === 'each') return value; // 'un' to 'un' is 1:1
+    if (from.type === 'each') return value; // 'un.' to 'un.' is 1:1, anything else is invalid
     const valueInBaseUnit = value * from.factor;
     return valueInBaseUnit / to.factor;
   }
