@@ -126,6 +126,20 @@ const recipeCategories = [
   'Side',
 ];
 
+const availableUnits = [
+  { value: 'kg', label: 'kg' },
+  { value: 'g', label: 'g' },
+  { value: 'l', label: 'l' },
+  { value: 'ml', label: 'ml' },
+  { value: 'lb', label: 'lb' },
+  { value: 'oz', label: 'oz' },
+  { value: 'floz', label: 'fl oz' },
+  { value: 'unit', label: 'unit' },
+  { value: 'portion', label: 'portion' },
+  { value: 'each', label: 'each' },
+];
+
+
 export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -507,9 +521,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                          {Object.keys(allUnits).map(unitKey => (
-                              <SelectItem key={unitKey} value={unitKey}>{(allUnits as any)[unitKey].name}</SelectItem>
-                          ))}
+                            {availableUnits.map(unit => (
+                                <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
+                            ))}
                           </SelectContent>
                       </Select>
                       <FormMessage />
@@ -612,10 +626,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.keys(allUnits).map((unitKey) => (
-                              <SelectItem key={unitKey} value={unitKey}>
-                                {(allUnits as any)[unitKey].name}
-                              </SelectItem>
+                            {availableUnits.map(unit => (
+                                <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
