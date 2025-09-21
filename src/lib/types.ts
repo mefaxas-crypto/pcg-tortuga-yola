@@ -1,4 +1,5 @@
 
+
 export type InventoryItem = {
   id: string;
   materialCode: string;
@@ -17,8 +18,8 @@ export type InventoryItem = {
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
-export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
-export type EditInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
+export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier' | 'unitCost'>;
+export type EditInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier' | 'unitCost'>;
 
 
 export type Supplier = {
@@ -37,7 +38,9 @@ export type Allergen = {
 export type AddAllergenData = Omit<Allergen, 'id'>;
 
 export type RecipeIngredient = {
-  inventoryItemId: string;
+  itemId: string; // Can be an inventory item ID or a sub-recipe ID
+  ingredientType: 'inventory' | 'recipe';
+  itemCode: string; // materialCode or recipeCode
   name: string;
   quantity: number;
   unit: string;
@@ -47,7 +50,7 @@ export type RecipeIngredient = {
 export type Recipe = {
   id: string;
   recipeCode: string;
-  name: string;
+  name:string;
   isSubRecipe: boolean;
   category: string;
   menuId?: string; // ID of the menu this recipe belongs to

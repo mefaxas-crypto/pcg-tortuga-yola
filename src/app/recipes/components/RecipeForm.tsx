@@ -9,7 +9,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Recipe, InventoryItem, Menu } from '@/lib/types';
 import { addRecipe, editRecipe } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { allUnits, convert, Unit } from '@/lib/conversions';
 
@@ -37,9 +37,9 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -80,9 +80,10 @@ const formSchema = z.object({
   ingredients: z
     .array(
       z.object({
-        inventoryItemId: z.string(),
+        itemId: z.string(),
+        ingredientType: z.enum(['inventory', 'recipe']),
+        itemCode: z.string(),
         name: z.string(),
-        materialCode: z.string(),
         quantity: z.coerce.number().min(0, 'Quantity must be positive'),
         unit: z.string().min(1, 'Unit is required'),
         totalCost: z.number(),
@@ -98,9 +99,19 @@ type RecipeFormProps = {
   recipe?: Recipe;
 };
 
-// This will hold the original unit and unitCost from the inventory for conversion purposes
-type InventoryItemDetails = {
-  [inventoryItemId: string]: {
+type SelectableItem = {
+  id: string;
+  name: string;
+  type: 'inventory' | 'recipe';
+  code: string;
+  unit: string;
+  cost: number;
+};
+
+
+// This will hold the original unit and unitCost from the inventory/sub-recipe for conversion purposes
+type ItemDetails = {
+  [itemId: string]: {
     baseUnit: string;
     unitCost: number;
   };
@@ -119,13 +130,13 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [selectableItems, setSelectableItems] = useState<SelectableItem[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
   const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
 
-  const [inventoryItemDetails, setInventoryItemDetails] =
-    useState<InventoryItemDetails>({});
+  const [itemDetails, setItemDetails] =
+    useState<ItemDetails>({});
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -155,7 +166,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       (sum, item) => sum + (item.totalCost || 0),
       0,
     );
-  }, [watchIngredients, fields]);
+  }, [watchIngredients]);
 
   useEffect(() => {
     if (mode === 'edit' && recipe) {
@@ -174,32 +185,62 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       });
 
       // Populate details for existing ingredients
-      const details: InventoryItemDetails = {};
-      const invItemsToGetDetailsFor = recipe.ingredients.map(
-        (ing) => ing.inventoryItemId,
+      const details: ItemDetails = {};
+       const itemsToGetDetailsFor = recipe.ingredients.map(
+        (ing) => ing.itemId,
       );
-      const relevantInvItems = inventory.filter((i) =>
-        invItemsToGetDetailsFor.includes(i.id),
+      const relevantItems = selectableItems.filter((i) =>
+        itemsToGetDetailsFor.includes(i.id),
       );
 
-      relevantInvItems.forEach((invItem) => {
-        details[invItem.id] = {
-          baseUnit: invItem.unit,
-          unitCost: invItem.unitCost,
+      relevantItems.forEach((item) => {
+        details[item.id] = {
+          baseUnit: item.unit,
+          unitCost: item.cost,
         };
       });
-      setInventoryItemDetails(details);
+      setItemDetails(details);
     }
-  }, [recipe, mode, form, inventory]);
+  }, [recipe, mode, form, selectableItems]);
 
   useEffect(() => {
+    // Fetch inventory items
     const qInv = query(collection(db, 'inventory'));
     const unsubInv = onSnapshot(qInv, (snapshot) => {
-      const fetchedItems: InventoryItem[] = [];
-      snapshot.forEach((doc) =>
-        fetchedItems.push({ id: doc.id, ...doc.data() } as InventoryItem),
-      );
-      setInventory(fetchedItems.sort((a, b) => a.name.localeCompare(b.name)));
+      const invItems: SelectableItem[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as InventoryItem
+        invItems.push({ 
+          id: doc.id,
+          name: data.name,
+          type: 'inventory',
+          code: data.materialCode,
+          unit: data.unit,
+          cost: data.unitCost,
+         });
+      });
+      setSelectableItems(current => [...invItems, ...current.filter(i => i.type === 'recipe')].sort((a,b) => a.name.localeCompare(b.name)));
+    });
+
+    // Fetch sub-recipes
+    const qSubRecipes = query(collection(db, 'recipes'), where('isSubRecipe', '==', true));
+    const unsubSubRecipes = onSnapshot(qSubRecipes, (snapshot) => {
+        const subRecipes: SelectableItem[] = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data() as Recipe;
+            // Exclude the current recipe from being a potential ingredient for itself
+            if (mode === 'edit' && recipe?.id === doc.id) return;
+            
+            subRecipes.push({
+                id: doc.id,
+                name: data.name,
+                type: 'recipe',
+                code: data.recipeCode,
+                unit: data.yieldUnit || 'unit',
+                cost: data.totalCost / (data.yield || 1)
+            });
+        });
+        setSelectableItems(current => [...subRecipes, ...current.filter(i => i.type === 'inventory')].sort((a,b) => a.name.localeCompare(b.name)));
     });
 
     const qMenus = query(collection(db, 'menus'));
@@ -213,35 +254,37 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     return () => {
       unsubInv();
+      unsubSubRecipes();
       unsubMenus();
     };
-  }, []);
+  }, [mode, recipe?.id]);
 
-  const handleIngredientAdd = (invItem: InventoryItem) => {
-    if (fields.some((item) => item.inventoryItemId === invItem.id)) {
+  const handleIngredientAdd = (item: SelectableItem) => {
+    if (fields.some((field) => field.itemId === item.id)) {
       toast({
         variant: 'destructive',
         title: 'Ingredient already added',
-        description: `"${invItem.name}" is already in this recipe.`,
+        description: `"${item.name}" is already in this recipe.`,
       });
       return;
     }
 
     append({
-      inventoryItemId: invItem.id,
-      name: invItem.name,
-      materialCode: invItem.materialCode,
+      itemId: item.id,
+      ingredientType: item.type,
+      itemCode: item.code,
+      name: item.name,
       quantity: 1,
-      unit: invItem.unit,
-      totalCost: invItem.unitCost, // Initial cost
+      unit: item.unit,
+      totalCost: item.cost, // Initial cost for 1 unit
     });
 
     // Store original details for conversion
-    setInventoryItemDetails((prev) => ({
+    setItemDetails((prev) => ({
       ...prev,
-      [invItem.id]: {
-        baseUnit: invItem.unit,
-        unitCost: invItem.unitCost,
+      [item.id]: {
+        baseUnit: item.unit,
+        unitCost: item.cost,
       },
     }));
 
@@ -254,7 +297,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     unit: string,
   ) => {
     const ingredient = fields[index];
-    const details = inventoryItemDetails[ingredient.inventoryItemId];
+    const details = itemDetails[ingredient.itemId];
     if (!details) return;
 
     let newTotalCost = 0;
@@ -328,6 +371,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   useEffect(() => {
     if (isSubRecipe) {
       form.setValue('menuId', 'none');
+      form.setValue('category', 'Sub-recipe');
     }
   }, [isSubRecipe, form]);
 
@@ -376,7 +420,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubRecipe}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category..." />
@@ -497,7 +541,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
             <CardHeader>
               <CardTitle>Ingredients</CardTitle>
               <CardDescription>
-                Add ingredients from your inventory to build the recipe.
+                Add ingredients from your inventory or other sub-recipes.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -518,7 +562,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                   {fields.map((field, index) => (
                     <TableRow key={field.id}>
                       <TableCell className="text-muted-foreground">
-                        {field.materialCode}
+                        {field.itemCode}
                       </TableCell>
                       <TableCell>{field.name}</TableCell>
                       <TableCell>
@@ -588,7 +632,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         role="combobox"
                         className="w-full md:w-[300px] justify-between"
                     >
-                        Search inventory...
+                        Search inventory & sub-recipes...
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                     </PopoverTrigger>
@@ -597,8 +641,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         <CommandInput placeholder="Search for an ingredient..." />
                         <CommandList>
                         <CommandEmpty>No ingredients found.</CommandEmpty>
-                        <CommandGroup>
-                            {inventory.map((item) => (
+                        <CommandGroup heading="Sub-Recipes">
+                            {selectableItems.filter(item => item.type === 'recipe').map((item) => (
                             <CommandItem
                                 key={item.id}
                                 value={item.name}
@@ -607,7 +651,25 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                 <Check
                                 className={cn(
                                     'mr-2 h-4 w-4',
-                                    fields.some(i => i.inventoryItemId === item.id) ? 'opacity-100' : 'opacity-0',
+                                    fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0',
+                                )}
+                                />
+                                {item.name}
+                            </CommandItem>
+                            ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup heading="Inventory Items">
+                            {selectableItems.filter(item => item.type === 'inventory').map((item) => (
+                            <CommandItem
+                                key={item.id}
+                                value={item.name}
+                                onSelect={() => handleIngredientAdd(item)}
+                            >
+                                <Check
+                                className={cn(
+                                    'mr-2 h-4 w-4',
+                                    fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0',
                                 )}
                                 />
                                 {item.name}

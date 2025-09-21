@@ -270,12 +270,18 @@ export async function logSale(saleData: AddSaleData) {
 
       // 3. Deplete each ingredient
       for (const recipeIngredient of recipe.ingredients) {
-        const invItemRef = doc(db, 'inventory', recipeIngredient.inventoryItemId);
+        if (recipeIngredient.ingredientType === 'recipe') {
+          // For now, we are not depleting sub-recipes stock. This could be a future enhancement.
+          console.log(`Skipping depletion for sub-recipe: ${recipeIngredient.name}`);
+          continue;
+        }
+
+        const invItemRef = doc(db, 'inventory', recipeIngredient.itemId);
         const invItemSnap = await transaction.get(invItemRef);
 
         if (!invItemSnap.exists()) {
           // It's possible an ingredient was deleted, so we'll log a warning and skip.
-          console.warn(`Inventory item with ID ${recipeIngredient.inventoryItemId} not found during sale depletion.`);
+          console.warn(`Inventory item with ID ${recipeIngredient.itemId} not found during sale depletion.`);
           continue;
         }
 
@@ -309,4 +315,3 @@ export async function logSale(saleData: AddSaleData) {
     throw new Error('Failed to log sale.');
   }
 }
-
