@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -44,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
@@ -372,34 +373,40 @@ export function ButcheringForm() {
           <div className='flex justify-between items-start'>
             <div className="flex flex-col gap-2">
                 {activeTemplate ? (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button type="button" variant="outline">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Yield From Template
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Search yield cuts..." />
-                                <CommandList>
-                                    <CommandEmpty>No cuts found in template.</CommandEmpty>
-                                    <CommandGroup>
-                                        {activeTemplate.yields.map((yieldItem) => (
-                                            <CommandItem
-                                                key={yieldItem.id}
-                                                value={yieldItem.name}
-                                                onSelect={() => handleAddYieldedItemFromTemplate(yieldItem)}
-                                                className="flex justify-between items-center"
-                                            >
-                                                <span>{yieldItem.name}</span>
-                                                <Check className={cn("h-4 w-4", fields.some(f => inventory.find(i => i.materialCode === yieldItem.id)?.id === f.itemId) ? "opacity-100" : "opacity-0")} />
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <Button type="button" variant="outline">
+                                  <PlusCircle className="mr-2 h-4 w-4" /> Add Yield From Template
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                  <CommandInput placeholder="Search yield cuts..." />
+                                  <CommandList>
+                                      <CommandEmpty>No cuts found in template.</CommandEmpty>
+                                      <CommandGroup>
+                                          {activeTemplate.yields.map((yieldItem) => (
+                                              <CommandItem
+                                                  key={yieldItem.id}
+                                                  value={yieldItem.name}
+                                                  onSelect={() => handleAddYieldedItemFromTemplate(yieldItem)}
+                                                  className="flex justify-between items-center"
+                                              >
+                                                  <span>{yieldItem.name}</span>
+                                                  <Check className={cn("h-4 w-4", fields.some(f => inventory.find(i => i.materialCode === yieldItem.id)?.id === f.itemId) ? "opacity-100" : "opacity-0")} />
+                                              </CommandItem>
+                                          ))}
+                                      </CommandGroup>
+                                  </CommandList>
+                              </Command>
+                          </PopoverContent>
+                      </Popover>
+                      <Button type="button" variant="secondary" size="icon">
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit Template</span>
+                      </Button>
+                    </div>
                 ) : (
                     <Button
                         type="button"
