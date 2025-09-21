@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -99,8 +98,6 @@ export function RecipeForm({
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
 
-  const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
-  const quantityInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const { toast } = useToast();
   
@@ -142,18 +139,6 @@ export function RecipeForm({
   const totalRecipeCost = useMemo(() => {
     return ingredients.reduce((total, item) => total + (item.totalCost || 0), 0);
   }, [ingredients]);
-
-  const addEmptyIngredient = () => {
-    append({
-        inventoryItemId: '',
-        quantity: 0,
-        name: '',
-        materialCode: '',
-        unit: '',
-        unitPrice: 0,
-        totalCost: 0
-    });
-  };
   
   useEffect(() => {
     const qInventory = query(collection(db, 'inventory'));
@@ -187,10 +172,6 @@ export function RecipeForm({
         description: 'Failed to load menus. Please try again later.',
       });
     });
-
-    if (mode === 'add' && fields.length === 0) {
-      addEmptyIngredient();
-    }
 
     return () => {
       unsubscribeInventory();
@@ -244,30 +225,6 @@ export function RecipeForm({
       setLoading(false);
     }
   }
-
-  const handleRemoveIngredient = (index: number) => {
-    remove(index);
-  };
-
-  const handleIngredientSelect = (index: number, item: InventoryItem) => {
-    const quantity = form.getValues(`ingredients.${index}.quantity`) || 0;
-    update(index, {
-        inventoryItemId: item.id,
-        name: item.name,
-        materialCode: item.materialCode,
-        unit: item.unit,
-        unitPrice: item.unitCost,
-        quantity: quantity,
-        totalCost: quantity * item.unitCost,
-    });
-    setOpenPopoverIndex(null);
-    
-    // Focus quantity input
-    setTimeout(() => {
-        quantityInputRefs.current[index]?.focus();
-        quantityInputRefs.current[index]?.select();
-    }, 100);
-  };
 
 
   return (
@@ -420,6 +377,40 @@ export function RecipeForm({
                 totalRecipeCost={totalRecipeCost}
                 isSubRecipe={isSubRecipe}
             />
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Ingredients</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[100px]">Code</TableHead>
+                                <TableHead>Ingredient</TableHead>
+                                <TableHead className="w-[120px]">Quantity</TableHead>
+                                <TableHead className="w-[100px]">Unit</TableHead>
+                                <TableHead className="text-right w-[120px]">Unit Price</TableHead>
+                                <TableHead className="text-right w-[120px]">Total Cost</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {/* We will map over 'fields' here later */}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+                <CardFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Ingredient
+                    </Button>
+                </CardFooter>
+            </Card>
           
             <FormField
               control={form.control}
