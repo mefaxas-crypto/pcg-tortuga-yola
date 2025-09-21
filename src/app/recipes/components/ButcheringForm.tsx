@@ -54,7 +54,6 @@ import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
-import { Card, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 
 const yieldItemSchema = z.object({
@@ -168,20 +167,25 @@ export function ButcheringForm() {
   const totalYieldedWeightInKg = useMemo(() => {
     return yieldedItems.reduce((sum, item) => {
       if (!item.weight || item.weight === 0 || !item.fullDetails) return sum;
+      
       let itemWeightInKg = 0;
       try {
-        if (item.fullDetails.unit === 'un.') {
+        // Handle items measured by 'un.'
+        if (item.fullDetails.purchaseUnit === 'un.') {
             const weightPerUnit = item.fullDetails.recipeUnitConversion;
             const baseUnitOfItem = item.fullDetails.recipeUnit as Unit | undefined;
 
             if (!baseUnitOfItem || !weightPerUnit || weightPerUnit === 0) {
-                console.warn(`Cannot calculate weight for unit-based item '${item.name}' without conversion factor.`);
+                console.warn(`Cannot calculate weight for unit-based item '${item.name}' without a valid conversion factor.`);
                 return sum;
             }
+            // Calculate the total weight in its recipe unit (e.g., total oz for all fillets)
             const totalWeightInBase = item.weight * weightPerUnit; 
+            // Convert that total weight to kg
             itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
 
         } else {
+          // Handle items measured by weight
           itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
         }
       } catch (error) {
@@ -453,22 +457,20 @@ export function ButcheringForm() {
             </div>
 
             {showSummary && (
-                 <Card className="w-full max-w-sm">
-                    <CardContent className="p-4 space-y-2">
-                        <div className='flex justify-between text-sm'>
-                            <span className='text-muted-foreground'>Total Yield Weight:</span>
-                            <span className='font-medium'>{totalYieldedWeightInKg.toFixed(3)} kg</span>
-                        </div>
-                        <div className='flex justify-between text-sm'>
-                            <span className='text-muted-foreground'>Total Yield %:</span>
-                            <span className={cn('font-medium', yieldPercentage > 100 ? 'text-destructive' : 'text-primary')}>{yieldPercentage.toFixed(2)}%</span>
-                        </div>
-                        <div className='flex justify-between text-sm'>
-                            <span className='text-muted-foreground'>Loss %:</span>
-                            <span className={cn('font-medium', lossPercentage < 0 ? 'text-destructive' : 'text-muted-foreground')}>{lossPercentage.toFixed(2)}%</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="w-full max-w-sm rounded-lg border bg-card text-card-foreground p-4 space-y-2">
+                    <div className='flex justify-between text-sm'>
+                        <span className='text-muted-foreground'>Total Yield Weight:</span>
+                        <span className='font-medium'>{totalYieldedWeightInKg.toFixed(3)} kg</span>
+                    </div>
+                    <div className='flex justify-between text-sm'>
+                        <span className='text-muted-foreground'>Total Yield %:</span>
+                        <span className={cn('font-medium', yieldPercentage > 100 ? 'text-destructive' : 'text-primary')}>{yieldPercentage.toFixed(2)}%</span>
+                    </div>
+                    <div className='flex justify-between text-sm'>
+                        <span className='text-muted-foreground'>Loss %:</span>
+                        <span className={cn('font-medium', lossPercentage < 0 ? 'text-destructive' : 'text-muted-foreground')}>{lossPercentage.toFixed(2)}%</span>
+                    </div>
+                </div>
             )}
           </div>
         </fieldset>
