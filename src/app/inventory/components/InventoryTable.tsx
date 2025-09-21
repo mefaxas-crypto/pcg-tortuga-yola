@@ -174,7 +174,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {item.quantity} {getUnitLabel(item.purchaseUnit)}
+                    {item.quantity.toFixed(2)} {getUnitLabel(item.purchaseUnit)}
                   </TableCell>
                    <TableCell>{item.purchaseQuantity} {getUnitLabel(item.purchaseUnit)}</TableCell>
                    <TableCell>
