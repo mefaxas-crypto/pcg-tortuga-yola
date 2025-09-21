@@ -28,6 +28,9 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { RotateCcw } from 'lucide-react';
+import { UndoProductionLogDialog } from './UndoProductionLogDialog';
 
 export function ProductionLogHistory() {
   const [logs, setLogs] = useState<ProductionLog[] | null>(null);
@@ -68,18 +71,19 @@ export function ProductionLogHistory() {
       <CardHeader>
         <CardTitle>Production History</CardTitle>
         <CardDescription>
-          A log of the most recently produced sub-recipes.
+          A log of the most recently produced sub-recipes. You can undo a log to reverse the inventory changes.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-96">
           <Table>
-            <TableHeader className='sticky top-0 bg-card'>
+            <TableHeader className="sticky top-0 bg-card">
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>Item Produced</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -98,37 +102,43 @@ export function ProductionLogHistory() {
                     <TableCell>
                       <Skeleton className="h-5 w-16 ml-auto" />
                     </TableCell>
+                     <TableCell>
+                      <Skeleton className="h-8 w-20 ml-auto" />
+                    </TableCell>
                   </TableRow>
                 ))}
               {!loading &&
-                logs?.map((log) =>
-                  log.producedItems.map((item, index) => (
-                    <TableRow key={`${log.id}-${index}`}>
-                      {index === 0 && (
-                        <>
-                          <TableCell
-                            className="align-top text-muted-foreground"
-                            rowSpan={log.producedItems.length}
-                          >
-                            {log.logDate ? format(log.logDate, 'P p') : 'Processing...'}
-                          </TableCell>
-                          <TableCell
-                            className="align-top text-muted-foreground"
-                            rowSpan={log.producedItems.length}
-                          >
-                            {log.user}
-                          </TableCell>
-                        </>
-                      )}
-                      <TableCell className="font-medium">
-                        {item.recipeName}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.quantityProduced.toFixed(2)} {item.yieldUnit}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                logs?.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="align-top text-muted-foreground pt-3.5">
+                      {log.logDate ? format(log.logDate, 'P p') : 'Processing...'}
+                    </TableCell>
+                    <TableCell className="align-top text-muted-foreground pt-3.5">
+                      {log.user}
+                    </TableCell>
+                    <TableCell colSpan={1} className='p-0'>
+                      <div className='divide-y'>
+                      {log.producedItems.map((item, index) => (
+                        <div key={index} className='flex justify-between items-center py-2 px-4'>
+                          <span className="font-medium">{item.recipeName}</span>
+                          <span className="text-right text-muted-foreground">
+                            {item.quantityProduced.toFixed(2)} {item.yieldUnit}
+                          </span>
+                        </div>
+                      ))}
+                      </div>
+                    </TableCell>
+                     <TableCell colSpan={0} className='p-0'></TableCell>
+                    <TableCell className="align-middle text-right">
+                       <UndoProductionLogDialog logId={log.id} logDate={log.logDate}>
+                          <Button variant="outline" size="sm">
+                            <RotateCcw className="mr-2 h-3 w-3" />
+                            Undo
+                          </Button>
+                        </UndoProductionLogDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
           {!loading && (!logs || logs.length === 0) && (
