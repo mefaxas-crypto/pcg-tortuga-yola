@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -47,6 +48,9 @@ export function ProductionForm() {
     },
   });
 
+  const selectedRecipeId = form.watch('recipeId');
+  const selectedRecipe = subRecipes.find(r => r.id === selectedRecipeId);
+
   useEffect(() => {
     const q = query(collection(db, 'recipes'), where('isSubRecipe', '==', true));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -62,14 +66,14 @@ export function ProductionForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
 
-    const selectedRecipe = subRecipes.find(r => r.id === values.recipeId);
-    if (!selectedRecipe) return;
+    const recipeForSubmit = subRecipes.find(r => r.id === values.recipeId);
+    if (!recipeForSubmit) return;
 
     try {
         await logProduction(values);
         toast({
             title: 'Production Logged',
-            description: `Inventory updated for the production of ${selectedRecipe.name}.`,
+            description: `Inventory updated for the production of ${recipeForSubmit.name}.`,
         });
       form.reset({ recipeId: '', quantityProduced: 1 });
     } catch (error) {
@@ -120,11 +124,16 @@ export function ProductionForm() {
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
+               {selectedRecipe && selectedRecipe.yield && selectedRecipe.yieldUnit && (
+                <FormDescription>
+                  One batch yields: {selectedRecipe.yield} {selectedRecipe.yieldUnit}
+                </FormDescription>
+              )}
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading || !selectedRecipeId} className="w-full">
           {loading ? 'Processing...' : 'Log Production'}
           <Flame className="ml-2 h-4 w-4" />
         </Button>
