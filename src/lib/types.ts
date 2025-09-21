@@ -110,28 +110,29 @@ export type LogProductionData = {
 };
 
 export type ButcheringItem = {
-    itemId: string; // From template or custom
+    itemId: string; // The inventory ID of the yielded item
     name: string;
     weight: number;
     yieldPercentage: number;
+    materialCode: string; // The material code of the yielded item
 }
 
 export type ButcheringData = {
     primaryItemId: string;
+    primaryItemMaterialCode: string;
     quantityUsed: number;
     quantityUnit: string;
     yieldedItems: ButcheringItem[];
 }
 
 export type YieldItem = {
-  id: string;
+  id: string; // Material Code
   name: string;
-  estimatedYield?: number;
 }
 
 export type ButcheryTemplate = {
     id: string;
     name: string;
-    primaryItemId: string;
+    primaryItemMaterialCode: string; // The material code of the primary inventory item
     yields: YieldItem[];
 }

@@ -61,7 +61,7 @@ const formSchema = z.object({
   yieldedItems: z
     .array(
       z.object({
-        itemId: z.string(), // ID from template or a generated one for custom items
+        itemId: z.string().min(1, 'Item ID is missing.'),
         name: z.string().min(1, 'Item name is required.'),
         weight: z.coerce.number().min(0.01, 'Weight must be greater than 0.'),
       }),
@@ -108,15 +108,17 @@ export function ButcheringForm() {
   const primaryItemId = form.watch('primaryItemId');
 
   const activeTemplate = useMemo(() => {
-    return (butcheryTemplates as ButcheryTemplateType[]).find(t => t.primaryItemId === primaryItemId);
-  }, [primaryItemId]);
+    const primaryItem = inventory.find(i => i.id === primaryItemId);
+    if (!primaryItem) return null;
+    return (butcheryTemplates as ButcheryTemplateType[]).find(t => t.primaryItemMaterialCode === primaryItem.materialCode);
+  }, [primaryItemId, inventory]);
 
 
   const totalYieldedWeight = yieldedItems.reduce((sum, item) => sum + (item.weight || 0), 0);
   const yieldPercentage = quantityUsed > 0 ? (totalYieldedWeight / quantityUsed) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
 
-  const handleAddYieldedItemFromTemplate = (templateYield: ButcheryTemplateType['yields'][0]) => {
+  const handleAddYieldedItemFromTemplate = (templateYield: { id: string, name: string }) => {
     const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
     if (!yieldedInventoryItem) {
       toast({
@@ -144,17 +146,26 @@ export function ButcheringForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
+        const primaryItem = inventory.find(i => i.id === values.primaryItemId);
+        if (!primaryItem) throw new Error("Primary item not found");
+
       const finalData = {
         ...values,
-        yieldedItems: values.yieldedItems.map(item => ({
-          ...item,
-          yieldPercentage: (item.weight / values.quantityUsed) * 100,
-        }))
+        primaryItemMaterialCode: primaryItem.materialCode,
+        yieldedItems: values.yieldedItems.map(item => {
+            const invItem = inventory.find(i => i.id === item.itemId);
+            if (!invItem) throw new Error(`Yielded item ${item.name} not found in inventory.`);
+            return {
+                ...item,
+                materialCode: invItem.materialCode,
+                yieldPercentage: (item.weight / values.quantityUsed) * 100,
+            }
+        })
       }
       await logButchering(finalData);
       toast({
         title: 'Butchering Logged!',
-        description: 'Inventory has been updated with yielded items and stock has been depleted.',
+        description: 'Inventory has been updated and butchery template saved.',
       });
       form.reset({
         primaryItemId: '',
@@ -173,6 +184,13 @@ export function ButcheringForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleNewItemSheetClose = () => {
+    setNewItemSheetOpen(false);
+    // Re-fetch or re-set inventory data here if a new item was added
+    // For simplicity, we can just let the onSnapshot handle it,
+    // but in a more complex app you might want to trigger a refresh.
   }
 
   return (
@@ -220,6 +238,7 @@ export function ButcheringForm() {
                                 onSelect={() => {
                                   form.setValue('primaryItemId', item.id);
                                   form.setValue('quantityUnit', item.unit);
+                                  form.setValue('yieldedItems', []); // Clear yielded items when primary changes
                                   setPopoverOpen(false);
                                 }}
                               >
@@ -415,7 +434,7 @@ export function ButcheringForm() {
     </Form>
     <InventoryItemFormSheet 
         open={isNewItemSheetOpen}
-        onClose={() => setNewItemSheetOpen(false)}
+        onClose={handleNewItemSheetClose}
         mode="add"
     />
     </>

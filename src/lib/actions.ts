@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import {db} from './firebase';
 import type {
@@ -32,6 +33,7 @@ import type {
 } from './types';
 import {revalidatePath} from 'next/cache';
 import { convert } from './conversions';
+import { butcheryTemplates } from './butchery-templates.json';
 
 // We are defining a specific type for adding a supplier
 // that doesn't require the `id` field, as it will be auto-generated.
@@ -100,6 +102,7 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
       unitCost,
     });
     revalidatePath('/inventory');
+    revalidatePath('/recipes/butchering');
     return {success: true, id: docRef.id};
   } catch (e) {
     console.error('Error adding document: ', e);
@@ -277,7 +280,7 @@ export async function logSale(saleData: AddSaleData) {
       // 3. Deplete each ingredient
       for (const recipeIngredient of recipe.ingredients) {
         const itemToDepleteRef = recipeIngredient.ingredientType === 'recipe' 
-          ? query(collection(db, 'inventory'), where('recipeCode', '==', recipeIngredient.itemCode))
+          ? query(collection(db, 'inventory'), where('materialCode', '==', recipeIngredient.itemCode))
           : doc(db, 'inventory', recipeIngredient.itemId);
 
         let invItemSnap;
@@ -467,6 +470,7 @@ export async function logButchering(data: ButcheringData) {
         }
 
         const yieldedItem = yieldedItemSnap.data() as InventoryItem;
+        // The cost of the new item is proportional to its yield percentage of the total cost of the portion being butchered.
         const newYieldedItemCost = (totalCostOfButcheredPortion * (yieldedItemData.yieldPercentage / 100)) / yieldedItemData.weight;
         
         const newQuantity = yieldedItem.quantity + yieldedItemData.weight;
@@ -475,11 +479,35 @@ export async function logButchering(data: ButcheringData) {
         transaction.update(yieldedItemRef, {
             quantity: newQuantity,
             status: newStatus,
-            // Update the cost based on this butchering event
-            unitCost: newYieldedItemCost, 
+            // Update the cost based on this butchering event if it's a valid number
+            unitCost: isFinite(newYieldedItemCost) ? newYieldedItemCost : yieldedItem.unitCost, 
         });
       }
     });
+
+    // 4. Update the butchery template (this is a placeholder for a real database implementation)
+    // This is NOT safe for concurrent use, but for this demo it illustrates the concept.
+    // In a real app, this should be a database transaction or a more robust system.
+    const templateIndex = butcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
+    
+    if (templateIndex > -1) {
+      // Update existing template
+      const template = butcheryTemplates[templateIndex];
+      data.yieldedItems.forEach(yielded => {
+        if (!template.yields.some(y => y.id === yielded.materialCode)) {
+          template.yields.push({ id: yielded.materialCode, name: yielded.name });
+        }
+      });
+    } else {
+      // Create new template
+      butcheryTemplates.push({
+        id: `template-${data.primaryItemMaterialCode}-${Date.now()}`,
+        name: `${primaryItem.name} Breakdown`,
+        primaryItemMaterialCode: data.primaryItemMaterialCode,
+        yields: data.yieldedItems.map(y => ({ id: y.materialCode, name: y.name }))
+      });
+    }
+    // Note: This does not actually save the JSON file on the server. This is a conceptual demonstration.
 
     revalidatePath('/inventory');
     revalidatePath('/');

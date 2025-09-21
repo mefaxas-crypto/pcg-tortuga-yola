@@ -3,7 +3,7 @@
         {
             "id": "template-short-loin-01",
             "name": "Beef Short Loin Breakdown",
-            "primaryItemId": "a3sDf5G6hJkLpQ9wE2rT",
+            "primaryItemMaterialCode": "a3sDf5G6hJkLpQ9wE2rT",
             "yields": [
                 {
                     "id": "yield-striploin-01",
