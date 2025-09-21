@@ -27,6 +27,7 @@ import type {
   AddRecipeData,
   AddSaleData,
   ButcheringData,
+  ButcheringLog,
   ButcheryTemplate,
   InventoryFormData,
   InventoryItem,
@@ -528,19 +529,15 @@ export async function logSale(saleData: AddSaleData) {
         const invItemRef = invItemSnap.ref;
         
         const quantityInRecipeUnit = recipeIngredient.quantity * saleData.quantity;
-
-        // Correctly convert from the recipe's unit to the inventory's tracking unit.
-        const neededInBaseUnit = convert(quantityInRecipeUnit, recipeIngredient.unit as Unit, invItem.recipeUnit as Unit);
         
+        const neededInBaseUnit = convert(quantityInRecipeUnit, recipeIngredient.unit as Unit, invItem.recipeUnit as Unit);
+
         let quantityToDeplete: number;
         if (invItem.unit === 'un.') {
-            // If tracking unit is 'un.', divide by the conversion factor to get fraction of a unit
             quantityToDeplete = neededInBaseUnit / (invItem.recipeUnitConversion || 1);
         } else {
-            // Otherwise, convert from base unit to the tracking unit (which should be compatible)
             quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
         }
-        
 
         const newQuantity = invItem.quantity - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.parLevel);
@@ -812,6 +809,8 @@ export async function logButchering(data: ButcheringData) {
       
       const totalYieldedWeightInKg = data.yieldedItems.reduce((acc, item) => acc + item.weight, 0);
 
+      const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
+
       for (let i = 0; i < data.yieldedItems.length; i++) {
         const yieldedItemData = data.yieldedItems[i];
         const yieldedItemSnap = yieldedItemSnaps[i];
@@ -843,7 +842,29 @@ export async function logButchering(data: ButcheringData) {
             purchasePrice: newPurchasePrice,
             purchaseQuantity: quantityToAdd,
         });
+
+        yieldedItemsForLog.push({
+            itemId: yieldedItem.id,
+            itemName: yieldedItem.name,
+            quantityYielded: quantityToAdd,
+            unit: yieldedItem.purchaseUnit as Unit,
+        });
       }
+
+      // Create the log entry
+      const logRef = doc(collection(db, 'butcheringLogs'));
+      transaction.set(logRef, {
+          logDate: serverTimestamp(),
+          user: 'Chef John Doe', // Placeholder
+          primaryItem: {
+              itemId: primaryItem.id,
+              itemName: primaryItem.name,
+              quantityUsed: quantityToDepleteInPurchaseUnit,
+              unit: primaryItem.purchaseUnit as Unit,
+          },
+          yieldedItems: yieldedItemsForLog,
+      });
+
     });
 
     const templateIndex = initialButcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
@@ -870,6 +891,66 @@ export async function logButchering(data: ButcheringData) {
     throw new Error(`Failed to log butchering: ${errorMessage}`);
   }
 }
+
+export async function undoButcheringLog(logId: string) {
+    try {
+        await runTransaction(db, async (transaction) => {
+            // --- 1. READ PHASE ---
+            const logRef = doc(db, 'butcheringLogs', logId);
+            const logSnap = await transaction.get(logRef);
+            if (!logSnap.exists()) {
+                throw new Error("Butchering log not found.");
+            }
+            const logData = logSnap.data() as ButcheringLog;
+
+            const allItemIds = new Set([logData.primaryItem.itemId, ...logData.yieldedItems.map(item => item.itemId)]);
+            const itemRefs = Array.from(allItemIds).map(id => doc(db, 'inventory', id));
+            const itemSnaps = await Promise.all(itemRefs.map(ref => transaction.get(ref)));
+            const itemSnapMap = new Map(itemSnaps.map(snap => [snap.id, snap]));
+
+            // --- 2. WRITE PHASE ---
+            // Restore primary item
+            const primaryItemSnap = itemSnapMap.get(logData.primaryItem.itemId);
+            if (primaryItemSnap && primaryItemSnap.exists()) {
+                const primaryItem = primaryItemSnap.data() as InventoryItem;
+                const newQuantity = primaryItem.quantity + logData.primaryItem.quantityUsed;
+                transaction.update(primaryItemSnap.ref, {
+                    quantity: newQuantity,
+                    status: getStatus(newQuantity, primaryItem.parLevel),
+                });
+            } else {
+                console.warn(`Primary item with ID ${logData.primaryItem.itemId} not found during undo. Stock cannot be restored.`);
+            }
+
+            // Deplete yielded items
+            for (const yieldedItem of logData.yieldedItems) {
+                const yieldedItemSnap = itemSnapMap.get(yieldedItem.itemId);
+                if (yieldedItemSnap && yieldedItemSnap.exists()) {
+                    const item = yieldedItemSnap.data() as InventoryItem;
+                    const newQuantity = item.quantity - yieldedItem.quantityYielded;
+                     transaction.update(yieldedItemSnap.ref, {
+                        quantity: newQuantity,
+                        status: getStatus(newQuantity, item.parLevel),
+                    });
+                } else {
+                     console.warn(`Yielded item with ID ${yieldedItem.itemId} not found during undo. Stock cannot be depleted.`);
+                }
+            }
+
+            // Delete the log entry
+            transaction.delete(logRef);
+        });
+
+        revalidatePath('/recipes');
+        revalidatePath('/inventory');
+        return { success: true };
+    } catch (error) {
+        console.error('Error undoing butchering log:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to undo butchering log: ${errorMessage}`);
+    }
+}
+
 
 export async function addButcheryTemplate(template: ButcheryTemplate) {
     try {

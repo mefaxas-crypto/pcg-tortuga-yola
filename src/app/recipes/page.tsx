@@ -1,3 +1,4 @@
+
 'use client';
 
 import PageHeader from '@/components/PageHeader';
@@ -18,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { ProductionForm } from './components/ProductionForm';
 import { ButcheringForm } from './components/ButcheringForm';
 import { ProductionLogHistory } from './components/ProductionLogHistory';
+import { ButcheringLogHistory } from './components/ButcheringLogHistory';
 
 
 export default function RecipesPage() {
@@ -61,7 +63,7 @@ export default function RecipesPage() {
             </Card>
             <ProductionLogHistory />
         </TabsContent>
-         <TabsContent value="butchering">
+         <TabsContent value="butchering" className="space-y-6">
             <Card>
                 <CardHeader>
                 <CardTitle>Log Butchering Yield</CardTitle>
@@ -73,6 +75,7 @@ export default function RecipesPage() {
                   <ButcheringForm />
                 </CardContent>
             </Card>
+            <ButcheringLogHistory />
         </TabsContent>
       </Tabs>
     </div>

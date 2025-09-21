@@ -191,3 +191,21 @@ export type ProductionLog = {
         yieldUnit: string;
     }[];
 }
+
+export type ButcheringLog = {
+    id: string;
+    logDate: Date;
+    user: string;
+    primaryItem: {
+        itemId: string;
+        itemName: string;
+        quantityUsed: number;
+        unit: Unit;
+    };
+    yieldedItems: {
+        itemId: string;
+        itemName: string;
+        quantityYielded: number;
+        unit: Unit;
+    }[];
+}
