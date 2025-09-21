@@ -375,6 +375,19 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     }
   }, [isSubRecipe, form]);
 
+  const handleNewIngredientCreated = (newItem: InventoryItem) => {
+    const selectableItem: SelectableItem = {
+      id: newItem.id,
+      name: newItem.name,
+      type: 'inventory',
+      code: newItem.materialCode,
+      unit: newItem.unit,
+      cost: newItem.unitCost
+    };
+    handleIngredientAdd(selectableItem);
+    setNewIngredientSheetOpen(false);
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -722,6 +735,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
         open={isNewIngredientSheetOpen}
         onClose={() => setNewIngredientSheetOpen(false)}
         mode="add"
+        onItemCreated={handleNewIngredientCreated}
        />
     </Form>
   );

@@ -76,7 +76,9 @@ const purchaseUnits = [
     // By Volume
     'l', 'gal',
     // Individual Items
-    'Each', 'Unit', 'Pack'
+    'Each', 'Unit', 'Pack',
+    // Special
+    'Butchery'
 ];
 
 // Units for use in recipes and internal tracking
@@ -152,20 +154,20 @@ export function InventoryItemFormSheet({
         form.reset({
           materialCode: '',
           name: '',
-          category: '',
+          category: 'Meat',
           quantity: 0,
           unit: 'kg', // Default for new butchered items
           purchaseUnit: 'Butchery', // Default
           conversionFactor: 1,
           parLevel: 0,
-          supplierId: '', // Will be set to in-house
+          supplierId: suppliers.find(s => s.name === 'In-house Butchery')?.id || '',
           purchasePrice: 0,
           unitCost: 0,
           allergens: [],
         });
       }
     }
-  }, [item, mode, form, open]);
+  }, [item, mode, form, open, suppliers]);
 
   useEffect(() => {
     const qSuppliers = query(collection(db, 'suppliers'));
