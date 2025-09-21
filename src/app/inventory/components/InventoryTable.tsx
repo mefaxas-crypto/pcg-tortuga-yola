@@ -109,11 +109,10 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                 <TableHead>Item</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Quantity</TableHead>
+                <TableHead>On Hand Qty</TableHead>
                 <TableHead>Purchase Unit</TableHead>
                 <TableHead>Conversion</TableHead>
                 <TableHead className="text-right">Purchase Price</TableHead>
-                 <TableHead className="text-right">Unit Cost</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -129,7 +128,6 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
@@ -156,9 +154,6 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                    </TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(item.purchasePrice || 0)}
-                  </TableCell>
-                   <TableCell className="text-right">
-                    {formatCurrency(item.unitCost || 0)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
