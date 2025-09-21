@@ -33,7 +33,7 @@ import type {
   Supplier,
 } from './types';
 import {revalidatePath} from 'next/cache';
-import { convert } from './conversions';
+import { Unit, convert } from './conversions';
 import { butcheryTemplates } from './butchery-templates.json';
 
 // We are defining a specific type for adding a supplier
@@ -402,7 +402,7 @@ export async function logProduction(data: LogProductionData) {
             `Sub-recipe ${subRecipe.name} not found in inventory. Creating a new entry.`
           );
           const newInvItemRef = doc(collection(db, 'inventory'));
-          const newQuantity = item.yield * item.quantityProduced;
+          const newQuantity = (subRecipe.yield || 1) * item.quantityProduced;
 
           transaction.set(newInvItemRef, {
             materialCode: subRecipe.recipeCode,
@@ -424,7 +424,7 @@ export async function logProduction(data: LogProductionData) {
           const producedItemRef = producedItemSnap.ref;
           const producedItem = producedItemSnap.data() as InventoryItem;
 
-          const quantityToAdd = item.yield * item.quantityProduced;
+          const quantityToAdd = (subRecipe.yield || 1) * item.quantityProduced;
           const newQuantity = producedItem.quantity + quantityToAdd;
           const newStatus = getStatus(newQuantity, producedItem.parLevel);
 
@@ -459,7 +459,7 @@ export async function logButchering(data: ButcheringData) {
       const primaryItem = primaryItemSnap.data() as InventoryItem;
 
       // 2. Deplete the primary item's stock
-      const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as any, primaryItem.unit as any);
+      const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.unit as Unit);
       
       if (primaryItem.quantity < quantityToDeplete) {
         throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDeplete} ${primaryItem.unit}.`);

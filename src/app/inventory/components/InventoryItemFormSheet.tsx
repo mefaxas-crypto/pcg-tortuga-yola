@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { volumeUnits, weightUnits, eachUnits } from '@/lib/conversions';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'Material Code is required.'),
@@ -85,12 +86,9 @@ const purchaseUnits = [
 
 // Units for use in recipes and internal tracking
 const recipeUnits = [
-    // Weight
-    'g', 'kg', 'oz', 'lb',
-    // Volume
-    'ml', 'l', 'floz', 'cup', 'tbsp', 'tsp',
-    // Individual Items
-    'unit', 'each', 'slice', 'portion'
+    ...Object.keys(weightUnits),
+    ...Object.keys(volumeUnits),
+    ...Object.keys(eachUnits)
 ];
 
 
