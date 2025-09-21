@@ -37,7 +37,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -149,7 +148,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
         name: recipe.name,
         isSubRecipe: recipe.isSubRecipe,
         category: recipe.category,
-        menuId: recipe.menuId,
+        menuId: recipe.menuId || 'none',
         yield: recipe.yield,
         yieldUnit: recipe.yieldUnit,
         notes: recipe.notes,
@@ -160,15 +159,15 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
       // Populate details for existing ingredients
       const details: InventoryItemDetails = {};
-      recipe.ingredients.forEach(ing => {
-        const invItem = inventory.find(i => i.id === ing.inventoryItemId);
-        if (invItem) {
-            details[ing.inventoryItemId] = {
-                baseUnit: invItem.unit,
-                unitCost: invItem.unitCost
-            }
+      const invItemsToGetDetailsFor = recipe.ingredients.map(ing => ing.inventoryItemId);
+      const relevantInvItems = inventory.filter(i => invItemsToGetDetailsFor.includes(i.id));
+
+      relevantInvItems.forEach(invItem => {
+         details[invItem.id] = {
+            baseUnit: invItem.unit,
+            unitCost: invItem.unitCost
         }
-      });
+      })
       setInventoryItemDetails(details);
     }
   }, [recipe, mode, form, inventory]);
@@ -233,7 +232,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     let newTotalCost = 0;
     try {
-        const costPerSelectedUnit = convert(details.unitCost, details.baseUnit as Unit, unit as Unit);
+        const costPerSelectedUnit = convert(1, details.baseUnit as Unit, unit as Unit) * details.unitCost;
         newTotalCost = quantity * costPerSelectedUnit;
     } catch (error) {
         console.error("Conversion error:", error);
@@ -253,7 +252,12 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    const recipeData = { ...values, totalCost: totalRecipeCost };
+    
+    const recipeData = { 
+        ...values, 
+        totalCost: totalRecipeCost,
+        menuId: values.menuId === 'none' ? '' : values.menuId
+    };
 
     try {
       if (mode === 'edit' && recipe) {
@@ -288,21 +292,30 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     <CardTitle>Recipe Details</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField name="recipeCode" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="recipeCode"
+                      render={({ field }) => (
                         <FormItem>
                             <FormLabel>Recipe Code</FormLabel>
                             <FormControl><Input placeholder="e.g., APP001" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField name="name" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
                         <FormItem>
                             <FormLabel>Recipe Name</FormLabel>
                             <FormControl><Input placeholder="e.g., Classic Tomato Soup" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField name="category" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
                         <FormItem>
                             <FormLabel>Category</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
@@ -314,13 +327,16 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                             <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField name="menuId" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="menuId"
+                      render={({ field }) => (
                         <FormItem>
                             <FormLabel>Assign to Menu (Optional)</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value} disabled={isSubRecipe}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a menu..." /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="">None</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
                                     {menus.map(menu => <SelectItem key={menu.id} value={menu.id}>{menu.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
@@ -328,14 +344,20 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         </FormItem>
                     )} />
                     <div className="grid grid-cols-2 gap-4">
-                        <FormField name="yield" render={({ field }) => (
+                        <FormField
+                          control={form.control}
+                          name="yield"
+                          render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Yield</FormLabel>
                                 <FormControl><Input type="number" placeholder="e.g., 4" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
-                        <FormField name="yieldUnit" render={({ field }) => (
+                        <FormField
+                          control={form.control}
+                          name="yieldUnit"
+                          render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Yield Unit</FormLabel>
                                 <FormControl><Input placeholder="e.g., portions" {...field} /></FormControl>
@@ -343,7 +365,10 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                             </FormItem>
                         )} />
                     </div>
-                     <FormField name="isSubRecipe" render={({ field }) => (
+                     <FormField
+                      control={form.control}
+                      name="isSubRecipe"
+                      render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 col-span-1 md:col-span-2">
                             <div className="space-y-0.5">
                                 <FormLabel>Is Sub-Recipe?</FormLabel>
@@ -352,7 +377,10 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                             <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )} />
-                    <FormField name="notes" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-2">
                             <FormLabel>Notes / Method</FormLabel>
                             <FormControl><Textarea placeholder="Describe the preparation method..." {...field} rows={6} /></FormControl>
@@ -400,7 +428,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                             <SelectTrigger><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 {Object.keys(allUnits).map(unitKey => (
-                                                    <SelectItem key={unitKey} value={unitKey}>{allUnits[unitKey as Unit].name}</SelectItem>
+                                                    <SelectItem key={unitKey} value={unitKey}>{(allUnits as any)[unitKey].name}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -477,3 +505,5 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
+
+    
