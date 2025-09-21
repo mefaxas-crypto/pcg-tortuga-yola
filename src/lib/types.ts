@@ -1,5 +1,6 @@
 
 
+import type { Unit } from './conversions';
 
 export type InventoryItem = {
   id: string;
@@ -7,16 +8,16 @@ export type InventoryItem = {
   name: string;
   category: string;
   quantity: number; // Current stock in the `unit` of tracking
-  unit: string; // The unit for inventory tracking (e.g., 'un' for bottles, 'g' for bulk flour)
+  unit: Unit; // The unit for inventory tracking (e.g., 'un' for bottles, 'g' for bulk flour)
   purchaseQuantity: number; // e.g., 1 for a case, 10 for a kg bag
-  purchaseUnit: string; // The unit of the purchase (e.g., 'un' for case, 'kg' for bag)
+  purchaseUnit: Unit; // The unit of the purchase (e.g., 'un' for case, 'kg' for bag)
   purchasePrice: number; // Price for one purchaseQuantity
   parLevel: number; // Re-order point in the `purchaseUnit`
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
   // Costing fields
   unitCost: number; // The cost of a single `recipeUnit` (e.g., price per gram, per ml)
-  recipeUnit: string; // The base unit for recipes (e.g., g, ml)
+  recipeUnit: Unit; // The base unit for recipes (e.g., g, ml)
   recipeUnitConversion: number; // How many recipeUnits are in ONE purchaseUnit (e.g., 750ml in 1 un. bottle)
   // Meta fields
   allergens?: string[];
@@ -30,14 +31,14 @@ export type InventoryFormData = {
   name: string;
   category: string;
   purchaseQuantity: number;
-  purchaseUnit: string;
+  purchaseUnit: Unit;
   purchasePrice: number;
   parLevel: number;
   supplierId?: string;
   allergens?: string[];
   quantity?: number; // Optional initial stock
   // Optional fields for 'un' conversion
-  recipeUnit?: string;
+  recipeUnit?: Unit;
   recipeUnitConversion?: number;
 }
 
@@ -66,7 +67,7 @@ export type RecipeIngredient = {
   itemCode: string; // materialCode or recipeCode
   name: string;
   quantity: number;
-  unit: string;
+  unit: Unit;
   totalCost: number;
 };
 
@@ -78,7 +79,7 @@ export type Recipe = {
   category: string;
   menuId?: string; // ID of the menu this recipe belongs to
   yield?: number; // How many portions the recipe makes
-  yieldUnit?: string;
+  yieldUnit?: Unit;
   notes?: string;
   ingredients: RecipeIngredient[];
   totalCost: number;
@@ -144,7 +145,7 @@ export type ButcheringData = {
     primaryItemId: string;
     primaryItemMaterialCode: string;
     quantityUsed: number;
-    quantityUnit: string;
+    quantityUnit: Unit;
     yieldedItems: ButcheringItem[];
 }
 
@@ -163,7 +164,7 @@ export type ButcheryTemplate = {
 export type PhysicalCountItem = {
     id: string;
     name: string;
-    physicalQuantity: number | undefined;
+    physicalQuantity: number; // The final count in the item's base unit
     theoreticalQuantity: number;
-    unit: string;
+    unit: Unit;
 }

@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -104,22 +105,25 @@ export async function addInventoryItem(formData: InventoryFormData) {
   try {
     const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
     
-    // The unit for inventory tracking is the purchase unit itself
     const inventoryUnit = purchaseUnit;
 
     let unitCost = 0;
-    // If we have a conversion, we can calculate the cost per recipe unit.
-    if (recipeUnit && recipeUnitConversion) {
+    const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit);
+    
+    // For 'un.' items, the recipeUnitConversion is user-provided.
+    if (purchaseUnit === 'un.') {
+      if (!recipeUnitConversion || !recipeUnit) {
+        throw new Error("Conversion factor is required for 'un.' items.");
+      }
       const totalRecipeUnitsInPurchase = purchaseQuantity * recipeUnitConversion;
       unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
     } else {
-      // For items where purchase unit is the only unit (e.g. lbs, kg)
-      const baseUnit = getBaseUnit(purchaseUnit as Unit);
-      const totalBaseUnits = convert(purchaseQuantity, purchaseUnit as Unit, baseUnit);
+      // For standard units, convert purchase unit to base recipe unit (g/ml).
+      const totalBaseUnits = convert(purchaseQuantity, purchaseUnit, finalRecipeUnit);
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
     
-    const quantity = formData.quantity || 0; // Initial stock in purchaseUnits
+    const quantity = formData.quantity || 0;
     const status = getStatus(quantity, formData.parLevel);
     const supplierName = await getSupplierName(formData.supplierId);
 
@@ -132,17 +136,17 @@ export async function addInventoryItem(formData: InventoryFormData) {
       purchaseQuantity: purchaseQuantity,
       purchaseUnit: purchaseUnit,
       purchasePrice,
-      unit: inventoryUnit, // The unit we track stock in (e.g., un., lbs)
-      unitCost: isFinite(unitCost) ? unitCost : 0, // Cost per base unit (g, ml) or per recipe unit
-      recipeUnit: recipeUnit || getBaseUnit(purchaseUnit as Unit), // The unit for recipes (g, ml, or user-defined)
-      recipeUnitConversion: recipeUnitConversion || 1, // How many recipe units are in one purchase unit
+      unit: inventoryUnit,
+      unitCost: isFinite(unitCost) ? unitCost : 0,
+      recipeUnit: finalRecipeUnit,
+      recipeUnitConversion: (purchaseUnit === 'un.') ? recipeUnitConversion : 1, // Store user conversion, or 1 if not applicable
     };
 
     const docRef = await addDoc(collection(db, 'inventory'), fullItemData);
 
     const newItem: InventoryItem = {
       id: docRef.id,
-      ...fullItemData,
+      ...(fullItemData as Omit<InventoryItem, 'id'>),
     };
 
     revalidatePath('/inventory');
@@ -183,14 +187,19 @@ export async function editInventoryItem(
     const inventoryUnit = purchaseUnit;
 
     let unitCost = 0;
-    if (recipeUnit && recipeUnitConversion) {
+    const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit);
+
+    if (purchaseUnit === 'un.') {
+      if (!recipeUnitConversion || !recipeUnit) {
+        throw new Error("Conversion factor is required for 'un.' items.");
+      }
       const totalRecipeUnitsInPurchase = purchaseQuantity * recipeUnitConversion;
       unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
     } else {
-      const baseUnit = getBaseUnit(purchaseUnit as Unit);
-      const totalBaseUnits = convert(purchaseQuantity, purchaseUnit as Unit, baseUnit);
+      const totalBaseUnits = convert(purchaseQuantity, purchaseUnit, finalRecipeUnit);
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
+
 
     const quantity = currentItem.quantity;
     const status = getStatus(quantity, formData.parLevel);
@@ -207,8 +216,8 @@ export async function editInventoryItem(
       purchasePrice,
       unit: inventoryUnit,
       unitCost: isFinite(unitCost) ? unitCost : 0,
-      recipeUnit: recipeUnit || getBaseUnit(purchaseUnit as Unit),
-      recipeUnitConversion: recipeUnitConversion || 1,
+      recipeUnit: finalRecipeUnit,
+      recipeUnitConversion: (purchaseUnit === 'un.') ? recipeUnitConversion : 1,
     };
 
     await updateDoc(itemRef, dataToUpdate);
@@ -253,7 +262,8 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[]) {
                 }
                 const invItem = itemSnap.data() as InventoryItem;
 
-                const newQuantity = item.physicalQuantity!;
+                // The physicalQuantity is already converted to the base unit in the frontend
+                const newQuantity = item.physicalQuantity;
                 const newStatus = getStatus(newQuantity, invItem.parLevel);
 
                 transaction.update(itemSnap.ref, {
@@ -266,7 +276,7 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[]) {
                     itemName: item.name,
                     theoreticalQuantity: item.theoreticalQuantity,
                     physicalQuantity: item.physicalQuantity,
-                    variance: item.physicalQuantity! - item.theoreticalQuantity,
+                    variance: item.physicalQuantity - item.theoreticalQuantity,
                     unit: item.unit,
                 });
             }
@@ -430,23 +440,23 @@ export async function logSale(saleData: AddSaleData) {
 
         const invItem = invItemSnap.data() as InventoryItem;
         const invItemRef = invItemSnap.ref;
-
-        // Convert the recipe ingredient's unit to the inventory item's base unit for costing
+        
         let quantityToDepleteInPurchaseUnit;
         
-        // If the inventory item is tracked by 'un.', we deplete by 'un.'
-        if (invItem.unit === 'un.') {
+        // If the inventory item is tracked by 'un.', we deplete by that 'un.'
+        // by converting the recipe unit back to the 'un.' via its conversion factor.
+        if (invItem.purchaseUnit === 'un.') {
            quantityToDepleteInPurchaseUnit = convert(
                 recipeIngredient.quantity * saleData.quantity,
-                recipeIngredient.unit as any,
-                invItem.recipeUnit as any
+                recipeIngredient.unit,
+                invItem.recipeUnit
             ) / invItem.recipeUnitConversion;
         } else {
             // Otherwise, we convert to the purchase unit for depletion
             quantityToDepleteInPurchaseUnit = convert(
                 recipeIngredient.quantity * saleData.quantity,
-                recipeIngredient.unit as any,
-                invItem.purchaseUnit as any
+                recipeIngredient.unit,
+                invItem.purchaseUnit
             );
         }
 
@@ -499,17 +509,17 @@ export async function logProduction(data: LogProductionData) {
 
           // Convert recipe ingredient unit to the costing unit of the inventory item
           let quantityToDepleteInPurchaseUnit;
-          if (invItem.unit === 'un.') {
+          if (invItem.purchaseUnit === 'un.') {
             quantityToDepleteInPurchaseUnit = convert(
                 ingredient.quantity * item.quantityProduced,
-                ingredient.unit as any,
-                invItem.recipeUnit as any
+                ingredient.unit,
+                invItem.recipeUnit
             ) / invItem.recipeUnitConversion;
           } else {
               quantityToDepleteInPurchaseUnit = convert(
                   ingredient.quantity * item.quantityProduced,
-                  ingredient.unit as any,
-                  invItem.purchaseUnit as any
+                  ingredient.unit,
+                  invItem.purchaseUnit
               );
           }
 
@@ -621,7 +631,7 @@ export async function logButchering(data: ButcheringData) {
       }
 
       // --- 2. CALCULATION/LOGIC PHASE ---
-      const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
+      const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit, primaryItem.purchaseUnit);
       
       const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInPurchaseUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
@@ -649,7 +659,7 @@ export async function logButchering(data: ButcheringData) {
         const costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
         
         // Quantity to add is its weight, converted to its own purchase unit
-        const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit as Unit);
+        const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit);
 
         const newQuantity = yieldedItem.quantity + quantityToAdd;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
@@ -696,7 +706,6 @@ export async function logButchering(data: ButcheringData) {
     console.error('Error during butchering log:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes("Not enough stock")) {
-        // Don't throw, let the UI handle it gracefully
         return { success: false, error: errorMessage };
     }
     throw new Error(`Failed to log butchering: ${errorMessage}`);
@@ -722,4 +731,3 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
-
