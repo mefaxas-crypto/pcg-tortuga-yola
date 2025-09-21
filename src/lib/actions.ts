@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -154,7 +155,8 @@ export async function addInventoryItem(formData: InventoryFormData) {
     return newItem;
   } catch (e) {
     console.error('Error adding document: ', e);
-    throw new Error('Failed to add inventory item');
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to add inventory item: ${errorMessage}`);
   }
 }
 
@@ -227,7 +229,8 @@ export async function editInventoryItem(
     return {success: true};
   } catch (e) {
     console.error('Error updating document: ', e);
-    throw new Error('Failed to edit inventory item');
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to edit inventory item: ${errorMessage}`);
   }
 }
 
@@ -448,14 +451,14 @@ export async function logSale(saleData: AddSaleData) {
         if (invItem.purchaseUnit === 'un.') {
            quantityToDepleteInPurchaseUnit = convert(
                 recipeIngredient.quantity * saleData.quantity,
-                recipeIngredient.unit,
+                recipeIngredient.unit as Unit,
                 invItem.recipeUnit
             ) / invItem.recipeUnitConversion;
         } else {
             // Otherwise, we convert to the purchase unit for depletion
             quantityToDepleteInPurchaseUnit = convert(
                 recipeIngredient.quantity * saleData.quantity,
-                recipeIngredient.unit,
+                recipeIngredient.unit as Unit,
                 invItem.purchaseUnit
             );
         }
@@ -512,13 +515,13 @@ export async function logProduction(data: LogProductionData) {
           if (invItem.purchaseUnit === 'un.') {
             quantityToDepleteInPurchaseUnit = convert(
                 ingredient.quantity * item.quantityProduced,
-                ingredient.unit,
+                ingredient.unit as Unit,
                 invItem.recipeUnit
             ) / invItem.recipeUnitConversion;
           } else {
               quantityToDepleteInPurchaseUnit = convert(
                   ingredient.quantity * item.quantityProduced,
-                  ingredient.unit,
+                  ingredient.unit as Unit,
                   invItem.purchaseUnit
               );
           }
