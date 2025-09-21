@@ -152,6 +152,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
   const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   const [itemDetails, setItemDetails] = useState<ItemDetails>({});
 
@@ -198,17 +199,22 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       defaultRecipeUnit: data.recipeUnit || data.unit,
     }));
 
-    const subSelectable: SelectableItem[] = subRecipeItems.map(data => ({
+    const subSelectable: Recipe[] = subRecipeItems.map(data => ({
       id: data.id,
-      name: data.name,
-      type: 'recipe',
-      code: data.internalCode,
-      baseUnit: data.yieldUnit || 'un.',
-      costPerBaseUnit: data.totalCost / (data.yield || 1),
-      defaultRecipeUnit: data.yieldUnit || 'un.',
+      ...data
+    } as Recipe));
+
+    const subSelectableItems: SelectableItem[] = subSelectable.map(data => ({
+        id: data.id,
+        name: data.name,
+        type: 'recipe',
+        code: data.internalCode,
+        baseUnit: data.yieldUnit || 'un.',
+        costPerBaseUnit: data.totalCost / (data.yield || 1),
+        defaultRecipeUnit: data.yieldUnit || 'un.',
     }));
 
-    return [...invSelectable, ...subSelectable].sort((a,b) => a.name.localeCompare(b.name));
+    return [...invSelectable, ...subSelectableItems].sort((a,b) => a.name.localeCompare(b.name));
   }, [inventoryItems, subRecipeItems]);
 
   const { subRecipeSelectable, inventoryOnlySelectable } = useMemo(() => {
@@ -321,6 +327,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     }));
 
     setIngredientPopoverOpen(false);
+    setSearchValue('');
   };
 
   const handleIngredientChange = (
@@ -702,19 +709,21 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                 </TableBody>
                 <TableFooter>
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={2}>
-                      <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
+                    <TableCell colSpan={7}>
+                       <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
                         <Command>
                           <PopoverAnchor>
                             <CommandInput
-                              placeholder="Search to add ingredient..."
-                              onValueChange={(value) => {
-                                if (value) {
+                              value={searchValue}
+                              onValueChange={(search) => {
+                                setSearchValue(search);
+                                if (search) {
                                   setIngredientPopoverOpen(true);
                                 } else {
                                   setIngredientPopoverOpen(false);
                                 }
                               }}
+                              placeholder="Search to add ingredient..."
                             />
                           </PopoverAnchor>
                           <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -763,7 +772,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                       </Popover>
                       <FormMessage>{form.formState.errors.ingredients?.root?.message || form.formState.errors.ingredients?.message}</FormMessage>
                     </TableCell>
-                    <TableCell colSpan={5}></TableCell>
                   </TableRow>
                 </TableFooter>
               </Table>
