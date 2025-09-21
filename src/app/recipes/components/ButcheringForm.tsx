@@ -183,7 +183,7 @@ export function ButcheringForm() {
       toast({
         variant: 'destructive',
         title: 'Error Logging Butchering',
-        description: errorMessage.replace('Failed to log butchering: ', ''), // Show a cleaner message
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -256,7 +256,7 @@ export function ButcheringForm() {
                                 key={item.id}
                                 onSelect={() => {
                                   form.setValue('primaryItemId', item.id);
-                                  form.setValue('quantityUnit', item.unit);
+                                  form.setValue('quantityUnit', item.purchaseUnit);
                                   form.setValue('yieldedItems', []); // Clear yielded items when primary changes
                                   setPopoverOpen(false);
                                 }}

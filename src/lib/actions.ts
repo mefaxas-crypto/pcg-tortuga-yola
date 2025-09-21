@@ -100,7 +100,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
     const inventoryUnit = purchaseUnit;
 
     let unitCost = 0;
-    const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit);
+    const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
     let finalRecipeUnitConversion = 1;
     
     if (purchaseUnit === 'un.') {
@@ -112,7 +112,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
       unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
     } else {
       // For standard units, the recipeUnit is its base, and we find the conversion factor.
-      finalRecipeUnitConversion = convert(1, purchaseUnit, finalRecipeUnit);
+      finalRecipeUnitConversion = convert(1, purchaseUnit as Unit, finalRecipeUnit as Unit);
       const totalBaseUnits = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
@@ -182,7 +182,7 @@ export async function editInventoryItem(
     const inventoryUnit = purchaseUnit;
 
     let unitCost = 0;
-    const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit);
+    const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
     let finalRecipeUnitConversion = 1;
 
     if (purchaseUnit === 'un.') {
@@ -193,7 +193,7 @@ export async function editInventoryItem(
       const totalRecipeUnitsInPurchase = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
     } else {
-      finalRecipeUnitConversion = convert(1, purchaseUnit, finalRecipeUnit);
+      finalRecipeUnitConversion = convert(1, purchaseUnit as Unit, finalRecipeUnit as Unit);
       const totalBaseUnits = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
@@ -471,8 +471,8 @@ export async function logSale(saleData: AddSaleData) {
         // Convert the total recipe quantity needed to the inventory's MAIN tracking unit for depletion.
         const quantityToDeplete = convert(
             quantityInRecipeUnit,
-            invItem.recipeUnit,
-            invItem.unit
+            invItem.recipeUnit as Unit,
+            invItem.unit as Unit
         );
 
         const newQuantity = invItem.quantity - quantityToDeplete;
@@ -635,15 +635,15 @@ export async function logButchering(data: ButcheringData) {
           yieldedItemDocRefs.map(ref => ref ? transaction.get(ref) : Promise.resolve(null))
       );
 
-
       for (let i = 0; i < yieldedItemSnaps.length; i++) {
+        const yieldedItemData = data.yieldedItems[i];
         if (!yieldedItemSnaps[i] || !yieldedItemSnaps[i]!.exists()) {
-          throw new Error(`Yielded item ${data.yieldedItems[i].name} could not be found in inventory.`);
+          throw new Error(`Yielded item "${yieldedItemData.name}" could not be found in inventory. Please ensure it exists before logging butchery.`);
         }
       }
 
       // --- 2. CALCULATION/LOGIC PHASE ---
-      const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit, primaryItem.purchaseUnit);
+      const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
       
       const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInPurchaseUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
@@ -671,7 +671,7 @@ export async function logButchering(data: ButcheringData) {
         const costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
         
         // Quantity to add is its weight, converted to its own purchase unit
-        const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit);
+        const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit as Unit);
 
         const newQuantity = yieldedItem.quantity + quantityToAdd;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
@@ -744,3 +744,4 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
   }
 }
 
+    

@@ -249,9 +249,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                 name: data.name,
                 type: 'recipe',
                 code: data.recipeCode,
-                baseUnit: data.yieldUnit || 'un',
+                baseUnit: data.yieldUnit || 'un.',
                 costPerBaseUnit: data.totalCost / (data.yield || 1),
-                defaultRecipeUnit: data.yieldUnit || 'un',
+                defaultRecipeUnit: data.yieldUnit || 'un.',
             });
         });
         setSelectableItems(current => [...subRecipes, ...current.filter(i => i.type === 'inventory')].sort((a,b) => a.name.localeCompare(b.name)));
@@ -766,3 +766,5 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
+
+    
