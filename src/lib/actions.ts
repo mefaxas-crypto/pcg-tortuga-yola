@@ -534,10 +534,15 @@ export async function logSale(saleData: AddSaleData) {
 
         let quantityToDeplete: number;
         if (invItem.unit === 'un.') {
-            quantityToDeplete = neededInBaseUnit / (invItem.recipeUnitConversion || 1);
+            // Convert from the base recipe unit (e.g., fl. oz) to a fraction of a 'un.'
+            // Example: 10.14 fl. oz / 250 fl. oz per un. = 0.04 un.
+            const baseUnitsPerInventoryUnit = invItem.recipeUnitConversion || 1;
+            quantityToDeplete = neededInBaseUnit / baseUnitsPerInventoryUnit;
         } else {
+            // Standard conversion (e.g., g to lbs)
             quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
         }
+
 
         const newQuantity = invItem.quantity - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.parLevel);
@@ -610,8 +615,12 @@ export async function logProduction(data: LogProductionData) {
 
           let quantityToDeplete: number;
           if (invItem.unit === 'un.') {
-              quantityToDeplete = neededInBaseUnit / (invItem.recipeUnitConversion || 1);
+              // Convert from the base recipe unit (e.g., fl. oz) to a fraction of a 'un.'
+              // Example: 10.14 fl. oz / 250 fl. oz per un. = 0.04 un.
+              const baseUnitsPerInventoryUnit = invItem.recipeUnitConversion || 1;
+              quantityToDeplete = neededInBaseUnit / baseUnitsPerInventoryUnit;
           } else {
+              // Standard conversion (e.g., g to lbs)
               quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
           }
 
@@ -730,7 +739,8 @@ export async function undoProductionLog(logId: string) {
           const usedInBaseUnit = convert(totalIngredientUsed, ingredient.unit as Unit, invItem.recipeUnit as Unit);
           let quantityToRestore: number;
           if (invItem.unit === 'un.') {
-              quantityToRestore = usedInBaseUnit / (invItem.recipeUnitConversion || 1);
+              const baseUnitsPerInventoryUnit = invItem.recipeUnitConversion || 1;
+              quantityToRestore = usedInBaseUnit / baseUnitsPerInventoryUnit;
           } else {
               quantityToRestore = convert(usedInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
           }
@@ -807,7 +817,10 @@ export async function logButchering(data: ButcheringData) {
         status: newPrimaryStatus,
       });
       
-      const totalYieldedWeightInKg = data.yieldedItems.reduce((acc, item) => acc + item.weight, 0);
+      const totalYieldedWeightInKg = data.yieldedItems.reduce((acc, item) => {
+        const weightInKg = convert(item.weight, item.unit as Unit, 'kg' as Unit);
+        return acc + weightInKg;
+      }, 0);
 
       const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
 
@@ -823,13 +836,14 @@ export async function logButchering(data: ButcheringData) {
         
         let costOfThisYield;
         if(useWeightBasedCosting) {
-            const yieldedItemCostProportion = totalYieldedWeightInKg > 0 ? (yieldedItemData.weight / totalYieldedWeightInKg) : 0;
+            const itemWeightInKg = convert(yieldedItemData.weight, yieldedItemData.unit as Unit, 'kg' as Unit);
+            const yieldedItemCostProportion = totalYieldedWeightInKg > 0 ? (itemWeightInKg / totalYieldedWeightInKg) : 0;
             costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
         } else {
             costOfThisYield = totalCostOfButcheredPortion * (yieldedItemData.costDistributionPercentage / 100);
         }
         
-        const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit as Unit);
+        const quantityToAdd = yieldedItemData.weight; // This is now in the item's own unit
 
         const newQuantity = yieldedItem.quantity + quantityToAdd;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);

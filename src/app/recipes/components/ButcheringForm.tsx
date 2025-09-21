@@ -51,7 +51,7 @@ import { db } from '@/lib/firebase';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType, YieldItem } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { allUnits, Unit } from '@/lib/conversions';
+import { allUnits, Unit, convert } from '@/lib/conversions';
 import { addButcheryTemplate, logButchering } from '@/lib/actions';
 import { butcheryTemplates as initialButcheryTemplates } from '@/lib/butchery-templates.json';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
@@ -66,7 +66,8 @@ const formSchema = z.object({
       z.object({
         itemId: z.string().min(1, 'Item ID is missing.'),
         name: z.string().min(1, 'Item name is required.'),
-        weight: z.coerce.number().min(0.01, 'Weight must be greater than 0.'),
+        weight: z.coerce.number().min(0, 'Weight must be a positive number.'),
+        unit: z.string().min(1, 'Unit is required.'),
         materialCode: z.string(),
         costDistributionPercentage: z.number(),
       }),
@@ -112,6 +113,7 @@ export function ButcheringForm() {
   }, []);
   
   const quantityUsed = form.watch('quantityUsed');
+  const quantityUnit = form.watch('quantityUnit');
   const yieldedItems = form.watch('yieldedItems');
   const primaryItemId = form.watch('primaryItemId');
 
@@ -122,9 +124,18 @@ export function ButcheringForm() {
   }, [primaryItemId, inventory, butcheryTemplates]);
 
 
-  const totalYieldedWeight = yieldedItems.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
-  const yieldPercentage = quantityUsed > 0 ? (totalYieldedWeight / quantityUsed) * 100 : 0;
+  const totalYieldedWeightInKg = yieldedItems.reduce((sum, item) => {
+    const weightInKg = convert(item.weight, item.unit as Unit, 'kg');
+    return sum + (Number(weightInKg) || 0);
+  }, 0);
+  const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
+  const yieldPercentage = quantityUsedInKg > 0 ? (totalYieldedWeightInKg / quantityUsedInKg) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
+
+  const getUnitLabel = (unitKey: string | undefined) => {
+    if (!unitKey) return '';
+    return allUnits[unitKey as keyof typeof allUnits]?.name || unitKey;
+  }
 
   const handleAddYieldedItemFromTemplate = (templateYield: YieldItem) => {
     const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
@@ -148,6 +159,7 @@ export function ButcheringForm() {
       itemId: yieldedInventoryItem.id,
       name: yieldedInventoryItem.name,
       weight: 0,
+      unit: yieldedInventoryItem.purchaseUnit,
       materialCode: yieldedInventoryItem.materialCode,
       costDistributionPercentage: templateYield.costDistributionPercentage,
     });
@@ -163,13 +175,15 @@ export function ButcheringForm() {
         ...values,
         primaryItemMaterialCode: primaryItem.materialCode,
         yieldedItems: values.yieldedItems.map(item => {
+            const itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
+            const quantityUsedInKg = convert(values.quantityUsed, values.quantityUnit as Unit, 'kg');
             return {
                 ...item,
-                yieldPercentage: (item.weight / values.quantityUsed) * 100,
+                yieldPercentage: (itemWeightInKg / quantityUsedInKg) * 100,
             }
         })
       }
-      await logButchering(finalData as any); // Type assertion to handle the discrepancy temporarily
+      await logButchering(finalData);
       toast({
         title: 'Butchering Logged!',
         description: 'Inventory has been updated and butchery template saved.',
@@ -202,6 +216,7 @@ export function ButcheringForm() {
         itemId: newItem.id,
         name: newItem.name,
         weight: 0,
+        unit: newItem.purchaseUnit,
         materialCode: newItem.materialCode,
         costDistributionPercentage: 0, // Default cost distribution
     });
@@ -365,7 +380,12 @@ export function ButcheringForm() {
               <TableBody>
                 {fields.map((field, index) => {
                   const itemWeight = form.getValues(`yieldedItems.${index}.weight`);
-                  const itemYield = quantityUsed > 0 ? (itemWeight / quantityUsed) * 100 : 0;
+                  const itemUnit = form.getValues(`yieldedItems.${index}.unit`);
+                  
+                  const itemWeightInKg = convert(itemWeight, itemUnit as Unit, 'kg');
+                  const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
+                  const itemYield = quantityUsedInKg > 0 ? (itemWeightInKg / quantityUsedInKg) * 100 : 0;
+                  
                   return (
                     <TableRow key={field.id}>
                       <TableCell>
@@ -381,7 +401,7 @@ export function ButcheringForm() {
                         />
                       </TableCell>
                        <TableCell className='text-muted-foreground'>
-                        kg
+                        {getUnitLabel(field.unit)}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">{itemYield.toFixed(2)}%</TableCell>
                       <TableCell>
@@ -466,7 +486,7 @@ export function ButcheringForm() {
             <div className='w-full max-w-sm space-y-2'>
               <div className='flex justify-between font-medium'>
                 <span>Total Yield Weight:</span>
-                <span>{totalYieldedWeight.toFixed(3)} {form.getValues('quantityUnit')}</span>
+                <span>{totalYieldedWeightInKg.toFixed(3)} kg</span>
               </div>
               <div className='flex justify-between font-medium text-primary'>
                 <span>Total Yield %:</span>

@@ -145,6 +145,7 @@ export type ButcheringItem = {
     itemId: string; // The inventory ID of the yielded item
     name: string;
     weight: number;
+    unit: Unit;
     yieldPercentage: number;
     materialCode: string; // The material code of the yielded item
     costDistributionPercentage: number;
