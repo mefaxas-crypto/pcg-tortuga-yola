@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -30,7 +31,7 @@ export default function RootLayout({
           </Sidebar>
           <SidebarInset>
             <Header />
-            <main className="p-4 lg:p-6">{children}</main>
+            <main className="p-4 lg:p-6 max-w-7xl mx-auto">{children}</main>
           </SidebarInset>
           <Toaster />
         </SidebarProvider>
