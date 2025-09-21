@@ -233,14 +233,16 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     let newTotalCost = 0;
     try {
-        const costPerSelectedUnit = convert(1, details.baseUnit as Unit, unit as Unit) * details.unitCost;
-        newTotalCost = quantity * costPerSelectedUnit;
+        const costPerBaseUnit = details.unitCost;
+        const convertedQuantity = convert(quantity, unit as Unit, details.baseUnit as Unit);
+        newTotalCost = convertedQuantity * costPerBaseUnit;
+
     } catch (error) {
         console.error("Conversion error:", error);
         toast({
             variant: "destructive",
             title: "Unit Conversion Error",
-            description: `Cannot convert from '${details.baseUnit}' to '${unit}'. Please check units.`,
+            description: `Cannot convert from '${unit}' to '${details.baseUnit}'. Please check units.`,
         });
     }
     
@@ -282,6 +284,12 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   }
 
   const isSubRecipe = form.watch('isSubRecipe');
+
+  useEffect(() => {
+    if (isSubRecipe) {
+      form.setValue('menuId', 'none');
+    }
+  }, [isSubRecipe, form]);
 
   return (
     <Form {...form}>

@@ -4,7 +4,7 @@
 import PageHeader from '@/components/PageHeader';
 import { RecipeForm } from '../../components/RecipeForm';
 import { Card, CardContent } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import type { Recipe } from '@/lib/types';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -13,7 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  const { id } = params;
+  
+  // The 'use' hook must be called at the top level.
+  const resolvedParams = use(Promise.resolve(params));
+  const { id } = resolvedParams;
 
   useEffect(() => {
     const fetchRecipe = async () => {

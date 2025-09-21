@@ -2,15 +2,18 @@
 
 ## Core Features:
 
-- Inventory Tracking: Monitor food items, quantities, expiration dates, par levels, and suppliers in real-time across multiple outlets.
-- Recipe & Menu Engineering: Create dynamic recipes and sub-recipes with precise costing that updates automatically when ingredient prices change. Analyze the profitability of entire menus to hit target food cost percentages.
-- Fabrication & Yield Management: Define specifications for butchering and fabrication (e.g., breaking down a whole tenderloin). Automatically calculate the true cost and inventory of each yielded item (e.g., center-cut filets vs. trimmings) while tracking waste.
-- Sales Logging & Live Depletion: Integrate with sales data to automatically deplete the precise ingredients and sub-recipes from inventory as items are sold, providing a true, theoretical stock count at all times.
-- Physical Stock Takes & Variance Reporting: A dedicated module for conducting physical inventory counts and generating variance reports to compare theoretical vs. physical stock, pinpointing sources of waste, spoilage, or loss.
-- Allergen Tracking: Tag individual ingredients with allergens (e.g., gluten, nuts, dairy). This data will automatically aggregate up to recipes and menu items, allowing for instant and accurate dietary information for guests.
-- Firebase & Google Cloud Integration: The system will be a cloud-native application. Database: Connect to a secure and scalable Google Cloud SQL for PostgreSQL instance. Backend: The Python/Django API will be containerized and deployed as a serverless service on Google Cloud Run. Frontend: The Vite + React user interface will be hosted globally on Firebase Hosting.
-- AI-Powered Waste Prediction: Employ a Genkit-powered AI tool to analyze historical data and predict potential food waste, allowing for proactive adjustments to inventory and purchasing.
-- Intelligent Recipe Suggestions: Utilize Genkit to provide AI-driven recipe suggestions based on current inventory, minimizing waste and maximizing resource utilization.
+- **Inventory Management**: Track all food and beverage items with details like quantity, unit of measure, supplier, and expiration dates.
+- **Recipe Costing**: Create detailed recipes, automatically calculate the cost per serving based on real-time ingredient prices, and set menu prices to ensure profitability.
+- **Menu Engineering**: Analyze menu item performance based on sales data and food cost to optimize profitability and popularity.
+- **Supplier & Purchasing Management**: Maintain a database of suppliers and streamline the purchasing process.
+- **Physical Stock Takes & Variance Reporting**: A dedicated module for conducting physical inventory counts and generating variance reports to compare theoretical vs. physical stock, pinpointing sources of waste, spoilage, or loss.
+- **Allergen Tracking**: Tag individual ingredients with allergens (e.g., gluten, nuts, dairy). This data will automatically aggregate up to recipes and menu items, allowing for instant and accurate dietary information for guests.
+- **Cloud-Native & Serverless Architecture**: The system is a cloud-native application built on modern web technologies.
+  - **Database**: Connects to a secure and scalable cloud-based database via Firebase.
+  - **Backend**: A serverless backend is implemented using Next.js API Routes, running on Node.js.
+  - **Frontend**: A reactive and modern user interface built with Next.js and React, hosted globally on Firebase Hosting.
+- **AI-Powered Waste Prediction**: Employs a Genkit-powered AI tool to analyze historical data and predict potential food waste, allowing for proactive adjustments to inventory and purchasing.
+- **Intelligent Recipe Suggestions**: Utilizes Genkit to provide AI-driven recipe suggestions based on current inventory, minimizing waste and maximizing resource utilization.
 
 ## Style Guidelines:
 
