@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -616,8 +617,8 @@ export function RecipeForm({
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                                )}}
-                            ))}
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -673,3 +674,5 @@ export function RecipeForm({
     </>
   );
 }
+
+    
