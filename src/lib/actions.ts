@@ -523,11 +523,17 @@ export async function logProduction(data: LogProductionData) {
           const invItem = invItemSnap.data() as InventoryItem;
 
           // Convert recipe ingredient unit to the inventory's main tracking unit for depletion.
-          const quantityToDeplete = convert(
-              ingredient.quantity * item.quantityProduced,
-              ingredient.unit as Unit,
-              invItem.unit as Unit
-          );
+          let quantityToDeplete;
+          try {
+            quantityToDeplete = convert(
+                ingredient.quantity * item.quantityProduced,
+                ingredient.unit as Unit,
+                invItem.unit as Unit
+            );
+          } catch (e) {
+            const err = e instanceof Error ? e.message : String(e);
+            throw new Error(`Conversion failed for ingredient "${invItem.name}": ${err}`);
+          }
 
           const newQuantity = invItem.quantity - quantityToDeplete;
           const newStatus = getStatus(newQuantity, invItem.parLevel);
@@ -705,7 +711,7 @@ export async function logButchering(data: ButcheringData) {
 
     revalidatePath('/inventory');
     revalidatePath('/recipes');
-    revalidatePath('/');
+revalidatePath('/');
 
     return { success: true };
   } catch (error) {

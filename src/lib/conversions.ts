@@ -76,6 +76,14 @@ export function convert(
     const valueInBaseUnit = value * from.factor;
     return valueInBaseUnit / to.factor;
   }
+  
+  // --- Incompatible Type Conversion (e.g. volume to each) ---
+  // This is a common scenario for sub-recipes (e.g., a recipe uses 1 'batch', which is 1 'un.' in inventory).
+  // We'll assume a 1:1 conversion factor if density is not provided.
+  if (from.type !== to.type && !densityInGramsPerMl) {
+    console.warn(`Attempting conversion between incompatible types (${from.type} to ${to.type}) without a density. Assuming 1:1 conversion.`);
+    return value;
+  }
 
   // --- Density-based Conversion (Volume-Weight or Weight-Volume) ---
   if (!densityInGramsPerMl || densityInGramsPerMl <= 0) {
