@@ -37,6 +37,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -94,6 +96,10 @@ export function RecipeForm({
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
+
+  // State for the ingredient search popover
+  const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
+  const [searchQueries, setSearchQueries] = useState<string[]>([]);
   
   const { toast } = useToast();
   
@@ -128,6 +134,13 @@ export function RecipeForm({
     name: 'ingredients',
   });
 
+  // Initialize search queries based on fields
+  useEffect(() => {
+    if (fields.length > 0 && searchQueries.length !== fields.length) {
+      setSearchQueries(fields.map(field => ''));
+    }
+  }, [fields, searchQueries.length]);
+
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
 
@@ -145,6 +158,7 @@ export function RecipeForm({
         unitPrice: 0,
         totalCost: 0
     });
+    setSearchQueries([...searchQueries, '']);
   };
   
   useEffect(() => {
@@ -184,11 +198,7 @@ export function RecipeForm({
       addEmptyIngredient();
     }
 
-    return () => {
-      unsubscribeInventory();
-      unsubscribeMenus();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast, mode]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -236,6 +246,13 @@ export function RecipeForm({
       setLoading(false);
     }
   }
+
+  const handleRemoveIngredient = (index: number) => {
+    remove(index);
+    const newQueries = [...searchQueries];
+    newQueries.splice(index, 1);
+    setSearchQueries(newQueries);
+  };
 
   return (
     <>
@@ -403,23 +420,61 @@ export function RecipeForm({
                             const selectedItem = inventory.find(i => i.id === form.watch(`ingredients.${index}.inventoryItemId`));
                             const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
                             const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
+                            const currentSearchQuery = searchQueries[index] || '';
                             
                             return (
                                 <TableRow key={field.id} className="align-top">
                                     <TableCell className="pt-2 pb-3 text-muted-foreground">{selectedItem?.materialCode || '-'}</TableCell>
                                     <TableCell className="pt-2 pb-3">
-                                        <FormField
-                                            control={form.control}
-                                            name={`ingredients.${index}.inventoryItemId`}
-                                            render={({ field: inventoryItemField }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                        <Input placeholder="Search ingredient..." />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                      <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
+                                        <PopoverTrigger asChild>
+                                            <FormField
+                                                control={form.control}
+                                                name={`ingredients.${index}.inventoryItemId`}
+                                                render={({ field: inventoryItemField }) => (
+                                                    <FormItem>
+                                                        <FormControl>
+                                                          <Input 
+                                                            placeholder="Type to search..."
+                                                            value={currentSearchQuery}
+                                                            onChange={(e) => {
+                                                              const newQueries = [...searchQueries];
+                                                              newQueries[index] = e.target.value;
+                                                              setSearchQueries(newQueries);
+                                                              if(e.target.value.length > 0) {
+                                                                setOpenPopoverIndex(index);
+                                                              } else {
+                                                                setOpenPopoverIndex(null);
+                                                              }
+                                                            }}
+                                                          />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                            <Command>
+                                              <CommandList>
+                                                <CommandGroup>
+                                                  {/* Static list for now */}
+                                                </CommandGroup>
+                                                <CommandGroup>
+                                                  <CommandItem
+                                                    onSelect={() => {
+                                                      setIngredientSheetOpen(true);
+                                                      setOpenPopoverIndex(null);
+                                                    }}
+                                                  >
+                                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                                    Add New Ingredient
+                                                  </CommandItem>
+                                                </CommandGroup>
+                                              </CommandList>
+                                            </Command>
+                                          </PopoverContent>
+                                        </Popover>
                                     </TableCell>
                                     <TableCell className="pt-2 pb-3">
                                         <FormField
@@ -463,7 +518,7 @@ export function RecipeForm({
                                             variant="ghost"
                                             size="icon"
                                             className="text-destructive h-9 w-9"
-                                            onClick={() => remove(index)}
+                                            onClick={() => handleRemoveIngredient(index)}
                                             disabled={fields.length <= 1}
                                         >
                                             <Trash2 className="h-4 w-4" />
