@@ -45,7 +45,9 @@ export async function addSupplier(supplierData: AddSupplierData) {
   try {
     const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
     revalidatePath('/suppliers');
-    return {success: true, id: docRef.id};
+    revalidatePath('/inventory');
+    const newSupplier: Supplier = { id: docRef.id, ...supplierData };
+    return newSupplier;
   } catch (e) {
     console.error('Error adding document: ', e);
     throw new Error('Failed to add supplier');
@@ -57,6 +59,7 @@ export async function editSupplier(id: string, supplierData: EditSupplierData) {
     const supplierRef = doc(db, 'suppliers', id);
     await updateDoc(supplierRef, supplierData);
     revalidatePath('/suppliers');
+    revalidatePath('/inventory');
     return {success: true};
   } catch (e) {
     console.error('Error updating document: ', e);
@@ -533,4 +536,3 @@ export async function logButchering(data: ButcheringData) {
     throw new Error(`Failed to log butchering: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
-

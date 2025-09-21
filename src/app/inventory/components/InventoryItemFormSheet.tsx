@@ -40,6 +40,8 @@ import {
 } from '@/components/ui/select';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { volumeUnits, weightUnits, eachUnits } from '@/lib/conversions';
+import { SupplierFormSheet } from '@/app/suppliers/components/SupplierFormSheet';
+import { PlusCircle } from 'lucide-react';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'Material Code is required.'),
@@ -104,6 +106,7 @@ export function InventoryItemFormSheet({
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
+  const [isNewSupplierSheetOpen, setNewSupplierSheetOpen] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -235,6 +238,13 @@ export function InventoryItemFormSheet({
     }
   };
 
+  const handleSupplierCreated = (newSupplier: Supplier) => {
+    // No need to setSuppliers manually, onSnapshot will do it.
+    // setSuppliers(current => [...current, newSupplier].sort((a, b) => a.name.localeCompare(b.name)));
+    form.setValue('supplierId', newSupplier.id);
+    setNewSupplierSheetOpen(false);
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
@@ -275,6 +285,7 @@ export function InventoryItemFormSheet({
   }));
 
   return (
+    <>
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <SheetContent className="overflow-y-auto">
         <Form {...form}>
@@ -480,6 +491,10 @@ export function InventoryItemFormSheet({
                             ))}
                           </SelectContent>
                         </Select>
+                        <Button type="button" variant="link" className="p-0 h-auto" onClick={() => setNewSupplierSheetOpen(true)}>
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Create New Supplier
+                        </Button>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -519,5 +534,12 @@ export function InventoryItemFormSheet({
         </Form>
       </SheetContent>
     </Sheet>
+    <SupplierFormSheet
+      open={isNewSupplierSheetOpen}
+      onClose={() => setNewSupplierSheetOpen(false)}
+      mode="add"
+      onSupplierCreated={handleSupplierCreated}
+    />
+    </>
   );
 }

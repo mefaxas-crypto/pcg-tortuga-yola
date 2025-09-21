@@ -38,6 +38,7 @@ type SupplierFormSheetProps = {
   mode: 'add' | 'edit';
   supplier?: Supplier;
   onClose: () => void;
+  onSupplierCreated?: (newSupplier: Supplier) => void;
 };
 
 export function SupplierFormSheet({
@@ -45,6 +46,7 @@ export function SupplierFormSheet({
   mode,
   supplier,
   onClose,
+  onSupplierCreated,
 }: SupplierFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -59,17 +61,19 @@ export function SupplierFormSheet({
   });
 
   useEffect(() => {
-    if (mode === 'edit' && supplier) {
-      form.reset(supplier);
-    } else {
-      form.reset({
-        name: '',
-        contactPerson: '',
-        phoneNumber: '',
-        email: '',
-      });
+    if (open) {
+        if (mode === 'edit' && supplier) {
+            form.reset(supplier);
+        } else {
+            form.reset({
+                name: '',
+                contactPerson: '',
+                phoneNumber: '',
+                email: '',
+            });
+        }
     }
-  }, [supplier, mode, form]);
+  }, [supplier, mode, form, open]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -81,11 +85,14 @@ export function SupplierFormSheet({
                 description: `"${values.name}" has been updated.`,
             });
         } else {
-            await addSupplier(values);
+            const newSupplier = await addSupplier(values);
             toast({
                 title: 'Supplier Added',
                 description: `"${values.name}" has been added to your suppliers.`,
             });
+            if (onSupplierCreated && newSupplier) {
+                onSupplierCreated(newSupplier);
+            }
         }
       form.reset();
       onClose();
