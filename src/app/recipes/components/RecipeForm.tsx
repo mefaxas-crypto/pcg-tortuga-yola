@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -152,6 +153,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
   const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   const [itemDetails, setItemDetails] = useState<ItemDetails>({});
 
@@ -419,6 +421,15 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       setLoading(false);
     }
   }
+  
+  const handleSearchValueChange = (value: string) => {
+    setSearchValue(value);
+    if(value) {
+        setIngredientPopoverOpen(true);
+    } else {
+        setIngredientPopoverOpen(false);
+    }
+  };
 
   const isSubRecipe = form.watch('isSubRecipe');
 
@@ -705,10 +716,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     <TableCell colSpan={2}>
                       <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
                           <PopoverAnchor>
-                            <Command>
+                            <Command onValueChange={handleSearchValueChange}>
                               <CommandInput
                                 placeholder="Search to add ingredient..."
-                                onFocus={() => setIngredientPopoverOpen(true)}
                               />
                               <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                                 <CommandList>
