@@ -255,7 +255,7 @@ export function InventoryItemFormSheet({
 
   const formTitle = isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient');
   const formDescription = isInternalCreation 
-    ? 'Enter details for this new cut. The supplier will be set to "In-house" automatically.' 
+    ? 'Define the details of this yielded cut. Its cost will be calculated from the butchering process.' 
     : 'Enter the details of the ingredient as you would purchase it.';
   
   const purchaseUnit = form.watch('purchaseUnit');
@@ -340,7 +340,7 @@ export function InventoryItemFormSheet({
                                 <FormItem className='col-span-1'>
                                 <FormLabel>Purchase Qty</FormLabel>
                                 <FormControl>
-                                    <Input type="number" step="any" placeholder="e.g., 750" {...field} value={field.value || ''} disabled={isInternalCreation} />
+                                    <Input type="number" step="any" placeholder="e.g., 750" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -352,7 +352,7 @@ export function InventoryItemFormSheet({
                             render={({ field }) => (
                                 <FormItem className='col-span-1'>
                                 <FormLabel>Purchase Unit</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Unit" />
