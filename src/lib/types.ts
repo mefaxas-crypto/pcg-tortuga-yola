@@ -39,7 +39,6 @@ export type AddAllergenData = Omit<Allergen, 'id'>;
 export type RecipeIngredient = {
   inventoryItemId: string;
   name: string;
-  materialCode: string;
   quantity: number;
   unit: string;
   totalCost: number;

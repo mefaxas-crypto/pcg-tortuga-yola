@@ -9,6 +9,7 @@ import {
   getDoc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -23,9 +24,12 @@ import type {
   EditInventoryItemData,
   EditMenuData,
   EditRecipeData,
+  InventoryItem,
+  Recipe,
   Supplier,
 } from './types';
 import {revalidatePath} from 'next/cache';
+import { convert } from './conversions';
 
 // We are defining a specific type for adding a supplier
 // that doesn't require the `id` field, as it will be auto-generated.
@@ -83,7 +87,6 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
   try {
     const status = getStatus(itemData.quantity, itemData.parLevel);
 
-    // Fetch supplier name from the supplierId
     const supplierRef = doc(db, 'suppliers', itemData.supplierId);
     const supplierSnap = await getDoc(supplierRef);
     if (!supplierSnap.exists()) {
@@ -115,7 +118,6 @@ export async function editInventoryItem(
     const itemRef = doc(db, 'inventory', id);
     const status = getStatus(itemData.quantity, itemData.parLevel);
 
-    // Fetch supplier name from the supplierId
     const supplierRef = doc(db, 'suppliers', itemData.supplierId);
     const supplierSnap = await getDoc(supplierRef);
     if (!supplierSnap.exists()) {
@@ -132,7 +134,7 @@ export async function editInventoryItem(
       unitCost,
     });
     revalidatePath('/inventory');
-    revalidatePath('/recipes/**'); // Revalidate recipes when inventory changes
+    revalidatePath('/recipes/**'); 
     return {success: true};
   } catch (e) {
     console.error('Error updating document: ', e);
@@ -246,17 +248,65 @@ export async function deleteMenu(menuId: string) {
   }
 }
 
+
 // Sales Actions
 export async function logSale(saleData: AddSaleData) {
   try {
-    const docRef = await addDoc(collection(db, 'sales'), {
-      ...saleData,
-      saleDate: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+      // 1. Log the sale
+      const saleRef = doc(collection(db, 'sales'));
+      transaction.set(saleRef, {
+        ...saleData,
+        saleDate: serverTimestamp(),
+      });
+
+      // 2. Fetch the recipe to know which ingredients to deplete
+      const recipeRef = doc(db, 'recipes', saleData.recipeId);
+      const recipeSnap = await transaction.get(recipeRef);
+      if (!recipeSnap.exists()) {
+        throw `Recipe with ID ${saleData.recipeId} not found!`;
+      }
+      const recipe = recipeSnap.data() as Recipe;
+
+      // 3. Deplete each ingredient
+      for (const recipeIngredient of recipe.ingredients) {
+        const invItemRef = doc(db, 'inventory', recipeIngredient.inventoryItemId);
+        const invItemSnap = await transaction.get(invItemRef);
+
+        if (!invItemSnap.exists()) {
+          // It's possible an ingredient was deleted, so we'll log a warning and skip.
+          console.warn(`Inventory item with ID ${recipeIngredient.inventoryItemId} not found during sale depletion.`);
+          continue;
+        }
+
+        const invItem = invItemSnap.data() as InventoryItem;
+
+        // Convert the recipe ingredient's unit to the inventory item's base unit
+        const quantityToDepleteInBaseUnit = convert(
+            recipeIngredient.quantity * saleData.quantity,
+            recipeIngredient.unit as any,
+            invItem.unit as any,
+        );
+
+        const newQuantity = invItem.quantity - quantityToDepleteInBaseUnit;
+        const newStatus = getStatus(newQuantity, invItem.parLevel);
+        
+        transaction.update(invItemRef, { 
+            quantity: newQuantity,
+            status: newStatus
+        });
+      }
     });
+
+    // 4. Revalidate paths
     revalidatePath('/sales');
-    return { success: true, id: docRef.id };
+    revalidatePath('/inventory');
+    revalidatePath('/'); // Revalidate dashboard for low stock items
+
+    return { success: true };
   } catch (error) {
-    console.error('Error logging sale: ', error);
+    console.error('Error logging sale and depleting inventory: ', error);
     throw new Error('Failed to log sale.');
   }
 }
+
