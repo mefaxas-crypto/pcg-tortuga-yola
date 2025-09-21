@@ -366,7 +366,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     return new Intl.NumberFormat('en-US', options).format(value || 0);
   };
 
-  async function onSubmit(values: z.infer<typeof formSchema>>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
 
     const recipeData = {
@@ -740,18 +740,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                   </CommandItem>
                                   ))}
                               </CommandGroup>
-                               <CommandGroup>
-                                <CommandItem
-                                    onSelect={() => {
-                                        setIngredientPopoverOpen(false);
-                                        setNewIngredientSheetOpen(true);
-                                    }}
-                                    >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Create New Ingredient
-                                </CommandItem>
-                            </CommandGroup>
-                              <CommandEmpty>
+                               <CommandEmpty>
                                 <CommandGroup>
                                     <CommandItem
                                         onSelect={() => {
@@ -802,5 +791,3 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
-
-    
