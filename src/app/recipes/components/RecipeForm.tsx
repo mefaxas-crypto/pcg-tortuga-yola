@@ -277,6 +277,13 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     };
   }, [mode, recipe?.id]);
 
+  const { subRecipeItems, inventoryOnlyItems } = useMemo(() => {
+    const subRecipes = selectableItems.filter(item => item.type === 'recipe');
+    const subRecipeCodes = new Set(subRecipes.map(item => item.code));
+    const inventory = selectableItems.filter(item => item.type === 'inventory' && !subRecipeCodes.has(item.code));
+    return { subRecipeItems: subRecipes, inventoryOnlyItems: inventory };
+  }, [selectableItems]);
+
   const handleIngredientAdd = (item: SelectableItem) => {
     if (fields.some((field) => field.itemId === item.id)) {
       toast({
@@ -699,7 +706,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                               <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                                 <CommandList>
                                   <CommandGroup heading="Sub-Recipes">
-                                    {selectableItems.filter(item => item.type === 'recipe').map((item) => (
+                                    {subRecipeItems.map((item) => (
                                       <CommandItem
                                         key={item.id}
                                         value={item.name}
@@ -712,7 +719,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                   </CommandGroup>
                                   <CommandSeparator />
                                   <CommandGroup heading="Inventory Items">
-                                    {selectableItems.filter(item => item.type === 'inventory').map((item) => (
+                                    {inventoryOnlyItems.map((item) => (
                                       <CommandItem
                                         key={item.id}
                                         value={item.name}
