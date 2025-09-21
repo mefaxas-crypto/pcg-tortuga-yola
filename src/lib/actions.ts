@@ -103,6 +103,7 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
       status,
       supplier: supplierName,
       unitCost,
+      supplierId: itemData.supplierId || '', // Ensure supplierId is not undefined
     };
 
     const docRef = await addDoc(collection(db, 'inventory'), fullItemData);
@@ -123,7 +124,7 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
 
 async function getSupplierName(supplierId?: string): Promise<string> {
     if (!supplierId) {
-        return 'In-house'; // Or whatever default you prefer
+        return 'In-house'; // Default for butchered items etc.
     }
     const supplierRef = doc(db, 'suppliers', supplierId);
     const supplierSnap = await getDoc(supplierRef);
@@ -532,3 +533,4 @@ export async function logButchering(data: ButcheringData) {
     throw new Error(`Failed to log butchering: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+
