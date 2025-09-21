@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import {
@@ -23,6 +24,7 @@ import type {
   AddRecipeData,
   AddSaleData,
   ButcheringData,
+  ButcheryTemplate,
   InventoryFormData,
   InventoryItem,
   LogProductionData,
@@ -31,7 +33,7 @@ import type {
 } from './types';
 import {revalidatePath} from 'next/cache';
 import { allUnits, Unit, convert } from './conversions';
-import { butcheryTemplates } from './butchery-templates.json';
+import { butcheryTemplates as initialButcheryTemplates } from './butchery-templates.json';
 
 // We are defining a specific type for adding a supplier
 // that doesn't require the `id` field, as it will be auto-generated.
@@ -541,12 +543,12 @@ export async function logButchering(data: ButcheringData) {
     // 4. Update the butchery template (this is a placeholder for a real database implementation)
     // This is NOT safe for concurrent use, but for this demo it illustrates the concept.
     // In a real app, this should be a database transaction or a more robust system.
-    const templateIndex = butcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
+    const templateIndex = initialButcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
     const primaryItem = await getDoc(doc(db, 'inventory', data.primaryItemId)).then(d => d.data() as InventoryItem);
     
     if (templateIndex > -1) {
       // Update existing template
-      const template = butcheryTemplates[templateIndex];
+      const template = initialButcherTemplates[templateIndex];
       data.yieldedItems.forEach(yielded => {
         if (!template.yields.some(y => y.id === yielded.materialCode)) {
           template.yields.push({ id: yielded.materialCode, name: yielded.name });
@@ -554,7 +556,7 @@ export async function logButchering(data: ButcheringData) {
       });
     } else {
       // Create new template
-      butcheryTemplates.push({
+      initialButcheryTemplates.push({
         id: `template-${data.primaryItemMaterialCode}-${Date.now()}`,
         name: `${primaryItem.name} Breakdown`,
         primaryItemMaterialCode: data.primaryItemMaterialCode,
@@ -570,5 +572,29 @@ export async function logButchering(data: ButcheringData) {
   } catch (error) {
     console.error('Error during butchering log:', error);
     throw new Error(`Failed to log butchering: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export async function updateButcheryTemplate(template: ButcheryTemplate) {
+  try {
+    // This is a placeholder for a real database operation.
+    // In a real application, you would find the template in the database and update its `yields` array.
+    console.log('Updating butchery template:', template);
+
+    // Conceptually, we find the template in our "database" (the JSON file) and update it.
+    const templateIndex = initialButcheryTemplates.findIndex(t => t.id === template.id);
+    if (templateIndex > -1) {
+      initialButcheryTemplates[templateIndex] = template;
+    } else {
+      throw new Error("Template not found for update.");
+    }
+    
+    // We would revalidate any paths that might show this template data.
+    revalidatePath('/recipes');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating butchery template:', error);
+    throw new Error('Failed to update butchery template.');
   }
 }

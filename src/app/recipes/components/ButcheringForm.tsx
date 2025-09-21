@@ -53,8 +53,9 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
-import { butcheryTemplates } from '@/lib/butchery-templates.json';
+import { butcheryTemplates as initialButcheryTemplates } from '@/lib/butchery-templates.json';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
+import { ButcheringTemplateDialog } from './ButcheringTemplateDialog';
 
 const formSchema = z.object({
   primaryItemId: z.string().min(1, 'Please select a primary item to butcher.'),
@@ -77,6 +78,8 @@ export function ButcheringForm() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
+  const [butcheryTemplates, setButcheryTemplates] = useState<ButcheryTemplateType[]>(initialButcheryTemplates);
+  const [isTemplateDialogOpen, setTemplateDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -113,8 +116,8 @@ export function ButcheringForm() {
   const activeTemplate = useMemo(() => {
     const primaryItem = inventory.find(i => i.id === primaryItemId);
     if (!primaryItem) return null;
-    return (butcheryTemplates as ButcheryTemplateType[]).find(t => t.primaryItemMaterialCode === primaryItem.materialCode);
-  }, [primaryItemId, inventory]);
+    return butcheryTemplates.find(t => t.primaryItemMaterialCode === primaryItem.materialCode) || null;
+  }, [primaryItemId, inventory, butcheryTemplates]);
 
 
   const totalYieldedWeight = yieldedItems.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
@@ -200,6 +203,13 @@ export function ButcheringForm() {
     });
     setNewItemSheetOpen(false); // Close the sheet after appending
   };
+  
+  const handleTemplateUpdate = (updatedTemplate: ButcheryTemplateType) => {
+    setButcheryTemplates(currentTemplates => 
+      currentTemplates.map(t => t.id === updatedTemplate.id ? updatedTemplate : t)
+    );
+    setTemplateDialogOpen(false);
+  }
 
 
   return (
@@ -402,7 +412,7 @@ export function ButcheringForm() {
                               </Command>
                           </PopoverContent>
                       </Popover>
-                      <Button type="button" variant="secondary" size="icon">
+                      <Button type="button" variant="secondary" size="icon" onClick={() => setTemplateDialogOpen(true)}>
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Edit Template</span>
                       </Button>
@@ -454,6 +464,15 @@ export function ButcheringForm() {
         mode="add"
         isInternalCreation={true}
     />
+    {activeTemplate && (
+      <ButcheringTemplateDialog
+        open={isTemplateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        template={activeTemplate}
+        inventoryItems={inventory}
+        onTemplateUpdate={handleTemplateUpdate}
+      />
+    )}
     </>
   );
 }
