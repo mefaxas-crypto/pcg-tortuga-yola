@@ -368,7 +368,7 @@ export function RecipeForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                       {recipeCategories.map(category => (
