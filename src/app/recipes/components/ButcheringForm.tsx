@@ -54,7 +54,6 @@ import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
-import { useRouter } from 'next/navigation';
 
 const yieldItemSchema = z.object({
   itemId: z.string().min(1, 'Item ID is missing.'),
@@ -76,7 +75,6 @@ const formSchema = z.object({
 });
 
 export function ButcheringForm() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isPopoverOpen, setPopoverOpen] = useState(false);
@@ -124,9 +122,9 @@ export function ButcheringForm() {
     };
   }, []);
   
+  const watchedYieldedItems = form.watch('yieldedItems');
   const quantityUsed = form.watch('quantityUsed');
   const quantityUnit = form.watch('quantityUnit');
-  const watchedYieldedItems = form.watch('yieldedItems');
   const primaryItemId = form.watch('primaryItemId');
 
   const activeTemplate = useMemo(() => {
