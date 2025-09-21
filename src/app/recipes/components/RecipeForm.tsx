@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -112,8 +113,11 @@ type SelectableItem = {
   name: string;
   type: 'inventory' | 'recipe';
   code: string;
-  unit: string;
-  cost: number;
+  // This is the unit we use for costing, the smallest logical unit
+  baseUnit: string;
+  costPerBaseUnit: number;
+  // This is the default unit to show in the recipe form
+  defaultRecipeUnit: string;
 };
 
 
@@ -121,7 +125,7 @@ type SelectableItem = {
 type ItemDetails = {
   [itemId: string]: {
     baseUnit: string;
-    unitCost: number;
+    costPerBaseUnit: number;
   };
 };
 
@@ -133,16 +137,10 @@ const recipeCategories = [
   'Side',
 ];
 
-const availableUnits = [
-  { value: 'kg', label: 'kg' },
-  { value: 'g', label: 'g' },
-  { value: 'l', label: 'l' },
-  { value: 'ml', label: 'ml' },
-  { value: 'lb', label: 'lb' },
-  { value: 'oz', label: 'oz' },
-  { value: 'floz', label: 'fl oz' },
-  { value: 'unit', label: 'unit' },
-];
+const availableUnits = Object.keys(allUnits).map(key => ({
+    value: key,
+    label: allUnits[key as keyof typeof allUnits].name
+}));
 
 
 export function RecipeForm({ mode, recipe }: RecipeFormProps) {
@@ -154,8 +152,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
   const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
 
-  const [itemDetails, setItemDetails] =
-    useState<ItemDetails>({});
+  const [itemDetails, setItemDetails] = useState<ItemDetails>({});
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -203,7 +200,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
         foodCostPercentage: recipe.foodCostPercentage,
       });
 
-      // Populate details for existing ingredients
       const details: ItemDetails = {};
        const itemsToGetDetailsFor = recipe.ingredients.map(
         (ing) => ing.itemId,
@@ -214,8 +210,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
       relevantItems.forEach((item) => {
         details[item.id] = {
-          baseUnit: item.unit,
-          unitCost: item.cost,
+          baseUnit: item.baseUnit,
+          costPerBaseUnit: item.costPerBaseUnit,
         };
       });
       setItemDetails(details);
@@ -223,7 +219,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   }, [recipe, mode, form, selectableItems]);
 
   useEffect(() => {
-    // Fetch inventory items
     const qInv = query(collection(db, 'inventory'));
     const unsubInv = onSnapshot(qInv, (snapshot) => {
       const invItems: SelectableItem[] = [];
@@ -234,20 +229,19 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
           name: data.name,
           type: 'inventory',
           code: data.materialCode,
-          unit: data.unit,
-          cost: data.unitCost,
+          baseUnit: data.unit, // This is the smallest unit for tracking (g, ml, un)
+          costPerBaseUnit: data.unitCost,
+          defaultRecipeUnit: data.recipeUnit || data.unit,
          });
       });
       setSelectableItems(current => [...invItems, ...current.filter(i => i.type === 'recipe')].sort((a,b) => a.name.localeCompare(b.name)));
     });
 
-    // Fetch sub-recipes
     const qSubRecipes = query(collection(db, 'recipes'), where('isSubRecipe', '==', true));
     const unsubSubRecipes = onSnapshot(qSubRecipes, (snapshot) => {
         const subRecipes: SelectableItem[] = [];
         snapshot.forEach((doc) => {
             const data = doc.data() as Recipe;
-            // Exclude the current recipe from being a potential ingredient for itself
             if (mode === 'edit' && recipe?.id === doc.id) return;
             
             subRecipes.push({
@@ -255,8 +249,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                 name: data.name,
                 type: 'recipe',
                 code: data.recipeCode,
-                unit: data.yieldUnit || 'unit',
-                cost: data.totalCost / (data.yield || 1)
+                baseUnit: data.yieldUnit || 'un',
+                costPerBaseUnit: data.totalCost / (data.yield || 1),
+                defaultRecipeUnit: data.yieldUnit || 'un',
             });
         });
         setSelectableItems(current => [...subRecipes, ...current.filter(i => i.type === 'inventory')].sort((a,b) => a.name.localeCompare(b.name)));
@@ -294,16 +289,16 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       itemCode: item.code,
       name: item.name,
       quantity: 1,
-      unit: item.unit,
-      totalCost: item.cost, // Initial cost for 1 unit
+      unit: item.defaultRecipeUnit, // Use the new default recipe unit
+      totalCost: item.costPerBaseUnit, // Cost for 1 base unit initially
     });
 
     // Store original details for conversion
     setItemDetails((prev) => ({
       ...prev,
       [item.id]: {
-        baseUnit: item.unit,
-        unitCost: item.cost,
+        baseUnit: item.baseUnit,
+        costPerBaseUnit: item.costPerBaseUnit,
       },
     }));
 
@@ -321,13 +316,12 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     let newTotalCost = 0;
     try {
-      const costPerBaseUnit = details.unitCost;
       const convertedQuantity = convert(
         quantity,
         unit as Unit,
         details.baseUnit as Unit,
       );
-      newTotalCost = convertedQuantity * costPerBaseUnit;
+      newTotalCost = convertedQuantity * details.costPerBaseUnit;
     } catch (error) {
       console.error('Conversion error:', error);
       toast({
@@ -405,8 +399,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       name: newItem.name,
       type: 'inventory',
       code: newItem.materialCode,
-      unit: newItem.unit,
-      cost: newItem.unitCost
+      baseUnit: newItem.unit,
+      costPerBaseUnit: newItem.unitCost,
+      defaultRecipeUnit: newItem.recipeUnit || newItem.unit,
     };
     handleIngredientAdd(selectableItem);
     setNewIngredientSheetOpen(false);
@@ -771,5 +766,3 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
-
-    

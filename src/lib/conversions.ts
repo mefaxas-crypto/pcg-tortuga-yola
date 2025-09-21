@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview A library of functions for converting between different units of measurement.
  * This library handles weight, volume, and will be expanded to handle item-specific densities.
@@ -8,37 +9,19 @@ const BASE_WEIGHT_UNIT = 'g';
 const BASE_VOLUME_UNIT = 'ml';
 
 // --- Unit Definitions ---
-
+// The key is the internal identifier, the name is for display.
 // prettier-ignore
-export const weightUnits = {
-  'g':    { name: 'gram', type: 'weight', factor: 1 },
-  'kg':   { name: 'kilogram', type: 'weight', factor: 1000 },
-  'oz':   { name: 'ounce', type: 'weight', factor: 28.3495 },
-  'lb':   { name: 'pound', type: 'weight', factor: 453.592 },
+export const allUnits = {
+  'kg':   { name: 'Kg',      type: 'weight', factor: 1000 },
+  'g':    { name: 'g',       type: 'weight', factor: 1 },
+  'lbs':  { name: 'lbs',     type: 'weight', factor: 453.592 },
+  'oz':   { name: 'oz',      type: 'weight', factor: 28.3495 },
+  'lt':   { name: 'Lt',      type: 'volume', factor: 1000 },
+  'ml':   { name: 'mL',      type: 'volume', factor: 1 },
+  'floz': { name: 'fl. oz',  type: 'volume', factor: 29.5735 },
+  'un':   { name: 'un.',     type: 'each',   factor: 1 },
 };
 
-// prettier-ignore
-export const volumeUnits = {
-  'ml':   { name: 'milliliter', type: 'volume', factor: 1 },
-  'l':    { name: 'liter', type: 'volume', factor: 1000 },
-  'tsp':  { name: 'teaspoon', type: 'volume', factor: 4.92892 },
-  'tbsp': { name: 'tablespoon', type: 'volume', factor: 14.7868 },
-  'floz': { name: 'fluid ounce', type: 'volume', factor: 29.5735 },
-  'cup':  { name: 'cup', type: 'volume', factor: 236.588 },
-  'pt':   { name: 'pint', type: 'volume', factor: 473.176 },
-  'qt':   { name: 'quart', type: 'volume', factor: 946.353 },
-  'gal':  { name: 'gallon', type: 'volume', factor: 3785.41 },
-};
-
-// prettier-ignore
-export const eachUnits = {
-    'each': { name: 'each', type: 'each', factor: 1 },
-    'unit': { name: 'unit', type: 'each', factor: 1 },
-    'slice': { name: 'slice', type: 'each', factor: 1 },
-    'portion': { name: 'portion', type: 'each', factor: 1 },
-};
-
-export const allUnits = { ...weightUnits, ...volumeUnits, ...eachUnits };
 export type Unit = keyof typeof allUnits;
 
 /**
@@ -64,12 +47,12 @@ export function convert(
   const to = allUnits[toUnit];
 
   if (!from || !to) {
-    throw new Error('Invalid unit specified.');
+    throw new Error(`Invalid unit specified. From: ${fromUnit}, To: ${toUnit}`);
   }
 
   // --- Direct Conversion (Weight-Weight, Volume-Volume, Each-Each) ---
   if (from.type === to.type) {
-    if (from.type === 'each') return value; // 'each' to 'unit' etc. are 1:1 for quantity
+    if (from.type === 'each') return value; // 'un' to 'un' is 1:1
     const valueInBaseUnit = value * from.factor;
     return valueInBaseUnit / to.factor;
   }

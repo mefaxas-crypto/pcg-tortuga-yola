@@ -43,6 +43,7 @@ import { SupplierFormSheet } from '@/app/suppliers/components/SupplierFormSheet'
 import { PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { allUnits } from '@/lib/conversions';
+import { UnitConversionDialog } from './UnitConversionDialog';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'SAP Code is required.'),
@@ -54,8 +55,10 @@ const formSchema = z.object({
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().optional(),
   allergens: z.array(z.string()).optional(),
-  // Internal fields, not shown on form
+  // Internal fields, not shown on form but required for submission
   quantity: z.coerce.number().optional().default(0),
+  recipeUnit: z.string().optional(),
+  recipeUnitConversion: z.coerce.number().optional(),
 });
 
 type InventoryItemFormSheetProps = {
@@ -66,8 +69,6 @@ type InventoryItemFormSheetProps = {
   onItemCreated?: (newItem: InventoryItem) => void;
   isInternalCreation?: boolean;
 };
-
-// --- Standardized Unit Definitions ---
 
 const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
 const availableUnits = Object.keys(allUnits).map(key => ({
@@ -87,6 +88,9 @@ export function InventoryItemFormSheet({
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
   const [isNewSupplierSheetOpen, setNewSupplierSheetOpen] = useState(false);
+  const [isConversionDialogOpen, setConversionDialogOpen] = useState(false);
+  const [pendingFormValues, setPendingFormValues] = useState<z.infer<typeof formSchema> | null>(null);
+
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -116,6 +120,8 @@ export function InventoryItemFormSheet({
       supplierId: '',
       allergens: [],
       quantity: 0,
+      recipeUnit: undefined,
+      recipeUnitConversion: undefined,
   };
 
   useEffect(() => {
@@ -124,7 +130,7 @@ export function InventoryItemFormSheet({
         form.reset({
           ...commonReset,
           ...item,
-          purchaseQuantity: item.conversionFactor,
+          purchaseQuantity: item.purchaseQuantity,
           supplierId: item.supplierId || '',
           allergens: item.allergens || [],
         });
@@ -178,7 +184,7 @@ export function InventoryItemFormSheet({
     setNewSupplierSheetOpen(false);
   }
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const completeSubmission = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
         if (mode === 'edit' && item) {
@@ -187,7 +193,7 @@ export function InventoryItemFormSheet({
                 title: 'Ingredient Updated',
                 description: `"${values.name}" has been updated.`,
             });
-            onClose();
+            handleClose();
         } else {
             const newItem = await addInventoryItem(values);
             toast({
@@ -199,7 +205,6 @@ export function InventoryItemFormSheet({
             }
             handleClose();
         }
-      
     } catch (error) {
       console.error(error);
       toast({
@@ -212,6 +217,26 @@ export function InventoryItemFormSheet({
     }
   }
 
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    // If purchase unit is 'un' and we are adding a new item, we need conversion factor.
+    if (values.purchaseUnit === 'un' && mode === 'add') {
+      setPendingFormValues(values);
+      setConversionDialogOpen(true);
+      return;
+    }
+    // For edits or standard units, proceed directly.
+    await completeSubmission(values);
+  }
+
+  const handleConversionSubmit = (conversion: { recipeUnit: string; recipeUnitConversion: number; }) => {
+    if (pendingFormValues) {
+        const finalValues = { ...pendingFormValues, ...conversion };
+        setConversionDialogOpen(false);
+        setPendingFormValues(null);
+        completeSubmission(finalValues);
+    }
+  };
+
   const allergenOptions = allergens.map(allergen => ({
     value: allergen.name,
     label: allergen.name,
@@ -221,6 +246,8 @@ export function InventoryItemFormSheet({
   const formDescription = isInternalCreation 
     ? 'Enter details for this new cut. The supplier will be set to "In-house" automatically.' 
     : 'Enter the details of the ingredient as you would purchase it.';
+  
+  const purchaseUnit = form.watch('purchaseUnit');
 
   return (
     <>
@@ -381,7 +408,7 @@ export function InventoryItemFormSheet({
                             <FormControl>
                                 <Input type="number" {...field} value={field.value || ''} />
                             </FormControl>
-                            <FormDescription className='text-xs'>Re-order point in base units (g, ml, or each)</FormDescription>
+                             <FormDescription className='text-xs'>Re-order point in purchase units (e.g. # of {purchaseUnit})</FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -426,11 +453,19 @@ export function InventoryItemFormSheet({
         </Form>
       </SheetContent>
     </Sheet>
+    
     <SupplierFormSheet
       open={isNewSupplierSheetOpen}
       onClose={() => setNewSupplierSheetOpen(false)}
       mode="add"
       onSupplierCreated={handleSupplierCreated}
+    />
+
+    <UnitConversionDialog 
+        open={isConversionDialogOpen}
+        onOpenChange={setConversionDialogOpen}
+        itemName={form.getValues('name')}
+        onConfirm={handleConversionSubmit}
     />
     </>
   );

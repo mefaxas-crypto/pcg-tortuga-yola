@@ -32,6 +32,7 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
+import { allUnits } from '@/lib/conversions';
 
 type InventoryTableProps = {
   onEdit: (item: InventoryItem) => void;
@@ -80,6 +81,11 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
     }
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(value);
+  }
+  
+  const getUnitLabel = (unitKey: string | undefined) => {
+    if (!unitKey) return '';
+    return allUnits[unitKey as keyof typeof allUnits]?.name || unitKey;
   }
 
   return (
@@ -142,10 +148,12 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {item.quantity} {item.unit}
+                    {item.quantity} {getUnitLabel(item.unit)}
                   </TableCell>
-                   <TableCell>{item.purchaseUnit}</TableCell>
-                   <TableCell>{item.conversionFactor}</TableCell>
+                   <TableCell>{item.purchaseQuantity} {getUnitLabel(item.purchaseUnit)}</TableCell>
+                   <TableCell>
+                     {item.recipeUnitConversion ? `1 ${getUnitLabel(item.purchaseUnit)} = ${item.recipeUnitConversion} ${getUnitLabel(item.recipeUnit)}` : 'N/A'}
+                   </TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(item.purchasePrice || 0)}
                   </TableCell>

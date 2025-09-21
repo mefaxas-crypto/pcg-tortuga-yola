@@ -89,28 +89,30 @@ function getStatus(
   }
 }
 
-// Determines the base unit for an item (e.g., g, ml, or each)
+// Determines the base unit for an item (e.g., g, ml, or un)
 function getBaseUnit(purchaseUnit: Unit): Unit {
     const unitInfo = allUnits[purchaseUnit];
     if (unitInfo.type === 'weight') return 'g';
     if (unitInfo.type === 'volume') return 'ml';
-    return 'each';
+    return 'un'; // Default to 'un' for items like 'each', 'bottle', etc.
 }
 
 export async function addInventoryItem(formData: InventoryFormData) {
   try {
-    const { purchaseQuantity, purchaseUnit, purchasePrice, ...restOfForm } = formData;
+    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
     
-    // Determine the base unit for inventory tracking
-    const baseUnit = getBaseUnit(purchaseUnit as Unit);
+    // The unit for inventory tracking is the purchase unit itself if it's 'un', otherwise it's the base unit.
+    const inventoryUnit = purchaseUnit === 'un' ? 'un' : getBaseUnit(purchaseUnit as Unit);
 
-    // Calculate how many base units are in one purchase unit.
-    // e.g. if purchase is 1kg, base is g, conversion is 1000
-    const conversionFromPurchaseToBase = convert(1, purchaseUnit as Unit, baseUnit as Unit);
-    const totalBaseUnitsInPurchase = purchaseQuantity * conversionFromPurchaseToBase;
-    
-    // Calculate cost per single base unit (e.g. cost per gram)
-    const unitCost = totalBaseUnitsInPurchase > 0 ? purchasePrice / totalBaseUnitsInPurchase : 0;
+    let unitCost = 0;
+    // If we have a conversion, we can calculate the cost per recipe unit.
+    if (recipeUnit && recipeUnitConversion) {
+      const totalRecipeUnitsInPurchase = purchaseQuantity * recipeUnitConversion;
+      unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
+    } else {
+      // Otherwise, the cost is per purchase unit.
+      unitCost = purchaseQuantity > 0 ? purchasePrice / purchaseQuantity : 0;
+    }
     
     const quantity = formData.quantity || 0; // Initial stock
     const status = getStatus(quantity, formData.parLevel);
@@ -122,11 +124,13 @@ export async function addInventoryItem(formData: InventoryFormData) {
       status,
       supplier: supplierName,
       supplierId: formData.supplierId || '',
-      purchaseUnit: purchaseUnit, // e.g. 'kg'
-      conversionFactor: purchaseQuantity, // e.g. 1
-      unit: baseUnit, // e.g. 'g'
+      purchaseQuantity: purchaseQuantity,
+      purchaseUnit: purchaseUnit,
       purchasePrice,
-      unitCost: isFinite(unitCost) ? unitCost : 0,
+      unit: inventoryUnit, // The unit we track stock in (e.g., 'un' for bottles, 'g' for flour)
+      unitCost: isFinite(unitCost) ? unitCost : 0, // Cost per recipeUnit or per purchaseUnit
+      recipeUnit: recipeUnit || inventoryUnit, // The unit for recipes (e.g., 'ml' for wine bottle)
+      recipeUnitConversion: recipeUnitConversion || 1, // How many recipe units are in one purchase unit
     };
 
     const docRef = await addDoc(collection(db, 'inventory'), fullItemData);
@@ -169,14 +173,18 @@ export async function editInventoryItem(
     if (!itemSnap.exists()) throw new Error("Item not found");
     const currentItem = itemSnap.data() as InventoryItem;
 
-    const { purchaseQuantity, purchaseUnit, purchasePrice, ...restOfForm } = formData;
+    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
     
-    const baseUnit = getBaseUnit(purchaseUnit as Unit);
-    const conversionFromPurchaseToBase = convert(1, purchaseUnit as Unit, baseUnit as Unit);
-    const totalBaseUnitsInPurchase = purchaseQuantity * conversionFromPurchaseToBase;
-    const unitCost = totalBaseUnitsInPurchase > 0 ? purchasePrice / totalBaseUnitsInPurchase : 0;
+    const inventoryUnit = purchaseUnit === 'un' ? 'un' : getBaseUnit(purchaseUnit as Unit);
 
-    // Use current quantity if not provided in form (form doesn't have current stock)
+    let unitCost = 0;
+    if (recipeUnit && recipeUnitConversion) {
+      const totalRecipeUnitsInPurchase = purchaseQuantity * recipeUnitConversion;
+      unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
+    } else {
+      unitCost = purchaseQuantity > 0 ? purchasePrice / purchaseQuantity : 0;
+    }
+
     const quantity = currentItem.quantity;
     const status = getStatus(quantity, formData.parLevel);
     const supplierName = await getSupplierName(formData.supplierId);
@@ -187,11 +195,13 @@ export async function editInventoryItem(
       status,
       supplier: supplierName,
       supplierId: formData.supplierId || '',
-      purchaseUnit: purchaseUnit,
-      conversionFactor: purchaseQuantity,
-      unit: baseUnit,
+      purchaseQuantity,
+      purchaseUnit,
       purchasePrice,
+      unit: inventoryUnit,
       unitCost: isFinite(unitCost) ? unitCost : 0,
+      recipeUnit: recipeUnit || inventoryUnit,
+      recipeUnitConversion: recipeUnitConversion || 1,
     };
 
     await updateDoc(itemRef, dataToUpdate);
@@ -275,42 +285,6 @@ export async function deleteRecipe(recipeId: string) {
   }
 }
 
-// Menu Actions
-export async function addMenu(menuData: Omit<Menu, 'id'>) {
-  try {
-    const docRef = await addDoc(collection(db, 'menus'), menuData);
-    revalidatePath('/menus');
-    return {success: true, id: docRef.id};
-  } catch (e) {
-    console.error('Error adding menu: ', e);
-    throw new Error('Failed to add menu');
-  }
-}
-
-export async function editMenu(id: string, menuData: Omit<Menu, 'id'>) {
-  try {
-    const menuRef = doc(db, 'menus', id);
-    await updateDoc(menuRef, menuData);
-    revalidatePath('/menus');
-    revalidatePath(`/menus/${id}/edit`);
-    return {success: true};
-  } catch (e) {
-    console.error('Error updating menu: ', e);
-    throw new Error('Failed to edit menu');
-  }
-}
-
-export async function deleteMenu(menuId: string) {
-  try {
-    await deleteDoc(doc(db, 'menus', menuId));
-    revalidatePath('/menus');
-    return {success: true};
-  } catch (e) {
-    console.error('Error deleting menu: ', e);
-    throw new Error('Failed to delete menu');
-  }
-}
-
 
 // Sales Actions
 export async function logSale(saleData: AddSaleData) {
@@ -356,14 +330,17 @@ export async function logSale(saleData: AddSaleData) {
         const invItem = invItemSnap.data() as InventoryItem;
         const invItemRef = invItemSnap.ref;
 
-        // Convert the recipe ingredient's unit to the inventory item's base unit
-        const quantityToDepleteInBaseUnit = convert(
+        // Convert the recipe ingredient's unit to the inventory item's base unit for costing
+        const quantityToDepleteInCostingUnit = convert(
             recipeIngredient.quantity * saleData.quantity,
             recipeIngredient.unit as any,
-            invItem.unit as any,
+            invItem.recipeUnit as any,
         );
 
-        const newQuantity = invItem.quantity - quantityToDepleteInBaseUnit;
+        // Convert that to the inventory tracking unit for depletion
+        const quantityToDepleteInInventoryUnit = quantityToDepleteInCostingUnit / invItem.recipeUnitConversion;
+
+        const newQuantity = invItem.quantity - quantityToDepleteInInventoryUnit;
         const newStatus = getStatus(newQuantity, invItem.parLevel);
         
         transaction.update(invItemRef, { 
@@ -410,13 +387,18 @@ export async function logProduction(data: LogProductionData) {
           }
           const invItem = invItemSnap.data() as InventoryItem;
 
-          const quantityToDeplete = convert(
+          // Convert recipe ingredient unit to the costing unit of the inventory item
+           const quantityToDepleteInCostingUnit = convert(
             ingredient.quantity * item.quantityProduced,
             ingredient.unit as any,
-            invItem.unit as any
+            invItem.recipeUnit as any
           );
 
-          const newQuantity = invItem.quantity - quantityToDeplete;
+          // Convert that to the inventory tracking unit for depletion
+          const quantityToDepleteInInventoryUnit = quantityToDepleteInCostingUnit / invItem.recipeUnitConversion;
+
+
+          const newQuantity = invItem.quantity - quantityToDepleteInInventoryUnit;
           const newStatus = getStatus(newQuantity, invItem.parLevel);
 
           transaction.update(invItemRef, {
@@ -442,29 +424,32 @@ export async function logProduction(data: LogProductionData) {
             `Sub-recipe ${subRecipe.name} not found in inventory. Creating a new entry.`
           );
           const newInvItemRef = doc(collection(db, 'inventory'));
-          const newQuantity = (subRecipe.yield || 1) * item.quantityProduced;
+          
+          const newQuantity = item.quantityProduced; // We are producing N batches, which are 'un'
 
           transaction.set(newInvItemRef, {
             materialCode: subRecipe.recipeCode,
             name: subRecipe.name,
             category: subRecipe.category,
             quantity: newQuantity,
-            unit: subRecipe.yieldUnit || 'unit',
+            unit: 'un', // Sub-recipes are tracked in 'un' (batches)
             purchaseUnit: 'Production',
-            conversionFactor: 1,
+            purchaseQuantity: 1,
             parLevel: 0, // Default par level
             supplierId: '',
             supplier: 'In-house',
             purchasePrice: 0,
-            unitCost: subRecipe.totalCost / (subRecipe.yield || 1),
-            allergens: [], // Sub-recipes inherit allergens, this could be improved
+            unitCost: subRecipe.totalCost / (subRecipe.yield || 1), // Cost per yieldUnit (e.g. per gram)
+            allergens: [],
             status: getStatus(newQuantity, 0),
+            recipeUnit: subRecipe.yieldUnit || 'un',
+            recipeUnitConversion: subRecipe.yield || 1,
           });
         } else {
           const producedItemRef = producedItemSnap.ref;
           const producedItem = producedItemSnap.data() as InventoryItem;
 
-          const quantityToAdd = (subRecipe.yield || 1) * item.quantityProduced;
+          const quantityToAdd = item.quantityProduced; // Add N batches
           const newQuantity = producedItem.quantity + quantityToAdd;
           const newStatus = getStatus(newQuantity, producedItem.parLevel);
 
@@ -510,15 +495,20 @@ export async function logButchering(data: ButcheringData) {
 
       // --- 2. CALCULATION/LOGIC PHASE ---
       const primaryItem = primaryItemSnap.data() as InventoryItem;
-      const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.unit as Unit);
 
-      // if (primaryItem.quantity < quantityToDeplete) {
-      //   throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDeplete} ${primaryItem.unit}.`);
+      // Convert quantity used to the primary item's costing unit
+      const quantityToDepleteInCostingUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.recipeUnit as Unit);
+      
+      // Convert that to the inventory tracking unit for depletion
+      const quantityToDepleteInInventoryUnit = quantityToDepleteInCostingUnit / primaryItem.recipeUnitConversion;
+
+      // if (primaryItem.quantity < quantityToDepleteInInventoryUnit) {
+      //   throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDepleteInInventoryUnit} ${primaryItem.unit}.`);
       // }
       
-      const newPrimaryQuantity = primaryItem.quantity - quantityToDeplete;
+      const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInInventoryUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
-      const totalCostOfButcheredPortion = primaryItem.unitCost * quantityToDeplete;
+      const totalCostOfButcheredPortion = primaryItem.unitCost * quantityToDepleteInCostingUnit;
 
 
       // --- 3. WRITE PHASE ---
@@ -535,28 +525,26 @@ export async function logButchering(data: ButcheringData) {
         const yieldedItem = yieldedItemSnap.data() as InventoryItem;
 
         // The cost of the new item is proportional to its yield percentage of the total cost of the portion being butchered.
-        const newYieldedItemCost = (totalCostOfButcheredPortion * (yieldedItemData.yieldPercentage / 100)) / yieldedItemData.weight;
+        // We divide by the weight in the base unit of the yielded item (e.g. grams) to get cost per gram
+        const yieldedItemWeightInBase = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.recipeUnit as Unit);
+        const newYieldedItemCost = (totalCostOfButcheredPortion * (yieldedItemData.yieldPercentage / 100)) / yieldedItemWeightInBase;
         
-        const newQuantity = yieldedItem.quantity + yieldedItemData.weight;
+        const newQuantity = yieldedItem.quantity + yieldedItemWeightInBase;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
 
         transaction.update(yieldedItemSnap.ref, {
             quantity: newQuantity,
             status: newStatus,
-            // Update the cost based on this butchering event if it's a valid number
             unitCost: isFinite(newYieldedItemCost) ? newYieldedItemCost : yieldedItem.unitCost, 
         });
       }
     });
 
-    // 4. Update the butchery template (this is a placeholder for a real database implementation)
-    // This is NOT safe for concurrent use, but for this demo it illustrates the concept.
-    // In a real app, this should be a database transaction or a more robust system.
+    // 4. Update the butchery template
     const templateIndex = initialButcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
     const primaryItem = await getDoc(doc(db, 'inventory', data.primaryItemId)).then(d => d.data() as InventoryItem);
     
     if (templateIndex > -1) {
-      // Update existing template
       const template = initialButcheryTemplates[templateIndex];
       data.yieldedItems.forEach(yielded => {
         if (!template.yields.some(y => y.id === yielded.materialCode)) {
@@ -564,7 +552,6 @@ export async function logButchering(data: ButcheringData) {
         }
       });
     } else {
-      // Create new template
       initialButcheryTemplates.push({
         id: `template-${data.primaryItemMaterialCode}-${Date.now()}`,
         name: `${primaryItem.name} Breakdown`,
@@ -572,9 +559,9 @@ export async function logButchering(data: ButcheringData) {
         yields: data.yieldedItems.map(y => ({ id: y.materialCode, name: y.name }))
       });
     }
-    // Note: This does not actually save the JSON file on the server. This is a conceptual demonstration.
 
     revalidatePath('/inventory');
+    revalidatePath('/recipes');
     revalidatePath('/');
 
     return { success: true };
@@ -586,11 +573,8 @@ export async function logButchering(data: ButcheringData) {
 
 export async function updateButcheryTemplate(template: ButcheryTemplate) {
   try {
-    // This is a placeholder for a real database operation.
-    // In a real application, you would find the template in the database and update its `yields` array.
     console.log('Updating butchery template:', template);
 
-    // Conceptually, we find the template in our "database" (the JSON file) and update it.
     const templateIndex = initialButcheryTemplates.findIndex(t => t.id === template.id);
     if (templateIndex > -1) {
       initialButcheryTemplates[templateIndex] = template;
@@ -598,7 +582,6 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
       throw new Error("Template not found for update.");
     }
     
-    // We would revalidate any paths that might show this template data.
     revalidatePath('/recipes');
 
     return { success: true };

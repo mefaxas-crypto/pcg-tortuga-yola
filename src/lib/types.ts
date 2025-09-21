@@ -5,18 +5,23 @@ export type InventoryItem = {
   materialCode: string;
   name: string;
   category: string;
-  quantity: number; // Current stock in the `unit`
-  unit: string; // The base unit for inventory tracking and costing (e.g., g, ml, each).
-  purchaseUnit: string; // The unit of the purchaseQuantity (e.g., kg, L, Case)
-  conversionFactor: number; // How many of the `unit` are in one `purchaseUnit`. e.g. purchaseUnit=kg, unit=g, conversionFactor=1000
-  parLevel: number; // Re-order point in the base `unit`
+  quantity: number; // Current stock in the `unit` of tracking
+  unit: string; // The unit for inventory tracking (e.g., 'un' for bottles, 'g' for bulk flour)
+  purchaseQuantity: number; // e.g., 1 for a case, 10 for a kg bag
+  purchaseUnit: string; // The unit of the purchase (e.g., 'un' for case, 'kg' for bag)
+  purchasePrice: number; // Price for one purchaseQuantity
+  parLevel: number; // Re-order point in the `purchaseUnit`
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
-  purchasePrice: number; // Price for one purchaseUnit
-  unitCost: number; // The cost of a single recipe unit (e.g., price per gram)
+  // Costing fields
+  unitCost: number; // The cost of a single `recipeUnit` (e.g., price per gram, per ml)
+  recipeUnit: string; // The base unit for recipes (e.g., g, ml)
+  recipeUnitConversion: number; // How many recipeUnits are in ONE purchaseUnit (e.g., 750ml in 1 un. bottle)
+  // Meta fields
   allergens?: string[];
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
+
 
 // This is the data received from the form
 export type InventoryFormData = {
@@ -30,6 +35,9 @@ export type InventoryFormData = {
   supplierId?: string;
   allergens?: string[];
   quantity?: number; // Optional initial stock
+  // Optional fields for 'un' conversion
+  recipeUnit?: string;
+  recipeUnitConversion?: number;
 }
 
 export type AddInventoryItemData = InventoryFormData;
