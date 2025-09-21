@@ -288,9 +288,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       ingredientType: item.type,
       itemCode: item.code,
       name: item.name,
-      quantity: 1,
+      quantity: 0,
       unit: item.defaultRecipeUnit, // Use the new default recipe unit
-      totalCost: item.costPerBaseUnit, // Cost for 1 base unit initially
+      totalCost: 0,
     });
 
     // Store original details for conversion
