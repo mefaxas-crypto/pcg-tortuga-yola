@@ -42,18 +42,19 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { volumeUnits, weightUnits, eachUnits } from '@/lib/conversions';
 import { SupplierFormSheet } from '@/app/suppliers/components/SupplierFormSheet';
 import { PlusCircle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
-  materialCode: z.string().min(1, 'Material Code is required.'),
+  materialCode: z.string().min(1, 'SAP Code is required.'),
   name: z.string().min(2, 'Ingredient name must be at least 2 characters.'),
   category: z.string().min(1, 'Category is required.'),
   quantity: z.coerce.number().min(0, 'Quantity cannot be negative.'),
-  unit: z.string().min(1, 'Unit is required.'),
-  purchaseUnit: z.string().min(1, 'Purchase Unit is required.'),
+  unit: z.string().min(1, 'Recipe unit is required.'),
+  purchaseUnit: z.string().min(1, 'Presentation/Purchase Unit is required.'),
   conversionFactor: z.coerce.number().min(0.0001, 'Conversion factor must be positive.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().optional(),
-  purchasePrice: z.coerce.number().min(0, 'Purchase price must be a positive number.'),
+  purchasePrice: z.coerce.number().min(0, 'Cost must be a positive number.'),
   unitCost: z.coerce.number().min(0, 'Unit cost must be a positive number.'),
   allergens: z.array(z.string()).optional(),
 });
@@ -69,30 +70,19 @@ type InventoryItemFormSheetProps = {
 
 // --- Standardized Unit Definitions ---
 
-// Categories help group units logically in dropdowns
 const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
 
-// Units for purchasing from suppliers
 const purchaseUnits = [
-    // Common Cases and Containers
     'Case', 'Box', 'Bottle', 'Bag', 'Jar', 'Can', 'Carton',
-    // By Weight
-    'kg', 'lb',
-    // By Volume
-    'l', 'gal',
-    // Individual Items
-    'Each', 'Unit', 'Pack',
-    // Special
-    'Butchery',
-    'Production',
+    'kg', 'lb', 'l', 'gal', 'Each', 'Unit', 'Pack',
+    'Butchery', 'Production',
 ];
 
-// Units for use in recipes and internal tracking
 const recipeUnits = [
     ...Object.keys(weightUnits),
     ...Object.keys(volumeUnits),
     ...Object.keys(eachUnits)
-];
+].sort();
 
 
 export function InventoryItemFormSheet({
@@ -131,7 +121,6 @@ export function InventoryItemFormSheet({
   const conversionFactor = form.watch('conversionFactor');
 
   useEffect(() => {
-    // Only auto-calculate unit cost for non-internal items
     if (!isInternalCreation && purchasePrice !== undefined && conversionFactor > 0) {
       const newUnitCost = purchasePrice / conversionFactor;
       form.setValue('unitCost', newUnitCost, { shouldValidate: true });
@@ -140,54 +129,39 @@ export function InventoryItemFormSheet({
 
 
   useEffect(() => {
+    const commonReset = {
+      materialCode: '',
+      name: '',
+      category: '',
+      quantity: 0,
+      unit: '',
+      purchaseUnit: '',
+      conversionFactor: 1,
+      parLevel: 0,
+      supplierId: '',
+      purchasePrice: 0,
+      unitCost: 0,
+      allergens: [],
+    };
+  
     if (open) {
       if (mode === 'edit' && item) {
         form.reset({
-          materialCode: item.materialCode || '',
-          name: item.name || '',
-          category: item.category || '',
-          quantity: item.quantity || 0,
-          unit: item.unit || '',
-          purchaseUnit: item.purchaseUnit || '',
-          conversionFactor: item.conversionFactor || 1,
-          parLevel: item.parLevel || 0,
+          ...commonReset,
+          ...item,
           supplierId: item.supplierId || '',
-          purchasePrice: item.purchasePrice || 0,
-          unitCost: item.unitCost || 0,
           allergens: item.allergens || [],
         });
       } else if (isInternalCreation) {
-        // Defaults for butchering/production items
-         form.reset({
-          materialCode: '',
-          name: '',
+        form.reset({
+          ...commonReset,
           category: 'Meat', // Default category for butchered items
-          quantity: 0, // Starts with 0 quantity, will be updated by butchering log
           unit: 'kg', // Default unit for butchered items
           purchaseUnit: 'Butchery',
-          conversionFactor: 1, // 1:1 since it's created internally
-          parLevel: 0,
-          supplierId: '', // No supplier needed, will default to 'In-house' on server
-          purchasePrice: 0, // No direct purchase price
-          unitCost: 0, // Cost is calculated during the butchering log
-          allergens: [],
+          supplierId: '',
         });
       } else {
-        // Standard "Add Ingredient" defaults
-        form.reset({
-          materialCode: '',
-          name: '',
-          category: '',
-          quantity: 0,
-          unit: '',
-          purchaseUnit: '',
-          conversionFactor: 1,
-          parLevel: 0,
-          supplierId: '',
-          purchasePrice: 0,
-          unitCost: 0,
-          allergens: [],
-        });
+        form.reset(commonReset);
       }
     }
   }, [item, mode, form, open, isInternalCreation]);
@@ -200,13 +174,6 @@ export function InventoryItemFormSheet({
         suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
       });
       setSuppliers(suppliersData.sort((a, b) => a.name.localeCompare(b.name)));
-    }, (error) => {
-      console.error("Failed to fetch suppliers:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load suppliers. Please try again later.',
-      });
     });
 
     const qAllergens = query(collection(db, 'allergens'));
@@ -216,20 +183,13 @@ export function InventoryItemFormSheet({
         allergensData.push({ id: doc.id, ...doc.data() } as Allergen);
       });
       setAllergens(allergensData.sort((a, b) => a.name.localeCompare(b.name)));
-    }, (error) => {
-      console.error("Failed to fetch allergens:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load allergens. Please try again later.',
-      });
     });
 
     return () => {
       unsubscribeSuppliers();
       unsubscribeAllergens();
     };
-  }, [toast]);
+  }, []);
   
   const handleClose = () => {
     if (!loading) {
@@ -239,8 +199,6 @@ export function InventoryItemFormSheet({
   };
 
   const handleSupplierCreated = (newSupplier: Supplier) => {
-    // No need to setSuppliers manually, onSnapshot will do it.
-    // setSuppliers(current => [...current, newSupplier].sort((a, b) => a.name.localeCompare(b.name)));
     form.setValue('supplierId', newSupplier.id);
     setNewSupplierSheetOpen(false);
   }
@@ -284,243 +242,239 @@ export function InventoryItemFormSheet({
     label: allergen.name,
   }));
 
+  const formTitle = isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient');
+  const formDescription = isInternalCreation ? 'Enter details for this new cut. Cost will be calculated from the butchering log.' : 'Enter the details of the new ingredient.';
+
   return (
     <>
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <SheetContent className="overflow-y-auto">
+      <SheetContent className="overflow-y-auto sm:max-w-xl">
         <Form {...form}>
           <SheetHeader>
-            <SheetTitle>{isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient')}</SheetTitle>
-            <SheetDescription>
-              {isInternalCreation ? 'Enter details for this new cut. Cost will be calculated from the butchering log.' : (mode === 'add' ? 'Enter the details of the new ingredient.' : 'Update the details for this ingredient.')}
-            </SheetDescription>
+            <SheetTitle>{formTitle}</SheetTitle>
+            <SheetDescription>{formDescription}</SheetDescription>
           </SheetHeader>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="grid gap-4 py-4"
+            className="flex flex-col h-full"
           >
-            <fieldset disabled={loading} className="grid gap-4">
-              <FormField
-                control={form.control}
-                name="materialCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cod. Material (SAP Code)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 1006335" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ingredient Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Extra Virgin Olive Oil 5L" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
-                          <FormControl>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                          {categories.map(category => (
-                              <SelectItem key={category} value={category}>{category}</SelectItem>
-                          ))}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                          <Input type="number" {...field} value={field.value || ''} disabled={isInternalCreation} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
-                  <FormField
+            <div className="py-4 grid gap-6 flex-1">
+              <fieldset disabled={loading} className="grid gap-6">
+
+                {/* --- Header Fields --- */}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <FormField
                     control={form.control}
-                    name="unit"
+                    name="materialCode"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Recipe Unit</FormLabel>
+                        <FormItem className="md:col-span-2">
+                        <FormLabel>Codigo Sap (SAP Code)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., 1006335" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Material</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Extra Virgin Olive Oil" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
-                          <FormControl>
+                            <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="e.g., g, ml" />
+                                <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {recipeUnits.map(unit => (
-                              <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                            </FormControl>
+                            <SelectContent>
+                            {categories.map(category => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
                             ))}
-                          </SelectContent>
+                            </SelectContent>
                         </Select>
                         <FormMessage />
-                      </FormItem>
+                        </FormItem>
                     )}
-                  />
-              </div>
-              
-            {!isInternalCreation && (
-                <>
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="purchaseUnit"
-                        render={({ field }) => (
+                />
+                </div>
+                
+                <Separator />
+                <h4 className="text-lg font-medium">Purchase Info</h4>
+
+                {!isInternalCreation ? (
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <FormField
+                            control={form.control}
+                            name="purchaseUnit"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Presentation</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="e.g., Case, Box, 5L Can" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {purchaseUnits.map(unit => (
+                                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="unit"
+                            render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Purchase Unit</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormLabel>Recipe Unit</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="e.g., Case" />
-                                </SelectTrigger>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="e.g., g, ml, each" />
+                                    </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                {purchaseUnits.map(unit => (
+                                    {recipeUnits.map(unit => (
                                     <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                                ))}
+                                    ))}
                                 </SelectContent>
-                            </Select>
-                            <FormMessage />
+                                </Select>
+                                <FormMessage />
                             </FormItem>
-                        )}
+                            )}
                         />
-                    <FormField
-                    control={form.control}
-                    name="purchasePrice"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Purchase Price</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
+                        <FormField
+                            control={form.control}
+                            name="purchasePrice"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Presentation Cost</FormLabel>
+                                <FormControl>
+                                    <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="supplierId"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Vendor</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Select a supplier" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {suppliers.map(supplier => (
+                                    <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <Button type="button" variant="link" className="p-0 h-auto text-xs" onClick={() => setNewSupplierSheetOpen(true)}>
+                                <PlusCircle className="mr-2 h-3 w-3" />
+                                Create New Supplier
+                                </Button>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="parLevel"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Par Stock</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} value={field.value || ''} />
+                                </FormControl>
+                                <FormDescription className='text-xs'>Re-order point in Recipe Units</FormDescription>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        {/* Hidden but required field for conversion */}
+                        <FormField
+                            control={form.control}
+                            name="conversionFactor"
+                            render={({ field }) => (
+                                <FormItem className="hidden">
+                                <FormLabel>Conversion Factor</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                ): (
+                    <p className="text-sm text-muted-foreground">Purchase information for yielded items is determined by the butchering log. You can set the Par Stock and Allergens now.</p>
+                )}
+                 
+                 <Separator />
+
+                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    {isInternalCreation && (
+                         <FormField
+                            control={form.control}
+                            name="parLevel"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Par Stock</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} value={field.value || ''} />
+                                </FormControl>
+                                <FormDescription className='text-xs'>Re-order point in Recipe Units</FormDescription>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
                     )}
+                    <FormField
+                        control={form.control}
+                        name="allergens"
+                        render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                            <FormLabel>Allergens</FormLabel>
+                            <FormControl>
+                            <MultiSelect
+                                options={allergenOptions}
+                                onValueChange={field.onChange}
+                                defaultValue={field.value || []}
+                                placeholder="Select allergens..."
+                            />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
                     />
                 </div>
-
-                <FormField
-                    control={form.control}
-                    name="conversionFactor"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Conversion Factor</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.001" placeholder="e.g., 5000" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormDescription>How many recipe units are in one purchase unit?</FormDescription>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                
-                <FormField
-                    control={form.control}
-                    name="unitCost"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Unit Cost (Auto-calculated)</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} readOnly className="bg-muted/50" value={field.value || ''} />
-                        </FormControl>
-                        <FormDescription>The cost for one recipe unit (e.g., cost per gram).</FormDescription>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </>
-            )}
-
-              <FormField
-                control={form.control}
-                name="parLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Par Level</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {!isInternalCreation && (
-                  <FormField
-                    control={form.control}
-                    name="supplierId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Supplier</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a supplier" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {suppliers.map(supplier => (
-                              <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="link" className="p-0 h-auto" onClick={() => setNewSupplierSheetOpen(true)}>
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Create New Supplier
-                        </Button>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-              )}
-              
-              <FormField
-                control={form.control}
-                name="allergens"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Allergens</FormLabel>
-                    <FormControl>
-                      <MultiSelect
-                        options={allergenOptions}
-                        onValueChange={field.onChange}
-                        defaultValue={field.value || []}
-                        placeholder="Select allergens..."
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </fieldset>
-            <SheetFooter className="mt-4">
+              </fieldset>
+            </div>
+            <SheetFooter className="mt-auto pt-4">
               <SheetClose asChild>
                 <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
                   Cancel
@@ -543,3 +497,5 @@ export function InventoryItemFormSheet({
     </>
   );
 }
+
+    
