@@ -115,10 +115,8 @@ type SelectableItem = {
   name: string;
   type: 'inventory' | 'recipe';
   code: string;
-  // This is the unit we use for costing, the smallest logical unit
   baseUnit: string;
   costPerBaseUnit: number;
-  // This is the default unit to show in the recipe form
   defaultRecipeUnit: string;
 };
 
@@ -149,7 +147,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [selectableItems, setSelectableItems] = useState<SelectableItem[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [subRecipeItems, setSubRecipeItems] = useState<Recipe[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
   const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
@@ -187,6 +186,32 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     );
   }, [watchIngredients]);
 
+  // Combined and memoized list of selectable items
+  const selectableItems = useMemo<SelectableItem[]>(() => {
+    const invSelectable: SelectableItem[] = inventoryItems.map(data => ({
+      id: data.id,
+      name: data.name,
+      type: 'inventory',
+      code: data.materialCode,
+      baseUnit: data.recipeUnit,
+      costPerBaseUnit: data.unitCost,
+      defaultRecipeUnit: data.recipeUnit || data.unit,
+    }));
+
+    const subSelectable: SelectableItem[] = subRecipeItems.map(data => ({
+      id: data.id,
+      name: data.name,
+      type: 'recipe',
+      code: data.internalCode,
+      baseUnit: data.yieldUnit || 'un.',
+      costPerBaseUnit: data.totalCost / (data.yield || 1),
+      defaultRecipeUnit: data.yieldUnit || 'un.',
+    }));
+
+    return [...invSelectable, ...subSelectable].sort((a,b) => a.name.localeCompare(b.name));
+  }, [inventoryItems, subRecipeItems]);
+
+
   useEffect(() => {
     if (mode === 'edit' && recipe) {
       form.reset({
@@ -223,53 +248,34 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   }, [recipe, mode, form, selectableItems]);
 
   useEffect(() => {
+    // Fetch Inventory Items
     const qInv = query(collection(db, 'inventory'));
     const unsubInv = onSnapshot(qInv, (snapshot) => {
-      const invItems: SelectableItem[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data() as InventoryItem
-        invItems.push({ 
-          id: doc.id,
-          name: data.name,
-          type: 'inventory',
-          code: data.materialCode,
-          baseUnit: data.recipeUnit, // Use recipeUnit as the base for costing
-          costPerBaseUnit: data.unitCost,
-          defaultRecipeUnit: data.recipeUnit || data.unit,
-         });
-      });
-      setSelectableItems(current => [...invItems, ...current.filter(i => i.type === 'recipe')].sort((a,b) => a.name.localeCompare(b.name)));
+      const items: InventoryItem[] = [];
+      snapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() } as InventoryItem));
+      setInventoryItems(items);
     });
-
+  
+    // Fetch Sub-Recipes
     const qSubRecipes = query(collection(db, 'recipes'), where('isSubRecipe', '==', true));
     const unsubSubRecipes = onSnapshot(qSubRecipes, (snapshot) => {
-        const subRecipes: SelectableItem[] = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data() as Recipe;
-            if (mode === 'edit' && recipe?.id === doc.id) return;
-            
-            subRecipes.push({
-                id: doc.id,
-                name: data.name,
-                type: 'recipe',
-                code: data.internalCode,
-                baseUnit: data.yieldUnit || 'un.',
-                costPerBaseUnit: data.totalCost / (data.yield || 1),
-                defaultRecipeUnit: data.yieldUnit || 'un.',
-            });
-        });
-        setSelectableItems(current => [...subRecipes, ...current.filter(i => i.type === 'inventory')].sort((a,b) => a.name.localeCompare(b.name)));
+      const subs: Recipe[] = [];
+      snapshot.forEach((doc) => {
+        // Exclude the current recipe being edited from the list of sub-recipes
+        if (mode === 'edit' && recipe?.id === doc.id) return;
+        subs.push({ id: doc.id, ...doc.data() } as Recipe);
+      });
+      setSubRecipeItems(subs);
     });
-
+  
+    // Fetch Menus
     const qMenus = query(collection(db, 'menus'));
     const unsubMenus = onSnapshot(qMenus, (snapshot) => {
       const fetchedMenus: Menu[] = [];
-      snapshot.forEach((doc) =>
-        fetchedMenus.push({ id: doc.id, ...doc.data() } as Menu),
-      );
+      snapshot.forEach((doc) => fetchedMenus.push({ id: doc.id, ...doc.data() } as Menu));
       setMenus(fetchedMenus.sort((a, b) => a.name.localeCompare(b.name)));
     });
-
+  
     return () => {
       unsubInv();
       unsubSubRecipes();
@@ -277,12 +283,13 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     };
   }, [mode, recipe?.id]);
 
-  const { subRecipeItems, inventoryOnlyItems } = useMemo(() => {
+  const { subRecipeSelectable, inventoryOnlySelectable } = useMemo(() => {
     const subRecipes = selectableItems.filter(item => item.type === 'recipe');
     const subRecipeCodes = new Set(subRecipes.map(item => item.code));
     const inventory = selectableItems.filter(item => item.type === 'inventory' && !subRecipeCodes.has(item.code));
-    return { subRecipeItems: subRecipes, inventoryOnlyItems: inventory };
+    return { subRecipeSelectable: subRecipes, inventoryOnlySelectable: inventory };
   }, [selectableItems]);
+
 
   const handleIngredientAdd = (item: SelectableItem) => {
     if (fields.some((field) => field.itemId === item.id)) {
@@ -706,7 +713,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                               <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                                 <CommandList>
                                   <CommandGroup heading="Sub-Recipes">
-                                    {subRecipeItems.map((item) => (
+                                    {subRecipeSelectable.map((item) => (
                                       <CommandItem
                                         key={item.id}
                                         value={item.name}
@@ -719,7 +726,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                   </CommandGroup>
                                   <CommandSeparator />
                                   <CommandGroup heading="Inventory Items">
-                                    {inventoryOnlyItems.map((item) => (
+                                    {inventoryOnlySelectable.map((item) => (
                                       <CommandItem
                                         key={item.id}
                                         value={item.name}
@@ -787,3 +794,5 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
+
+    
