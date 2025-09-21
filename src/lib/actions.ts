@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import {
@@ -516,15 +515,15 @@ export async function logSale(saleData: AddSaleData) {
         const invItem = invItemSnap.data() as InventoryItem;
         const invItemRef = invItemSnap.ref;
         
-        // The quantity in the recipe is already in the correct `recipeUnit`
+        // The total quantity of the ingredient needed for the number of recipes sold, in the recipe's specified unit.
         const quantityInRecipeUnit = recipeIngredient.quantity * saleData.quantity;
 
-        // Convert the total recipe quantity needed to the inventory's MAIN tracking unit for depletion.
-        const quantityToDeplete = convert(
-            quantityInRecipeUnit,
-            invItem.recipeUnit as Unit,
-            invItem.unit as Unit
-        );
+        // Convert the total quantity needed from the recipe's unit to the inventory's main tracking unit.
+        // Example: Recipe needs 300ml. Inventory tracks in 'un.' (bottles).
+        // 1. Convert recipe need (300ml) to inventory's base recipe unit (e.g., fl.oz).
+        // 2. Convert that result to the final inventory tracking unit (e.g., 'un.').
+        const neededInBaseUnit = convert(quantityInRecipeUnit, recipeIngredient.unit as Unit, invItem.recipeUnit as Unit);
+        const quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
 
         const newQuantity = invItem.quantity - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.parLevel);
@@ -864,3 +863,5 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
+
+    
