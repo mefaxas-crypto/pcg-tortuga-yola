@@ -598,7 +598,8 @@ export async function logProduction(data: LogProductionData) {
     return { success: true };
   } catch (error) {
     console.error('Error during production logging:', error);
-    throw new Error('Failed to log production.');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to log production: ${errorMessage}`);
   }
 }
 
