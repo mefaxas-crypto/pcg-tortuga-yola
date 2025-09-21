@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
@@ -37,6 +37,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -94,6 +96,8 @@ export function RecipeForm({
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
+  const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
+  const [searchQueries, setSearchQueries] = useState<string[]>([]);
 
   const { toast } = useToast();
   
@@ -128,6 +132,12 @@ export function RecipeForm({
     name: 'ingredients',
   });
 
+  useEffect(() => {
+    if (recipe && recipe.ingredients) {
+      setSearchQueries(recipe.ingredients.map(ing => ing.name));
+    }
+  }, [recipe]);
+
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
 
@@ -145,6 +155,7 @@ export function RecipeForm({
         unitPrice: 0,
         totalCost: 0
     });
+    setSearchQueries([...searchQueries, '']);
   };
   
   useEffect(() => {
@@ -366,9 +377,9 @@ export function RecipeForm({
                   <FormLabel>Category</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isSubRecipe}>
                       <FormControl>
-                      <SelectTrigger>
+                        <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                       {recipeCategories.map(category => (
@@ -400,10 +411,10 @@ export function RecipeForm({
                     </TableHeader>
                     <TableBody>
                          {fields.map((field, index) => {
-                            const selectedItemId = form.watch(`ingredients.${index}.inventoryItemId`);
-                            const selectedItem = inventory.find(i => i.id === selectedItemId);
+                            const selectedItem = inventory.find(i => i.id === form.watch(`ingredients.${index}.inventoryItemId`));
                             const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
                             const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
+                            const currentSearchQuery = searchQueries[index] || '';
 
                             return (
                                 <TableRow key={field.id} className="align-top">
@@ -414,9 +425,28 @@ export function RecipeForm({
                                             name={`ingredients.${index}.inventoryItemId`}
                                             render={({ field: inventoryItemField }) => (
                                                 <FormItem>
-                                                    <FormControl>
-                                                        <Input placeholder="Ingredient placeholder" />
-                                                    </FormControl>
+                                                    <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
+                                                      <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                          <Input
+                                                            placeholder="Search ingredients..."
+                                                            value={currentSearchQuery}
+                                                            onChange={(e) => {
+                                                              const newQueries = [...searchQueries];
+                                                              newQueries[index] = e.target.value;
+                                                              setSearchQueries(newQueries);
+                                                              if (openPopoverIndex !== index) {
+                                                                  setOpenPopoverIndex(index);
+                                                              }
+                                                            }}
+                                                            onFocus={() => setOpenPopoverIndex(index)}
+                                                          />
+                                                        </FormControl>
+                                                      </PopoverTrigger>
+                                                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                        {/* Content will be added in the next step */}
+                                                      </PopoverContent>
+                                                    </Popover>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -533,3 +563,4 @@ export function RecipeForm({
     </>
   );
 }
+
