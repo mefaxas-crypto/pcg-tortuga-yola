@@ -9,19 +9,21 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   updateDoc,
   where,
 } from 'firebase/firestore';
 import {db} from './firebase';
 import type {
-  AddInventoryItemData,
-  EditInventoryItemData,
-  Supplier,
   AddAllergenData,
-  AddRecipeData,
-  EditRecipeData,
+  AddInventoryItemData,
   AddMenuData,
+  AddRecipeData,
+  AddSaleData,
+  EditInventoryItemData,
   EditMenuData,
+  EditRecipeData,
+  Supplier,
 } from './types';
 import {revalidatePath} from 'next/cache';
 
@@ -241,5 +243,20 @@ export async function deleteMenu(menuId: string) {
   } catch (e) {
     console.error('Error deleting menu: ', e);
     throw new Error('Failed to delete menu');
+  }
+}
+
+// Sales Actions
+export async function logSale(saleData: AddSaleData) {
+  try {
+    const docRef = await addDoc(collection(db, 'sales'), {
+      ...saleData,
+      saleDate: serverTimestamp(),
+    });
+    revalidatePath('/sales');
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('Error logging sale: ', error);
+    throw new Error('Failed to log sale.');
   }
 }

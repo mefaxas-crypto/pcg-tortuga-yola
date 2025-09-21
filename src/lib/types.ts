@@ -80,3 +80,17 @@ export type Menu = {
 
 export type AddMenuData = Omit<Menu, 'id'>;
 export type EditMenuData = Omit<Menu, 'id'>;
+
+export type Sale = {
+  id: string;
+  menuId: string;
+  menuName: string;
+  recipeId: string;
+  recipeName: string;
+  quantity: number;
+  totalRevenue: number;
+  totalCost: number;
+  saleDate: Date;
+};
+
+export type AddSaleData = Omit<Sale, 'id'>;
