@@ -164,47 +164,49 @@ export function ButcheringForm() {
     if (quantityUsed <= 0 || yieldedItems.length === 0 || yieldedItems.some(i => !i.fullDetails)) {
       return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
     }
-
+  
     try {
       const quantityUsedInGrams = convert(quantityUsed, quantityUnit as Unit, 'g');
-      if (quantityUsedInGrams === 0) {
+      if (quantityUsedInGrams <= 0) {
         return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
       }
       
       const totalYieldInGrams = yieldedItems.reduce((sum, item) => {
-        if (item.weight <= 0 || !item.fullDetails) return sum;
-
+        if (!item.fullDetails || item.weight <= 0) return sum;
+  
         const details = item.fullDetails;
         let itemWeightInGrams = 0;
-
-        // The weight entered in the form is in the item's purchaseUnit
-        const enteredWeight = item.weight;
-        const enteredUnit = details.purchaseUnit as Unit;
-
+  
+        // `item.weight` is the quantity entered by the user (e.g., 5 units, or 1 lb)
+        // `details.purchaseUnit` is the unit for that quantity (e.g., 'un.', 'lbs')
+  
         if (details.purchaseUnit === 'un.') {
-            // It's a 'unit' item, we need to convert its yield (e.g. 6oz) to grams
-            const weightPerUnitInGrams = convert(details.recipeUnitConversion, details.recipeUnit as Unit, 'g');
-            itemWeightInGrams = enteredWeight * weightPerUnitInGrams;
+            // For 'un.' items, we need to convert the number of units to a weight.
+            // e.g., 5 un. * (6 oz / un.) -> convert to grams
+            if (details.recipeUnit && details.recipeUnitConversion > 0) {
+                const totalWeightInRecipeUnits = item.weight * details.recipeUnitConversion;
+                itemWeightInGrams = convert(totalWeightInRecipeUnits, details.recipeUnit as Unit, 'g');
+            }
         } else {
-            // It's already a weight item, just convert to grams
-            itemWeightInGrams = convert(enteredWeight, enteredUnit, 'g');
+            // For weight-based items, just convert the entered weight to grams.
+            itemWeightInGrams = convert(item.weight, details.purchaseUnit as Unit, 'g');
         }
         
         return sum + itemWeightInGrams;
       }, 0);
       
-      const yieldPercentage = (totalYieldInGrams / quantityUsedInGrams) * 100;
+      const yieldPerc = (totalYieldInGrams / quantityUsedInGrams) * 100;
       
       return {
         totalYieldWeight: totalYieldInGrams / 1000, // convert back to kg for display
-        yieldPercentage: isFinite(yieldPercentage) ? yieldPercentage : 0,
-        lossPercentage: 100 - (isFinite(yieldPercentage) ? yieldPercentage : 0),
+        yieldPercentage: isFinite(yieldPerc) ? yieldPerc : 0,
+        lossPercentage: 100 - (isFinite(yieldPerc) ? yieldPerc : 0),
       };
     } catch (error) {
       console.error("Error calculating yield:", error);
       return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
     }
-
+  
   }, [yieldedItems, quantityUsed, quantityUnit]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
