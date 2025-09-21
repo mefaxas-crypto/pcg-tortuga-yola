@@ -53,6 +53,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  PopoverAnchor,
 } from '@/components/ui/popover';
 import {
   Command,
@@ -365,7 +366,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     return new Intl.NumberFormat('en-US', options).format(value || 0);
   };
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>>) {
     setLoading(true);
 
     const recipeData = {
@@ -694,72 +695,78 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
               </Table>
             </CardContent>
             <CardFooter className="flex-col items-start gap-4 border-t pt-6">
-              <h4 className="font-medium">Add Ingredient</h4>
               <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full md:w-[300px] justify-start text-left font-normal"
-                  >
-                    <ChevronsUpDown className="mr-2 h-4 w-4" />
-                    Search inventory & sub-recipes...
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search for an ingredient..." />
-                    <CommandList>
-                      <CommandEmpty>
-                        <CommandItem
-                            onSelect={() => {
-                                setIngredientPopoverOpen(false);
-                                setNewIngredientSheetOpen(true);
-                            }}
-                            className='justify-center'
-                            >
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Create New Ingredient
-                        </CommandItem>
-                      </CommandEmpty>
-                      <CommandGroup heading="Sub-Recipes">
-                        {selectableItems.filter(item => item.type === 'recipe').map((item) => (
-                          <CommandItem
-                            key={item.id}
-                            value={item.name}
-                            onSelect={() => handleIngredientAdd(item)}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0',
-                              )}
-                            />
-                            {item.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                      <CommandSeparator />
-                      <CommandGroup heading="Inventory Items">
-                        {selectableItems.filter(item => item.type === 'inventory').map((item) => (
-                          <CommandItem
-                            key={item.id}
-                            value={item.name}
-                            onSelect={() => handleIngredientAdd(item)}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0',
-                              )}
-                            />
-                            {item.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
+                  <Command className="w-full md:w-[300px]">
+                      <PopoverAnchor>
+                          <CommandInput 
+                              placeholder="Search to add ingredient..."
+                              onFocus={() => setIngredientPopoverOpen(true)}
+                           />
+                      </PopoverAnchor>
+                      <PopoverContent className="w-[var(--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                          <CommandList>
+                              <CommandGroup heading="Sub-Recipes">
+                                  {selectableItems.filter(item => item.type === 'recipe').map((item) => (
+                                  <CommandItem
+                                      key={item.id}
+                                      value={item.name}
+                                      onSelect={() => handleIngredientAdd(item)}
+                                  >
+                                      <Check
+                                      className={cn(
+                                          'mr-2 h-4 w-4',
+                                          fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0',
+                                      )}
+                                      />
+                                      {item.name}
+                                  </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                              <CommandSeparator />
+                              <CommandGroup heading="Inventory Items">
+                                  {selectableItems.filter(item => item.type === 'inventory').map((item) => (
+                                  <CommandItem
+                                      key={item.id}
+                                      value={item.name}
+                                      onSelect={() => handleIngredientAdd(item)}
+                                  >
+                                      <Check
+                                      className={cn(
+                                          'mr-2 h-4 w-4',
+                                          fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0',
+                                      )}
+                                      />
+                                      {item.name}
+                                  </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                               <CommandGroup>
+                                <CommandItem
+                                    onSelect={() => {
+                                        setIngredientPopoverOpen(false);
+                                        setNewIngredientSheetOpen(true);
+                                    }}
+                                    >
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Create New Ingredient
+                                </CommandItem>
+                            </CommandGroup>
+                              <CommandEmpty>
+                                <CommandGroup>
+                                    <CommandItem
+                                        onSelect={() => {
+                                            setIngredientPopoverOpen(false);
+                                            setNewIngredientSheetOpen(true);
+                                        }}
+                                        >
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Create New Ingredient
+                                    </CommandItem>
+                                </CommandGroup>
+                            </CommandEmpty>
+                          </CommandList>
+                      </PopoverContent>
                   </Command>
-                </PopoverContent>
               </Popover>
               <FormMessage>{form.formState.errors.ingredients?.message}</FormMessage>
             </CardFooter>
