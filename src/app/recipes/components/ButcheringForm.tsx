@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils';
 import { allUnits, Unit } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { butcheryTemplates } from '@/lib/butchery-templates.json';
+import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
 const formSchema = z.object({
   primaryItemId: z.string().min(1, 'Please select a primary item to butcher.'),
@@ -72,6 +73,7 @@ export function ButcheringForm() {
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isPopoverOpen, setPopoverOpen] = useState(false);
+  const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -115,7 +117,16 @@ export function ButcheringForm() {
   const lossPercentage = 100 - yieldPercentage;
 
   const handleAddYieldedItemFromTemplate = (templateYield: ButcheryTemplateType['yields'][0]) => {
-    if (fields.some(field => field.itemId === templateYield.id)) {
+    const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
+    if (!yieldedInventoryItem) {
+      toast({
+        variant: 'destructive',
+        title: 'Item not in Inventory',
+        description: `The yielded item "${templateYield.name}" from the template does not exist in your inventory. Please add it first.`,
+      });
+      return;
+    }
+    if (fields.some(field => field.itemId === yieldedInventoryItem.id)) {
       toast({
         variant: 'destructive',
         title: 'Item already added',
@@ -124,16 +135,8 @@ export function ButcheringForm() {
       return;
     }
     append({
-      itemId: templateYield.id,
-      name: templateYield.name,
-      weight: 0,
-    });
-  }
-
-  const handleAddCustomYieldedItem = () => {
-    append({
-      itemId: `custom-${Date.now()}`, // Unique ID for custom item
-      name: '',
+      itemId: yieldedInventoryItem.id,
+      name: yieldedInventoryItem.name,
       weight: 0,
     });
   }
@@ -173,6 +176,7 @@ export function ButcheringForm() {
   }
 
   return (
+    <>
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <fieldset disabled={loading} className="space-y-6">
@@ -302,17 +306,10 @@ export function ButcheringForm() {
                 {fields.map((field, index) => {
                   const itemWeight = form.getValues(`yieldedItems.${index}.weight`);
                   const itemYield = quantityUsed > 0 ? (itemWeight / quantityUsed) * 100 : 0;
-                  const isCustom = field.itemId.startsWith('custom-');
                   return (
                     <TableRow key={field.id}>
                       <TableCell>
-                        <FormField
-                            control={form.control}
-                            name={`yieldedItems.${index}.name`}
-                            render={({ field }) => (
-                                <Input placeholder="e.g. Beef Fillet 8oz" {...field} readOnly={!isCustom}/>
-                            )}
-                        />
+                        {field.name}
                       </TableCell>
                        <TableCell>
                         <FormField
@@ -368,7 +365,7 @@ export function ButcheringForm() {
                                                 className="flex justify-between items-center"
                                             >
                                                 <span>{yieldItem.name}</span>
-                                                <Check className={cn("h-4 w-4", fields.some(f => f.itemId === yieldItem.id) ? "opacity-100" : "opacity-0")} />
+                                                <Check className={cn("h-4 w-4", fields.some(f => inventory.find(i => i.materialCode === yieldItem.id)?.id === f.itemId) ? "opacity-100" : "opacity-0")} />
                                             </CommandItem>
                                         ))}
                                     </CommandGroup>
@@ -380,12 +377,12 @@ export function ButcheringForm() {
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={handleAddCustomYieldedItem}
+                        onClick={() => setNewItemSheetOpen(true)}
                         disabled={!primaryItemId}
                         title={!primaryItemId ? "Select a primary item first" : "Add custom yielded item"}
                         >
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Yielded Item
+                        Add New Yield Item
                     </Button>
                 )}
                 {!activeTemplate && primaryItemId && (
@@ -416,5 +413,11 @@ export function ButcheringForm() {
         </div>
       </form>
     </Form>
+    <InventoryItemFormSheet 
+        open={isNewItemSheetOpen}
+        onClose={() => setNewItemSheetOpen(false)}
+        mode="add"
+    />
+    </>
   );
 }

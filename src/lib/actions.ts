@@ -89,12 +89,7 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
   try {
     const status = getStatus(itemData.quantity, itemData.parLevel);
 
-    const supplierRef = doc(db, 'suppliers', itemData.supplierId);
-    const supplierSnap = await getDoc(supplierRef);
-    if (!supplierSnap.exists()) {
-      throw new Error('Supplier not found');
-    }
-    const supplierName = supplierSnap.data().name;
+    const supplierName = await getSupplierName(itemData.supplierId);
 
     const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
 
@@ -112,6 +107,20 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
   }
 }
 
+async function getSupplierName(supplierId: string): Promise<string> {
+    if (!supplierId) {
+        return 'In-house'; // Or whatever default you prefer
+    }
+    const supplierRef = doc(db, 'suppliers', supplierId);
+    const supplierSnap = await getDoc(supplierRef);
+    if (!supplierSnap.exists()) {
+      console.warn(`Supplier with ID ${supplierId} not found.`);
+      return 'Unknown Supplier';
+    }
+    return supplierSnap.data().name;
+}
+
+
 export async function editInventoryItem(
   id: string,
   itemData: EditInventoryItemData
@@ -120,12 +129,7 @@ export async function editInventoryItem(
     const itemRef = doc(db, 'inventory', id);
     const status = getStatus(itemData.quantity, itemData.parLevel);
 
-    const supplierRef = doc(db, 'suppliers', itemData.supplierId);
-    const supplierSnap = await getDoc(supplierRef);
-    if (!supplierSnap.exists()) {
-      throw new Error('Supplier not found');
-    }
-    const supplierName = supplierSnap.data().name;
+    const supplierName = await getSupplierName(itemData.supplierId);
 
     const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
 
@@ -272,22 +276,28 @@ export async function logSale(saleData: AddSaleData) {
 
       // 3. Deplete each ingredient
       for (const recipeIngredient of recipe.ingredients) {
+        const itemToDepleteRef = recipeIngredient.ingredientType === 'recipe' 
+          ? query(collection(db, 'inventory'), where('recipeCode', '==', recipeIngredient.itemCode))
+          : doc(db, 'inventory', recipeIngredient.itemId);
+
+        let invItemSnap;
+
         if (recipeIngredient.ingredientType === 'recipe') {
-          // For now, we are not depleting sub-recipes stock. This could be a future enhancement.
-          console.log(`Skipping depletion for sub-recipe: ${recipeIngredient.name}`);
-          continue;
+            const querySnapshot = await getDocs(itemToDepleteRef as any); // Can't use transaction.get() on queries
+            if (!querySnapshot.empty) {
+                invItemSnap = await transaction.get(querySnapshot.docs[0].ref);
+            }
+        } else {
+            invItemSnap = await transaction.get(itemToDepleteRef as any);
         }
 
-        const invItemRef = doc(db, 'inventory', recipeIngredient.itemId);
-        const invItemSnap = await transaction.get(invItemRef);
-
-        if (!invItemSnap.exists()) {
-          // It's possible an ingredient was deleted, so we'll log a warning and skip.
-          console.warn(`Inventory item with ID ${recipeIngredient.itemId} not found during sale depletion.`);
+        if (!invItemSnap || !invItemSnap.exists()) {
+          console.warn(`Inventory item with ID ${recipeIngredient.itemId} or code ${recipeIngredient.itemCode} not found during sale depletion.`);
           continue;
         }
 
         const invItem = invItemSnap.data() as InventoryItem;
+        const invItemRef = invItemSnap.ref;
 
         // Convert the recipe ingredient's unit to the inventory item's base unit
         const quantityToDepleteInBaseUnit = convert(
@@ -363,9 +373,8 @@ export async function logProduction(data: LogProductionData) {
           collection(db, 'inventory'),
           where('materialCode', '==', subRecipe.recipeCode)
         );
-        const producedItemSnaps = await getDocs(producedItemQuery);
         
-        // This is a workaround for transaction limitations with getDocs
+        const producedItemSnaps = await getDocs(producedItemQuery);
         let producedItemSnap: any = null;
         if (!producedItemSnaps.empty) {
             producedItemSnap = await transaction.get(producedItemSnaps.docs[0].ref);
@@ -376,7 +385,7 @@ export async function logProduction(data: LogProductionData) {
             `Sub-recipe ${subRecipe.name} not found in inventory. Creating a new entry.`
           );
           const newInvItemRef = doc(collection(db, 'inventory'));
-          const newQuantity = item.quantityProduced * (subRecipe.yield || 1);
+          const newQuantity = item.yield * item.quantityProduced;
 
           transaction.set(newInvItemRef, {
             materialCode: subRecipe.recipeCode,
@@ -386,19 +395,19 @@ export async function logProduction(data: LogProductionData) {
             unit: subRecipe.yieldUnit || 'unit',
             purchaseUnit: 'Production',
             conversionFactor: 1,
-            parLevel: 0,
+            parLevel: 0, // Default par level
             supplierId: '',
             supplier: 'In-house',
             purchasePrice: 0,
             unitCost: subRecipe.totalCost / (subRecipe.yield || 1),
-            allergens: [],
+            allergens: [], // Sub-recipes inherit allergens, this could be improved
             status: getStatus(newQuantity, 0),
           });
         } else {
           const producedItemRef = producedItemSnap.ref;
           const producedItem = producedItemSnap.data() as InventoryItem;
 
-          const quantityToAdd = item.quantityProduced * (subRecipe.yield || 1);
+          const quantityToAdd = item.yield * item.quantityProduced;
           const newQuantity = producedItem.quantity + quantityToAdd;
           const newStatus = getStatus(newQuantity, producedItem.parLevel);
 
@@ -436,7 +445,7 @@ export async function logButchering(data: ButcheringData) {
       const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as any, primaryItem.unit as any);
       
       if (primaryItem.quantity < quantityToDeplete) {
-        throw new Error(`Not enough stock for ${primaryItem.name}.`);
+        throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDeplete} ${primaryItem.unit}.`);
       }
 
       const newPrimaryQuantity = primaryItem.quantity - quantityToDeplete;
@@ -449,26 +458,25 @@ export async function logButchering(data: ButcheringData) {
       const totalCostOfButcheredPortion = primaryItem.unitCost * quantityToDeplete;
 
       // 3. Add or update the yielded items
-      for (const yieldedItem of data.yieldedItems) {
-        const newYieldedItemCost = totalCostOfButcheredPortion * (yieldedItem.yieldPercentage / 100) / yieldedItem.weight;
+      for (const yieldedItemData of data.yieldedItems) {
+        const yieldedItemRef = doc(db, 'inventory', yieldedItemData.itemId);
+        const yieldedItemSnap = await transaction.get(yieldedItemRef);
+        
+        if (!yieldedItemSnap.exists()) {
+            throw new Error(`Yielded item ${yieldedItemData.name} could not be found in inventory.`)
+        }
 
-        const newInvItemRef = doc(collection(db, 'inventory'));
-        const newQuantity = yieldedItem.weight;
-        transaction.set(newInvItemRef, {
-            name: yieldedItem.name,
-            materialCode: `BUTCH-${primaryItem.materialCode}-${Date.now()}`, // Generate a unique code
-            category: primaryItem.category,
+        const yieldedItem = yieldedItemSnap.data() as InventoryItem;
+        const newYieldedItemCost = (totalCostOfButcheredPortion * (yieldedItemData.yieldPercentage / 100)) / yieldedItemData.weight;
+        
+        const newQuantity = yieldedItem.quantity + yieldedItemData.weight;
+        const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
+
+        transaction.update(yieldedItemRef, {
             quantity: newQuantity,
-            unit: 'kg', // Assuming yielded items are measured in kg for now
-            purchaseUnit: 'Butchery',
-            conversionFactor: 1,
-            parLevel: 0,
-            supplier: 'In-house Butchery',
-            supplierId: '',
-            purchasePrice: 0, // Not purchased
-            unitCost: newYieldedItemCost,
-            allergens: primaryItem.allergens || [],
-            status: getStatus(newQuantity, 0),
+            status: newStatus,
+            // Update the cost based on this butchering event
+            unitCost: newYieldedItemCost, 
         });
       }
     });
