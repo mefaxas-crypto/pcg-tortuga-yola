@@ -125,10 +125,11 @@ export function ProductionForm() {
       form.reset({ items: [] });
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to log production. Please try again.',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);

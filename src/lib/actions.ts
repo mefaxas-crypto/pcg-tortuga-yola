@@ -3,6 +3,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -511,27 +512,19 @@ export async function logProduction(data: LogProductionData) {
       const productionLogRef = doc(collection(db, 'productionLogs'));
       const subRecipeRefs = data.items.map(item => doc(db, 'recipes', item.recipeId));
       
-      const producedItemQueries = data.items.map(item => {
-        const subRecipeRef = subRecipeRefs.find(ref => ref.id === item.recipeId);
-        if (!subRecipeRef) return null;
-        // We need to fetch the recipe to get its code to find the inventory item
-        return getDoc(subRecipeRef).then(snap => {
-            if (!snap.exists()) return null;
-            const recipeCode = snap.data()?.recipeCode;
-            return query(collection(db, 'inventory'), where('materialCode', '==', recipeCode));
-        });
+      const subRecipeSnaps = await Promise.all(subRecipeRefs.map(ref => transaction.get(ref)));
+
+      const producedItemQueries = subRecipeSnaps.map(snap => {
+        if (!snap.exists()) return null;
+        const recipeCode = snap.data()?.recipeCode;
+        return recipeCode ? query(collection(db, 'inventory'), where('materialCode', '==', recipeCode)) : null;
       });
 
-      const subRecipeSnaps = await Promise.all(subRecipeRefs.map(ref => transaction.get(ref)));
-      
       const allIngredientRefs: DocumentReference[] = [];
-      const ingredientRefMap = new Map<string, Recipe['ingredients']>();
-
-      for (let i = 0; i < subRecipeSnaps.length; i++) {
-        const subRecipeSnap = subRecipeSnaps[i];
+      
+      for (const subRecipeSnap of subRecipeSnaps) {
         if (subRecipeSnap.exists()) {
           const subRecipe = subRecipeSnap.data() as Recipe;
-          ingredientRefMap.set(subRecipe.id, subRecipe.ingredients);
           subRecipe.ingredients.forEach(ing => {
             const ingRef = doc(db, 'inventory', ing.itemId);
             if (!allIngredientRefs.some(ref => ref.id === ingRef.id)) {
@@ -541,13 +534,15 @@ export async function logProduction(data: LogProductionData) {
         }
       }
       
-      const resolvedProducedItemQueries = await Promise.all(producedItemQueries);
+      // Since we can't use getDocs in a transaction, we have to do this outside.
+      // This is a read before the transaction starts, which is acceptable.
       const producedItemQuerySnaps = await Promise.all(
-          resolvedProducedItemQueries.map(q => q ? getDocs(q) : Promise.resolve(null))
+          producedItemQueries.map(q => q ? getDocs(q) : Promise.resolve(null))
       );
 
       const producedItemDocRefs = producedItemQuerySnaps.map(snap => (snap && !snap.empty ? snap.docs[0].ref : null));
 
+      // Now, read all necessary documents inside the transaction
       const ingredientSnaps = await Promise.all(allIngredientRefs.map(ref => transaction.get(ref)));
       const producedItemSnaps = await Promise.all(producedItemDocRefs.map(ref => ref ? transaction.get(ref) : Promise.resolve(null)));
 
@@ -562,6 +557,7 @@ export async function logProduction(data: LogProductionData) {
           throw new Error(`Invalid sub-recipe (${item.name}) selected for production.`);
         }
         const subRecipe = subRecipeSnap.data() as Recipe;
+        const totalYieldQuantity = item.quantityProduced * (subRecipe.yield || 1);
 
         // --- Deplete raw ingredients ---
         for (const ingredient of subRecipe.ingredients) {
@@ -593,25 +589,26 @@ export async function logProduction(data: LogProductionData) {
 
         // --- Increase stock of produced sub-recipe ---
         const producedItemInvSnap = producedItemSnaps[i];
-        const totalYieldQuantity = item.quantityProduced * (subRecipe.yield || 1);
-
+        
         if (!producedItemInvSnap || !producedItemInvSnap.exists()) {
           console.warn(`Sub-recipe ${subRecipe.name} not found in inventory. Creating new entry.`);
           const newInvItemRef = doc(collection(db, 'inventory'));
           
+          const unitCost = subRecipe.totalCost / (subRecipe.yield || 1);
+
           transaction.set(newInvItemRef, {
             materialCode: subRecipe.recipeCode,
             name: subRecipe.name,
             category: subRecipe.category,
-            quantity: totalYieldQuantity, // Use total yield
-            unit: subRecipe.yieldUnit || 'ml', // Use the recipe's yield unit
-            purchaseUnit: subRecipe.yieldUnit || 'ml',
-            purchaseQuantity: subRecipe.yield || 1,
+            quantity: totalYieldQuantity, // The total amount produced in the yield unit
+            unit: subRecipe.yieldUnit || 'ml', // The base unit for tracking this item
+            purchaseUnit: subRecipe.yieldUnit || 'ml', // We "purchase" it from ourselves in this unit
+            purchaseQuantity: 1, // Let's say one "purchase" is 1 base unit for simplicity
             parLevel: 0,
             supplierId: '',
             supplier: 'In-house',
-            purchasePrice: subRecipe.totalCost, // Cost of one batch
-            unitCost: subRecipe.totalCost / (subRecipe.yield || 1), // Cost per yield unit (e.g., per ml)
+            purchasePrice: isFinite(unitCost) ? unitCost : 0, // The price for one purchase unit (which is one base unit)
+            unitCost: isFinite(unitCost) ? unitCost : 0,
             allergens: [],
             status: getStatus(totalYieldQuantity, 0),
             recipeUnit: subRecipe.yieldUnit || 'ml',
