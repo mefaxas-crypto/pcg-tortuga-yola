@@ -796,99 +796,109 @@ export async function undoProductionLog(logId: string) {
   }
 }
 
-
 export async function logButchering(data: ButcheringData) {
   try {
-    await runTransaction(db, async (transaction) => {
-        // --- 1. READ PHASE ---
-        const primaryItemRef = doc(db, 'inventory', data.primaryItemId);
-        const primaryItemSnap = await transaction.get(primaryItemRef);
+      await runTransaction(db, async (transaction) => {
+          // --- 1. READ PHASE ---
+          const primaryItemRef = doc(db, 'inventory', data.primaryItemId);
+          const primaryItemSnap = await transaction.get(primaryItemRef);
 
-        if (!primaryItemSnap.exists()) {
-            throw new Error('Primary butchering item not found in inventory.');
-        }
-        const primaryItem = primaryItemSnap.data() as InventoryItem;
+          if (!primaryItemSnap.exists()) {
+              throw new Error('Primary butchering item not found in inventory.');
+          }
+          const primaryItem = primaryItemSnap.data() as InventoryItem;
 
-        const producedItems = data.yieldedItems.filter(item => item.weight > 0);
-        if (producedItems.length === 0) {
-            throw new Error("No yielded items with a weight greater than 0 were provided.");
-        }
+          const producedItems = data.yieldedItems.filter(item => item.weight > 0);
+          if (producedItems.length === 0) {
+              throw new Error("No yielded items with a weight greater than 0 were provided.");
+          }
 
-        const yieldedItemRefs = producedItems.map(item => doc(db, 'inventory', item.itemId));
-        const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
+          const yieldedItemRefs = producedItems.map(item => doc(db, 'inventory', item.itemId));
+          const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
 
-        // --- 2. VALIDATION ---
-        const quantityUsedInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
-        
-        if (quantityUsedInPurchaseUnit > primaryItem.quantity) {
-            throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity.toFixed(2)} ${primaryItem.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit.toFixed(2)} ${primaryItem.purchaseUnit}`);
-        }
+          // --- 2. CALCULATION PHASE ---
+          // Convert the quantity of the primary item used to its base inventory unit (purchaseUnit)
+          const quantityUsedInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
 
-        const costOfButcheredPortion = (primaryItem.purchasePrice / primaryItem.purchaseQuantity) * quantityUsedInPurchaseUnit;
+          if (quantityUsedInPurchaseUnit > primaryItem.quantity) {
+              throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity.toFixed(2)} ${primaryItem.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit.toFixed(2)} ${primaryItem.purchaseUnit}`);
+          }
+          
+          // Calculate the monetary cost of the portion of the primary item that was used
+          const costOfButcheredPortion = (primaryItem.purchasePrice / primaryItem.purchaseQuantity) * quantityUsedInPurchaseUnit;
 
-        // --- 3. WRITE PHASE ---
-        const newPrimaryQuantity = primaryItem.quantity - quantityUsedInPurchaseUnit;
-        transaction.update(primaryItemRef, {
-            quantity: newPrimaryQuantity,
-            status: getStatus(newPrimaryQuantity, primaryItem.parLevel),
-        });
+          // --- 3. WRITE PHASE ---
+          // Deplete the primary item's stock
+          const newPrimaryQuantity = primaryItem.quantity - quantityUsedInPurchaseUnit;
+          transaction.update(primaryItemRef, {
+              quantity: newPrimaryQuantity,
+              status: getStatus(newPrimaryQuantity, primaryItem.parLevel),
+          });
 
-        const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
+          const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
 
-        for (let i = 0; i < producedItems.length; i++) {
-            const yieldedItemData = producedItems[i];
-            const yieldedItemSnap = yieldedItemSnaps[i];
-            
-            if (!yieldedItemSnap.exists()) {
-                throw new Error(`Yielded item "${yieldedItemData.name}" could not be found.`);
-            }
-            const yieldedItem = yieldedItemSnap.data() as InventoryItem;
-            
-            const costOfThisYield = costOfButcheredPortion * ((yieldedItemData.finalCostDistribution || 0) / 100);
-            
-            const quantityToAddInPurchaseUnit = yieldedItemData.weight;
-            const newQuantity = yieldedItem.quantity + quantityToAddInPurchaseUnit;
+          for (let i = 0; i < producedItems.length; i++) {
+              const yieldedItemData = producedItems[i];
+              const yieldedItemSnap = yieldedItemSnaps[i];
+              
+              if (!yieldedItemSnap.exists()) {
+                  throw new Error(`Yielded item "${yieldedItemData.name}" could not be found.`);
+              }
+              const yieldedItem = yieldedItemSnap.data() as InventoryItem;
 
-            const newTotalStockValue = (yieldedItem.unitCost * yieldedItem.quantity) + costOfThisYield;
-            const newUnitCost = newTotalStockValue / newQuantity;
+              // Calculate the cost to be assigned to this specific yielded item based on its distribution percentage
+              const costOfThisYield = costOfButcheredPortion * ((yieldedItemData.finalCostDistribution || 0) / 100);
+              
+              // The quantity to add is the weight entered in the form. The unit is already the yielded item's purchase unit.
+              const quantityToAddInPurchaseUnit = yieldedItemData.weight;
+              
+              const newQuantity = yieldedItem.quantity + quantityToAddInPurchaseUnit;
+              
+              // Calculate the new total value of the stock for this yielded item
+              const currentTotalValue = yieldedItem.purchasePrice * (yieldedItem.quantity / yieldedItem.purchaseQuantity);
+              const newTotalValue = currentTotalValue + costOfThisYield;
+              
+              // Calculate the new average purchase price per purchase quantity
+              const newTotalPurchaseQuantities = newQuantity / yieldedItem.purchaseQuantity;
+              const newPurchasePrice = newTotalValue / newTotalPurchaseQuantities;
 
-            transaction.update(yieldedItemSnap.ref, {
-                quantity: newQuantity,
-                status: getStatus(newQuantity, yieldedItem.parLevel),
-                unitCost: isFinite(newUnitCost) ? newUnitCost : yieldedItem.unitCost, // Update unit cost based on new value
-            });
+              transaction.update(yieldedItemSnap.ref, {
+                  quantity: newQuantity,
+                  status: getStatus(newQuantity, yieldedItem.parLevel),
+                  purchasePrice: isFinite(newPurchasePrice) ? newPurchasePrice : yieldedItem.purchasePrice,
+              });
 
-            yieldedItemsForLog.push({
-                itemId: yieldedItemSnap.id,
-                itemName: yieldedItem.name,
-                quantityYielded: quantityToAddInPurchaseUnit,
-                unit: yieldedItem.purchaseUnit as Unit,
-            });
-        }
+              yieldedItemsForLog.push({
+                  itemId: yieldedItemSnap.id,
+                  itemName: yieldedItem.name,
+                  quantityYielded: quantityToAddInPurchaseUnit,
+                  unit: yieldedItem.purchaseUnit as Unit,
+              });
+          }
 
-        const logRef = doc(collection(db, 'butcheringLogs'));
-        transaction.set(logRef, {
-            logDate: serverTimestamp(),
-            user: 'Chef John Doe', // Placeholder
-            primaryItem: {
-                itemId: primaryItemSnap.id,
-                itemName: primaryItem.name,
-                quantityUsed: quantityUsedInPurchaseUnit,
-                unit: primaryItem.purchaseUnit as Unit,
-            },
-            yieldedItems: yieldedItemsForLog,
-        });
-    });
+          const logRef = doc(collection(db, 'butcheringLogs'));
+          transaction.set(logRef, {
+              logDate: serverTimestamp(),
+              user: 'Chef John Doe', // Placeholder
+              primaryItem: {
+                  itemId: primaryItemSnap.id,
+                  itemName: primaryItem.name,
+                  quantityUsed: quantityUsedInPurchaseUnit,
+                  unit: primaryItem.purchaseUnit as Unit,
+              },
+              yieldedItems: yieldedItemsForLog,
+          });
+      });
 
-    revalidatePath('/inventory');
-    revalidatePath('/recipes');
-    revalidatePath('/');
+      revalidatePath('/inventory');
+      revalidatePath('/recipes');
+      revalidatePath('/');
 
-    return { success: true };
+      return { success: true };
   } catch (error) {
-    console.error('Error during butchering log:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to log butchering: ${errorMessage}`);
+      console.error('Error during butchering log:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to log butchering: ${errorMessage}`);
   }
 }
 
