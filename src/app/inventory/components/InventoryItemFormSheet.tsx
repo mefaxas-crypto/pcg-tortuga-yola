@@ -68,6 +68,7 @@ type InventoryItemFormSheetProps = {
   onClose: () => void;
   onItemCreated?: (newItem: InventoryItem) => void;
   isInternalCreation?: boolean;
+  internalCreationCategory?: string;
 };
 
 const availableUnits = Object.keys(allUnits).map(key => ({
@@ -82,6 +83,7 @@ export function InventoryItemFormSheet({
   onClose,
   onItemCreated,
   isInternalCreation = false,
+  internalCreationCategory,
 }: InventoryItemFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -138,12 +140,13 @@ export function InventoryItemFormSheet({
         form.reset({
           ...commonReset,
           supplierId: '',
+          category: internalCreationCategory || '',
         });
       } else {
         form.reset(commonReset);
       }
     }
-  }, [item, mode, form, open, isInternalCreation]);
+  }, [item, mode, form, open, isInternalCreation, internalCreationCategory]);
 
   useEffect(() => {
     const qSuppliers = query(collection(db, 'suppliers'));

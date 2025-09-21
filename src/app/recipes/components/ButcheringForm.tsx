@@ -492,6 +492,7 @@ export function ButcheringForm() {
         onItemCreated={handleNewItemCreated}
         mode="add"
         isInternalCreation={true}
+        internalCreationCategory={primaryItem?.category}
     />
     {(activeTemplate || dialogMode === 'add') && primaryItem && (
       <ButcheringTemplateDialog
