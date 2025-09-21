@@ -3,86 +3,106 @@
  * This library handles weight, volume, and will be expanded to handle item-specific densities.
  */
 
-// --- Weight Conversions ---
-const GRAMS_PER_OUNCE = 28.3495;
-const GRAMS_PER_POUND = 453.592;
+// --- Base Units ---
+const BASE_WEIGHT_UNIT = 'g';
+const BASE_VOLUME_UNIT = 'ml';
 
-export function gramsToOunces(grams: number): number {
-  return grams / GRAMS_PER_OUNCE;
-}
+// --- Unit Definitions ---
 
-export function ouncesToGrams(ounces: number): number {
-  return ounces * GRAMS_PER_OUNCE;
-}
+// prettier-ignore
+export const weightUnits = {
+  'g':    { name: 'gram', type: 'weight', factor: 1 },
+  'kg':   { name: 'kilogram', type: 'weight', factor: 1000 },
+  'oz':   { name: 'ounce', type: 'weight', factor: 28.3495 },
+  'lb':   { name: 'pound', type: 'weight', factor: 453.592 },
+};
 
-export function gramsToPounds(grams: number): number {
-  return grams / GRAMS_PER_POUND;
-}
+// prettier-ignore
+export const volumeUnits = {
+  'ml':   { name: 'milliliter', type: 'volume', factor: 1 },
+  'l':    { name: 'liter', type: 'volume', factor: 1000 },
+  'tsp':  { name: 'teaspoon', type: 'volume', factor: 4.92892 },
+  'tbsp': { name: 'tablespoon', type: 'volume', factor: 14.7868 },
+  'floz': { name: 'fluid ounce', type: 'volume', factor: 29.5735 },
+  'cup':  { name: 'cup', type: 'volume', factor: 236.588 },
+  'pt':   { name: 'pint', type: 'volume', factor: 473.176 },
+  'qt':   { name: 'quart', type: 'volume', factor: 946.353 },
+  'gal':  { name: 'gallon', type: 'volume', factor: 3785.41 },
+};
 
-export function poundsToGrams(pounds: number): number {
-  return pounds * GRAMS_PER_POUND;
-}
+// prettier-ignore
+export const eachUnits = {
+    'each': { name: 'each', type: 'each', factor: 1 },
+    'unit': { name: 'unit', type: 'each', factor: 1 },
+    'slice': { name: 'slice', type: 'each', factor: 1 },
+    'portion': { name: 'portion', type: 'each', factor: 1 },
+};
 
-export function kilogramsToPounds(kg: number): number {
-  return kg * 2.20462;
-}
-
-export function poundsToKilograms(lb: number): number {
-  return lb / 2.20462;
-}
-
-
-// --- Volume Conversions ---
-const ML_PER_FL_OZ = 29.5735;
-const ML_PER_CUP = 236.588;
-const ML_PER_LITER = 1000;
-
-export function mlToFluidOunces(ml: number): number {
-  return ml / ML_PER_FL_OZ;
-}
-
-export function fluidOuncesToMl(flOz: number): number {
-  return flOz * ML_PER_FL_OZ;
-}
-
-export function mlToCups(ml: number): number {
-  return ml / ML_PER_CUP;
-}
-
-export function cupsToMl(cups: number): number {
-  return cups * ML_PER_CUP;
-}
-
-export function litersToMilliliters(liters: number): number {
-  return liters * ML_PER_LITER;
-}
-
-export function millilitersToLiters(ml: number): number {
-  return ml / ML_PER_LITER;
-}
-
-// --- Density-Based Conversions (Placeholder) ---
-// To accurately convert between weight and volume (e.g., grams to cups),
-// we need the density of the specific ingredient. This is a placeholder
-// for where that logic will go. We will need a database of ingredient densities.
-// Example: 1 cup of flour is ~120g, but 1 cup of sugar is ~200g.
+export const allUnits = { ...weightUnits, ...volumeUnits, ...eachUnits };
+export type Unit = keyof typeof allUnits;
 
 /**
- * Converts a volume to a weight, given a specific ingredient's density.
- * @param volume The volume amount (e.g., 1).
- * @param volumeUnit The unit of the volume (e.g., 'cup').
- * @param weightUnit The target unit for the weight (e.g., 'g').
- * @param ingredientDensityGramsPerMl The density of the ingredient in g/mL.
- * @returns The converted weight.
+ * Converts a value from one unit to another.
+ *
+ * @param value The numerical value to convert.
+ * @param fromUnit The unit to convert from (e.g., 'kg').
+ * @param toUnit The unit to convert to (e.g., 'g').
+ * @param densityInGramsPerMl Optional density for volume-to-weight conversions.
+ * @returns The converted value, or throws an error if conversion is not possible.
  */
-export function convertVolumeToWeight(
-    volume: number,
-    volumeUnit: string, // e.g., 'cup', 'l', 'fl-oz'
-    weightUnit: string, // e.g., 'g', 'kg', 'lb'
-    ingredientDensityGramsPerMl: number
+export function convert(
+  value: number,
+  fromUnit: Unit,
+  toUnit: Unit,
+  densityInGramsPerMl?: number
 ): number {
-    // This function will be implemented once we have a density database.
-    // For now, it's a placeholder.
-    console.warn("convertVolumeToWeight is not yet implemented.");
-    return 0;
+  if (fromUnit === toUnit) {
+    return value;
+  }
+
+  const from = allUnits[fromUnit];
+  const to = allUnits[toUnit];
+
+  if (!from || !to) {
+    throw new Error('Invalid unit specified.');
+  }
+
+  // --- Direct Conversion (Weight-Weight, Volume-Volume, Each-Each) ---
+  if (from.type === to.type) {
+    if (from.type === 'each') return value; // 'each' to 'unit' etc. are 1:1 for quantity
+    const valueInBaseUnit = value * from.factor;
+    return valueInBaseUnit / to.factor;
+  }
+
+  // --- Density-based Conversion (Volume-Weight or Weight-Volume) ---
+  if (!densityInGramsPerMl || densityInGramsPerMl <= 0) {
+    throw new Error(
+      `Conversion between ${from.type} and ${to.type} requires a valid density.`
+    );
+  }
+
+  // Convert to base units (g, ml) first
+  let valueInGrams: number;
+  let valueInMl: number;
+
+  if (from.type === 'weight') {
+    valueInGrams = convert(value, fromUnit, BASE_WEIGHT_UNIT as Unit);
+    valueInMl = valueInGrams / densityInGramsPerMl;
+  } else if (from.type === 'volume') {
+    valueInMl = convert(value, fromUnit, BASE_VOLUME_UNIT as Unit);
+    valueInGrams = valueInMl * densityInGramsPerMl;
+  } else {
+    throw new Error(`Cannot convert from unit type '${from.type}'.`);
+  }
+
+  // Convert from base unit to target unit
+  if (to.type === 'weight') {
+    return convert(valueInGrams, BASE_WEIGHT_UNIT as Unit, toUnit);
+  } else if (to.type === 'volume') {
+    return convert(valueInMl, BASE_VOLUME_UNIT as Unit, toUnit);
+  }
+
+  throw new Error(
+    `Conversion from '${fromUnit}' to '${toUnit}' is not supported.`
+  );
 }
