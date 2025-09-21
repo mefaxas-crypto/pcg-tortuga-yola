@@ -2,7 +2,7 @@
 
 import { Check, X, ChevronsUpDown } from 'lucide-react';
 import * as React from 'react';
-import { cva } from 'class-variance-authority';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +38,7 @@ const multiSelectVariants = cva(
   },
 );
 
-interface MultiSelectProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface MultiSelectProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof multiSelectVariants> {
   options: {
     label: string;
     value: string;
@@ -103,7 +103,8 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
             ref={ref}
             {...props}
             onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-            className="flex h-auto min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+            className={cn("flex h-auto min-h-10 w-full items-center justify-between rounded-md border p-1", className)}
+            variant="outline"
           >
             {selectedValues.length > 0 ? (
               <div className="flex w-full items-center justify-between">
@@ -170,8 +171,8 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
               </div>
             ) : (
               <div className="mx-auto flex w-full items-center justify-between">
-                <span className="text-sm text-muted-foreground">{placeholder}</span>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                <span className="mx-3 text-sm text-muted-foreground">{placeholder}</span>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
               </div>
             )}
           </Button>
