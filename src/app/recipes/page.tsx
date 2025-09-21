@@ -1,4 +1,3 @@
-
 'use client';
 
 import PageHeader from '@/components/PageHeader';
@@ -17,6 +16,7 @@ import type { Recipe } from '@/lib/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProductionForm } from './components/ProductionForm';
+import { ButcheringForm } from './components/ButcheringForm';
 
 
 export default function RecipesPage() {
@@ -28,7 +28,7 @@ export default function RecipesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Recipes">
+      <PageHeader title="Recipes & Production">
          <Button asChild>
           <Link href="/recipes/new">
             <PlusCircle className="mr-2" />
@@ -38,9 +38,10 @@ export default function RecipesPage() {
       </PageHeader>
 
       <Tabs defaultValue="recipes">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="recipes">Recipes</TabsTrigger>
-          <TabsTrigger value="production">Production</TabsTrigger>
+          <TabsTrigger value="production">Sub-recipe Production</TabsTrigger>
+          <TabsTrigger value="butchering">Butchering Log</TabsTrigger>
         </TabsList>
         <TabsContent value="recipes">
             <RecipesTable onEdit={handleEdit} />
@@ -48,13 +49,26 @@ export default function RecipesPage() {
         <TabsContent value="production">
             <Card>
                 <CardHeader>
-                <CardTitle>Log Production</CardTitle>
+                <CardTitle>Log Sub-recipe Production</CardTitle>
                 <CardDescription>
                   Record the production of a sub-recipe. This will deplete the required raw ingredients from your inventory and increase the stock of the finished sub-recipe.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ProductionForm />
+                </CardContent>
+            </Card>
+        </TabsContent>
+         <TabsContent value="butchering">
+            <Card>
+                <CardHeader>
+                <CardTitle>Log Butchering Yield</CardTitle>
+                <CardDescription>
+                  Record the breakdown of a primary cut into yielded items. This will deplete the primary item and add the new items to your inventory.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ButcheringForm />
                 </CardContent>
             </Card>
         </TabsContent>

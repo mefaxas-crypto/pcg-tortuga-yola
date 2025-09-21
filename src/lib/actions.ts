@@ -21,6 +21,7 @@ import type {
   AddMenuData,
   AddRecipeData,
   AddSaleData,
+  ButcheringData,
   EditInventoryItemData,
   EditMenuData,
   EditRecipeData,
@@ -417,4 +418,10 @@ export async function logProduction(data: LogProductionData) {
     console.error('Error during production logging:', error);
     throw new Error('Failed to log production.');
   }
+}
+
+export async function logButchering(data: ButcheringData) {
+    // Placeholder function for now
+    console.log("Logging butchering data:", data);
+    return { success: true };
 }

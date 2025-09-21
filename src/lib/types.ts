@@ -108,3 +108,16 @@ export type ProductionItem = {
 export type LogProductionData = {
   items: ProductionItem[];
 };
+
+export type ButcheringItem = {
+    itemId: string;
+    name: string;
+    weight: number;
+    yieldPercentage: number;
+}
+
+export type ButcheringData = {
+    primaryItemId: string;
+    quantityUsed: number;
+    yieldedItems: ButcheringItem[];
+}
