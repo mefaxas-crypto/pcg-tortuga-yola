@@ -441,61 +441,7 @@ export function RecipeForm({
                             return (
                                 <TableRow key={field.id} className="align-top">
                                     <TableCell className="pt-3.5 pb-3 text-muted-foreground">{materialCode || '-'}</TableCell>
-                                    <TableCell className="pt-2 pb-3">
-                                        <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={openPopoverIndex === index}
-                                                    className="w-full justify-between"
-                                                >
-                                                    {selectedItemName || "Select ingredient..."}
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent 
-                                                className="w-[--radix-popover-trigger-width] p-0" 
-                                                align="start"
-                                            >
-                                                <Command>
-                                                    <CommandInput placeholder="Search ingredients..." />
-                                                    <CommandList>
-                                                        <CommandEmpty>No ingredients found.</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {inventory.map(item => (
-                                                                <CommandItem
-                                                                    key={item.id}
-                                                                    value={item.name}
-                                                                    onSelect={() => handleIngredientSelect(index, item)}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            form.getValues(`ingredients.${index}.inventoryItemId`) === item.id ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {item.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                     <CommandGroup className="border-t">
-                                                      <CommandItem
-                                                          onSelect={() => {
-                                                              setIngredientSheetOpen(true);
-                                                              setOpenPopoverIndex(null);
-                                                          }}
-                                                          className="text-primary focus:bg-primary/10 focus:text-primary"
-                                                      >
-                                                          <PlusCircle className="mr-2 h-4 w-4" />
-                                                          Add New Ingredient to Inventory
-                                                      </CommandItem>
-                                                    </CommandGroup>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
-                                    </TableCell>
+                                    <TableCell className="pt-3.5 pb-3 text-sm">{selectedItemName || 'N/A'}</TableCell>
                                     <TableCell className="pt-2 pb-3">
                                         <FormField
                                             control={form.control}
