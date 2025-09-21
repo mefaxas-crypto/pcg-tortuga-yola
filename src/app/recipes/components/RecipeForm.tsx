@@ -716,12 +716,26 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     <TableCell colSpan={2}>
                       <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
                           <PopoverAnchor>
-                            <Command onValueChange={handleSearchValueChange}>
+                            <Command>
                               <CommandInput
                                 placeholder="Search to add ingredient..."
+                                onValueChange={handleSearchValueChange}
                               />
                               <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                                 <CommandList>
+                                  <CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem
+                                        onSelect={() => {
+                                          setIngredientPopoverOpen(false);
+                                          setNewIngredientSheetOpen(true);
+                                        }}
+                                      >
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Create New Ingredient
+                                      </CommandItem>
+                                    </CommandGroup>
+                                  </CommandEmpty>
                                   <CommandGroup heading="Sub-Recipes">
                                     {subRecipeSelectable.map((item) => (
                                       <CommandItem
@@ -747,19 +761,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                  <CommandEmpty>
-                                    <CommandGroup>
-                                      <CommandItem
-                                        onSelect={() => {
-                                          setIngredientPopoverOpen(false);
-                                          setNewIngredientSheetOpen(true);
-                                        }}
-                                      >
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Create New Ingredient
-                                      </CommandItem>
-                                    </CommandGroup>
-                                  </CommandEmpty>
                                 </CommandList>
                               </PopoverContent>
                             </Command>
