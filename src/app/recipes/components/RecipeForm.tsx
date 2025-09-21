@@ -137,9 +137,6 @@ export function RecipeForm({
   useEffect(() => {
     if (mode === 'add' && fields.length === 0) {
       append(initialIngredient);
-      append(initialIngredient);
-      append(initialIngredient);
-      append(initialIngredient);
     }
   }, [append, mode, fields.length]);
 
@@ -470,10 +467,10 @@ export function RecipeForm({
                                                     </CommandList>
                                                      <CommandGroup className="border-t">
                                                         <CommandItem
-                                                            onSelect={() => {
-                                                                setIngredientSheetOpen(true);
-                                                                setOpenPopoverIndex(null);
-                                                            }}
+                                                          onSelect={() => {
+                                                              setIngredientSheetOpen(true);
+                                                              setOpenPopoverIndex(null);
+                                                          }}
                                                             >
                                                             <PlusCircle className="mr-2 h-4 w-4" />
                                                             Add New Ingredient to Inventory
