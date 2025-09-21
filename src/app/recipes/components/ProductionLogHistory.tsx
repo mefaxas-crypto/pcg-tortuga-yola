@@ -82,7 +82,7 @@ export function ProductionLogHistory() {
                 <TableHead>Date</TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>Item Produced</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead className="text-right">Batches</TableHead>
                 <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -122,7 +122,7 @@ export function ProductionLogHistory() {
                         <div key={index} className='flex justify-between items-center py-2 px-4'>
                           <span className="font-medium">{item.recipeName}</span>
                           <span className="text-right text-muted-foreground">
-                            {item.quantityProduced.toFixed(2)} {item.yieldUnit}
+                            {item.quantityProduced.toFixed(2)}
                           </span>
                         </div>
                       ))}

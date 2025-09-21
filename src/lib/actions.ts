@@ -527,15 +527,20 @@ export async function logSale(saleData: AddSaleData) {
         const invItem = invItemSnap.data() as InventoryItem;
         const invItemRef = invItemSnap.ref;
         
-        // The total quantity of the ingredient needed for the number of recipes sold, in the recipe's specified unit.
         const quantityInRecipeUnit = recipeIngredient.quantity * saleData.quantity;
 
-        // Convert the total quantity needed from the recipe's unit to the inventory's main tracking unit.
-        // Example: Recipe needs 300ml. Inventory tracks in 'un.' (bottles).
-        // 1. Convert recipe need (300ml) to inventory's base recipe unit (e.g., fl.oz).
-        // 2. Convert that result to the final inventory tracking unit (e.g., 'un.').
+        // Correctly convert from the recipe's unit to the inventory's tracking unit.
         const neededInBaseUnit = convert(quantityInRecipeUnit, recipeIngredient.unit as Unit, invItem.recipeUnit as Unit);
-        const quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
+        
+        let quantityToDeplete: number;
+        if (invItem.unit === 'un.') {
+            // If tracking unit is 'un.', divide by the conversion factor to get fraction of a unit
+            quantityToDeplete = neededInBaseUnit / (invItem.recipeUnitConversion || 1);
+        } else {
+            // Otherwise, convert from base unit to the tracking unit (which should be compatible)
+            quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
+        }
+        
 
         const newQuantity = invItem.quantity - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.parLevel);
@@ -564,40 +569,35 @@ export async function logSale(saleData: AddSaleData) {
 export async function logProduction(data: LogProductionData) {
   try {
     await runTransaction(db, async (transaction) => {
-      // --- 1. READ PHASE ---
-      // Fetch all sub-recipes being produced in this log
       const subRecipeRefs = data.items.map((item) => doc(db, 'recipes', item.recipeId));
       const subRecipeSnaps = await Promise.all(subRecipeRefs.map((ref) => transaction.get(ref)));
       
       const inventoryRefsToFetch = new Map<string, DocumentReference>();
 
-      // For each sub-recipe, collect the inventory items to be depleted and the final product to be updated
       for(const subRecipeSnap of subRecipeSnaps) {
         if (!subRecipeSnap.exists()) throw new Error(`Sub-recipe with ID ${subRecipeSnap.id} not found.`);
         const subRecipe = subRecipeSnap.data() as Recipe;
 
-        // Add the final produced item to the list of inventory items we need
         inventoryRefsToFetch.set(subRecipe.internalCode, doc(db, 'inventory', subRecipe.internalCode));
 
-        // Add all raw ingredients to the list
         for (const ingredient of subRecipe.ingredients) {
           const invItemId = ingredient.ingredientType === 'recipe' ? ingredient.itemCode : ingredient.itemId;
+          if(!invItemId || invItemId === 'N/A') {
+              throw new Error(`Recipe "${subRecipe.name}" contains an ingredient with an invalid code. Please fix the recipe.`);
+          }
           inventoryRefsToFetch.set(invItemId, doc(db, 'inventory', invItemId));
         }
       }
 
-      // Fetch all unique inventory items in a single batch
       const inventorySnaps = await Promise.all(
         Array.from(inventoryRefsToFetch.values()).map(ref => transaction.get(ref))
       );
       const inventorySnapMap = new Map(inventorySnaps.map(snap => [snap.id, snap]));
 
-      // --- 2. WRITE PHASE ---
       for (let i = 0; i < data.items.length; i++) {
         const itemToProduce = data.items[i];
         const subRecipe = subRecipeSnaps[i].data() as Recipe;
         
-        // Deplete raw ingredients
         for (const ingredient of subRecipe.ingredients) {
           const invItemId = ingredient.ingredientType === 'recipe' ? ingredient.itemCode : ingredient.itemId;
           const invItemSnap = inventorySnapMap.get(invItemId);
@@ -607,13 +607,17 @@ export async function logProduction(data: LogProductionData) {
           }
           const invItem = invItemSnap.data() as InventoryItem;
           
-          // Calculate total amount of ingredient needed for all batches in its recipe unit (e.g., 'g', 'ml')
           const totalIngredientNeededInRecipeUnit = ingredient.quantity * itemToProduce.quantityProduced;
           
-          // Convert this amount to the inventory's base recipe unit, then to the final tracking unit.
           const neededInBaseUnit = convert(totalIngredientNeededInRecipeUnit, ingredient.unit as Unit, invItem.recipeUnit as Unit);
-          const quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
-          
+
+          let quantityToDeplete: number;
+          if (invItem.unit === 'un.') {
+              quantityToDeplete = neededInBaseUnit / (invItem.recipeUnitConversion || 1);
+          } else {
+              quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
+          }
+
           const newQuantity = invItem.quantity - quantityToDeplete;
           transaction.update(invItemSnap.ref, {
             quantity: newQuantity,
@@ -621,7 +625,6 @@ export async function logProduction(data: LogProductionData) {
           });
         }
 
-        // Increase stock of the produced sub-recipe
         const producedItemInvSnap = inventorySnapMap.get(subRecipe.internalCode);
         if (!producedItemInvSnap || !producedItemInvSnap.exists()) {
           throw new Error(`Inventory item for sub-recipe ${subRecipe.name} not found. This should have been created with the recipe.`);
@@ -641,15 +644,12 @@ export async function logProduction(data: LogProductionData) {
       transaction.set(productionLogRef, {
         logDate: serverTimestamp(),
         user: 'Chef John Doe', // Placeholder
-        producedItems: data.items.map(item => {
-          const subRecipe = subRecipeSnaps.find(s=>s.id === item.recipeId)?.data() as Recipe;
-          return {
+        producedItems: data.items.map(item => ({
             recipeId: item.recipeId,
             recipeName: item.name,
-            quantityProduced: item.quantityProduced * (subRecipe?.yield || 1),
+            quantityProduced: item.quantityProduced,
             yieldUnit: item.yieldUnit,
-          }
-        }),
+        })),
       });
     });
 
@@ -663,6 +663,7 @@ export async function logProduction(data: LogProductionData) {
     throw new Error(`Failed to log production: ${errorMessage}`);
   }
 }
+
 
 export async function undoProductionLog(logId: string) {
   try {
@@ -689,9 +690,15 @@ export async function undoProductionLog(logId: string) {
       for (const recipeSnap of recipeSnaps) {
         if (recipeSnap.exists()) {
           const recipe = recipeSnap.data() as Recipe;
+          if(!recipe.internalCode || recipe.internalCode === 'N/A') {
+              throw new Error(`Recipe "${recipe.name}" has an invalid internal code.`);
+          }
           invItemRefsToFetch.add(doc(db, 'inventory', recipe.internalCode));
           recipe.ingredients.forEach(ing => {
             const invItemId = ing.ingredientType === 'recipe' ? ing.itemCode : ing.itemId;
+             if(!invItemId || invItemId === 'N/A') {
+                throw new Error(`An ingredient in recipe "${recipe.name}" has an invalid code.`);
+            }
             invItemRefsToFetch.add(doc(db, 'inventory', invItemId));
           });
         }
@@ -710,7 +717,7 @@ export async function undoProductionLog(logId: string) {
         const recipe = recipeSnap.data() as Recipe;
 
         // Restore raw ingredients
-        const batchesProduced = producedItem.quantityProduced / (recipe.yield || 1);
+        const batchesProduced = producedItem.quantityProduced;
         for (const ingredient of recipe.ingredients) {
           const invItemId = ingredient.ingredientType === 'recipe' ? ingredient.itemCode : ingredient.itemId;
           const invItemSnap = invSnapMap.get(invItemId);
@@ -721,7 +728,15 @@ export async function undoProductionLog(logId: string) {
           }
           const invItem = invItemSnap.data() as InventoryItem;
           const totalIngredientUsed = ingredient.quantity * batchesProduced;
-          const quantityToRestore = convert(totalIngredientUsed, ingredient.unit as Unit, invItem.unit as Unit);
+
+          const usedInBaseUnit = convert(totalIngredientUsed, ingredient.unit as Unit, invItem.recipeUnit as Unit);
+          let quantityToRestore: number;
+          if (invItem.unit === 'un.') {
+              quantityToRestore = usedInBaseUnit / (invItem.recipeUnitConversion || 1);
+          } else {
+              quantityToRestore = convert(usedInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
+          }
+
 
           const newQuantity = invItem.quantity + quantityToRestore;
           transaction.update(invItemSnap.ref, {
@@ -734,7 +749,8 @@ export async function undoProductionLog(logId: string) {
         const producedInvItemSnap = invSnapMap.get(recipe.internalCode);
         if (producedInvItemSnap && producedInvItemSnap.exists()) {
             const producedInvItem = producedInvItemSnap.data() as InventoryItem;
-            const newQuantity = producedInvItem.quantity - producedItem.quantityProduced;
+            const totalYieldQuantity = producedItem.quantityProduced * (recipe.yield || 1);
+            const newQuantity = producedInvItem.quantity - totalYieldQuantity;
             transaction.update(producedInvItemSnap.ref, {
                 quantity: newQuantity,
                 status: getStatus(newQuantity, producedInvItem.parLevel),
