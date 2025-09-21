@@ -101,11 +101,10 @@ export async function addInventoryItem(formData: InventoryFormData) {
     const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
     
     const inventoryUnit = purchaseUnit;
-
-    let unitCost = 0;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
+    let unitCost = 0;
     let finalRecipeUnitConversion = 1;
-    
+
     if (purchaseUnit === 'un.') {
       if (!recipeUnitConversion || !recipeUnit) {
         throw new Error("Conversion factor is required for 'un.' items.");
@@ -114,7 +113,6 @@ export async function addInventoryItem(formData: InventoryFormData) {
       const totalRecipeUnitsInPurchase = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
     } else {
-      // For standard units, the recipeUnit is its base, and we find the conversion factor.
       finalRecipeUnitConversion = convert(1, purchaseUnit as Unit, finalRecipeUnit as Unit);
       const totalBaseUnits = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
@@ -133,7 +131,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
       purchaseQuantity: purchaseQuantity,
       purchaseUnit: purchaseUnit,
       purchasePrice,
-      unit: inventoryUnit, // This is the same as purchaseUnit
+      unit: inventoryUnit,
       unitCost: isFinite(unitCost) ? unitCost : 0,
       recipeUnit: finalRecipeUnit,
       recipeUnitConversion: finalRecipeUnitConversion,
@@ -183,9 +181,8 @@ export async function editInventoryItem(
     const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
     
     const inventoryUnit = purchaseUnit;
-
-    let unitCost = 0;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
+    let unitCost = 0;
     let finalRecipeUnitConversion = 1;
 
     if (purchaseUnit === 'un.') {
@@ -797,7 +794,9 @@ export async function logButchering(data: ButcheringData) {
       const yieldedItemRefs = producedItems.map(item => doc(db, 'inventory', item.itemId));
       const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
       
-      const totalCostOfButcheredPortion = (primaryItem.unitCost * primaryItem.recipeUnitConversion) * data.quantityUsed;
+      const costOfPrimaryItemPerRecipeUnit = primaryItem.unitCost;
+      const primaryItemUsedInRecipeUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.recipeUnit as Unit);
+      const totalCostOfButcheredPortion = costOfPrimaryItemPerRecipeUnit * primaryItemUsedInRecipeUnit;
 
       const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
       
@@ -836,29 +835,28 @@ export async function logButchering(data: ButcheringData) {
         
         const costOfThisYield = totalCostOfButcheredPortion * (yieldedItemData.finalCostDistribution! / 100);
         
-        const quantityToAdd = yieldedItemData.weight;
+        const quantityToAddInPurchaseUnit = yieldedItemData.weight;
+        const quantityToAddInRecipeUnit = convert(quantityToAddInPurchaseUnit, yieldedItem.purchaseUnit as Unit, yieldedItem.recipeUnit as Unit);
 
-        const newQuantity = yieldedItem.quantity + quantityToAdd;
+        const newQuantity = yieldedItem.quantity + quantityToAddInPurchaseUnit;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
         
-        const currentTotalValue = yieldedItem.purchasePrice * yieldedItem.quantity;
-        const newTotalValue = currentTotalValue + costOfThisYield;
-        const newTotalQuantity = yieldedItem.quantity + quantityToAdd;
-        const newUnitCost = newTotalValue > 0 && newTotalQuantity > 0 ? newTotalValue / newTotalQuantity / yieldedItem.recipeUnitConversion : 0;
-        
-        const newPurchasePrice = newUnitCost * yieldedItem.recipeUnitConversion;
+        const currentTotalValueInRecipeUnits = yieldedItem.unitCost * convert(yieldedItem.quantity, yieldedItem.purchaseUnit as Unit, yieldedItem.recipeUnit as Unit);
+        const newTotalValue = currentTotalValueInRecipeUnits + costOfThisYield;
+        const newTotalQuantityInRecipeUnit = convert(newQuantity, yieldedItem.purchaseUnit as Unit, yieldedItem.recipeUnit as Unit);
 
+        const newUnitCost = newTotalQuantityInRecipeUnit > 0 ? newTotalValue / newTotalQuantityInRecipeUnit : 0;
+        
         transaction.update(yieldedItemSnap.ref, {
             quantity: newQuantity,
             status: newStatus,
-            purchasePrice: isFinite(newPurchasePrice) ? newPurchasePrice : 0,
             unitCost: isFinite(newUnitCost) ? newUnitCost : 0,
         });
 
         yieldedItemsForLog.push({
             itemId: yieldedItemSnap.id,
             itemName: yieldedItem.name,
-            quantityYielded: quantityToAdd,
+            quantityYielded: quantityToAddInPurchaseUnit,
             unit: yieldedItem.purchaseUnit as Unit,
         });
       }
