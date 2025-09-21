@@ -45,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2, Percent } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType, YieldItem } from '@/lib/types';
@@ -56,6 +56,8 @@ import { addButcheryTemplate, logButchering } from '@/lib/actions';
 import { butcheryTemplates as initialButcheryTemplates } from '@/lib/butchery-templates.json';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { ButcheringTemplateDialog } from './ButcheringTemplateDialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   primaryItemId: z.string().min(1, 'Please select a primary item to butcher.'),
@@ -69,7 +71,7 @@ const formSchema = z.object({
         weight: z.coerce.number().min(0, 'Weight must be a positive number.'),
         unit: z.string().min(1, 'Unit is required.'),
         materialCode: z.string(),
-        costDistributionPercentage: z.number(),
+        costDistributionPercentage: z.coerce.number().min(0),
       }),
     )
     .min(1, 'You must have at least one yielded item.'),
@@ -123,19 +125,28 @@ export function ButcheringForm() {
     return butcheryTemplates.find(t => t.primaryItemMaterialCode === primaryItem.materialCode) || null;
   }, [primaryItemId, inventory, butcheryTemplates]);
 
+  const totalYieldedWeightInKg = useMemo(() => {
+    return yieldedItems.reduce((sum, item) => {
+      const inventoryItem = inventory.find(i => i.id === item.itemId);
+      if (!inventoryItem) return sum;
 
-  const totalYieldedWeightInKg = yieldedItems.reduce((sum, item) => {
-    const weightInKg = convert(item.weight, item.unit as Unit, 'kg');
-    return sum + (Number(weightInKg) || 0);
-  }, 0);
+      let itemWeightInKg = 0;
+      if (item.unit === 'un.') {
+        // Convert unit back to its base weight/volume, then to kg
+        const weightPerUnit = inventoryItem.recipeUnitConversion || 0; // e.g., 6oz
+        const baseUnitOfItem = inventoryItem.recipeUnit; // e.g., oz
+        const totalWeightInBase = item.weight * weightPerUnit; // e.g., 5 un. * 6oz = 30oz
+        itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
+      } else {
+        itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
+      }
+      return sum + (itemWeightInKg || 0);
+    }, 0);
+  }, [yieldedItems, inventory]);
+
   const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
   const yieldPercentage = quantityUsedInKg > 0 ? (totalYieldedWeightInKg / quantityUsedInKg) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
-
-  const getUnitLabel = (unitKey: string | undefined) => {
-    if (!unitKey) return '';
-    return allUnits[unitKey as keyof typeof allUnits]?.name || unitKey;
-  }
 
   const handleAddYieldedItemFromTemplate = (templateYield: YieldItem) => {
     const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
@@ -218,9 +229,9 @@ export function ButcheringForm() {
         weight: 0,
         unit: newItem.purchaseUnit,
         materialCode: newItem.materialCode,
-        costDistributionPercentage: 0, // Default cost distribution
+        costDistributionPercentage: 0,
     });
-    setNewItemSheetOpen(false); // Close the sheet after appending
+    setNewItemSheetOpen(false); 
   };
   
   const handleTemplateUpdate = (updatedTemplate: ButcheryTemplateType) => {
@@ -248,6 +259,7 @@ export function ButcheringForm() {
   }
 
   const primaryItem = inventory.find(i => i.id === primaryItemId);
+  const showSummary = yieldedItems.every(item => item.weight > 0) && quantityUsed > 0 && yieldedItems.length > 0;
 
   return (
     <>
@@ -370,40 +382,42 @@ export function ButcheringForm() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Yielded Item Name</TableHead>
-                  <TableHead className="w-[150px]">Weight</TableHead>
-                  <TableHead className="w-[100px]">Unit</TableHead>
-                  <TableHead className="w-[150px] text-right">Yield %</TableHead>
+                  <TableHead>Yielded Item</TableHead>
+                  <TableHead className="w-[120px]">Weight / Qty</TableHead>
+                  <TableHead className="w-[80px]">Unit</TableHead>
+                  <TableHead className="w-[150px]">Cost Distribution</TableHead>
                   <TableHead className="w-[50px]"><span className='sr-only'>Remove</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {fields.map((field, index) => {
-                  const itemWeight = form.getValues(`yieldedItems.${index}.weight`);
-                  const itemUnit = form.getValues(`yieldedItems.${index}.unit`);
-                  
-                  const itemWeightInKg = convert(itemWeight, itemUnit as Unit, 'kg');
-                  const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
-                  const itemYield = quantityUsedInKg > 0 ? (itemWeightInKg / quantityUsedInKg) * 100 : 0;
-                  
                   return (
                     <TableRow key={field.id}>
-                      <TableCell>
+                      <TableCell className="font-medium">
                         {field.name}
                       </TableCell>
                        <TableCell>
                         <FormField
                             control={form.control}
                             name={`yieldedItems.${index}.weight`}
-                            render={({ field }) => (
-                                <Input type="number" step="any" {...field} />
-                            )}
+                            render={({ field }) => ( <Input type="number" step="any" {...field} /> )}
                         />
                       </TableCell>
                        <TableCell className='text-muted-foreground'>
-                        {getUnitLabel(field.unit)}
+                        {field.unit}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">{itemYield.toFixed(2)}%</TableCell>
+                      <TableCell>
+                        <FormField
+                          control={form.control}
+                          name={`yieldedItems.${index}.costDistributionPercentage`}
+                          render={({ field }) => (
+                            <div className="relative">
+                               <Input type="number" className='pr-6 text-right' {...field} />
+                               <Percent className="absolute right-1.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -415,15 +429,15 @@ export function ButcheringForm() {
                 {fields.length === 0 && (
                      <TableRow>
                         <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                            No yielded items added yet.
+                            Add items from a template or create new custom yield cuts.
                         </TableCell>
                     </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
-          <div className='flex justify-between items-start'>
-            <div className="flex flex-col gap-2">
+          <div className='flex flex-col sm:flex-row justify-between items-start gap-4'>
+            <div className="flex items-center gap-2">
                 {primaryItemId && (
                     <>
                         {activeTemplate ? (
@@ -470,10 +484,11 @@ export function ButcheringForm() {
                                 <p className='text-xs text-muted-foreground'>No template found for this item.</p>
                             </div>
                         )}
-                        <Button
+                        <Separator orientation='vertical' className='h-10 mx-2' />
+                         <Button
                             type="button"
                             variant="link"
-                            className='p-0 h-auto self-start'
+                            className='p-0 h-auto self-center'
                             onClick={() => setNewItemSheetOpen(true)}
                         >
                              <PlusCircle className="mr-2 h-3 w-3" />
@@ -483,20 +498,24 @@ export function ButcheringForm() {
                 )}
             </div>
 
-            <div className='w-full max-w-sm space-y-2'>
-              <div className='flex justify-between font-medium'>
-                <span>Total Yield Weight:</span>
-                <span>{totalYieldedWeightInKg.toFixed(3)} kg</span>
-              </div>
-              <div className='flex justify-between font-medium text-primary'>
-                <span>Total Yield %:</span>
-                <span>{yieldPercentage.toFixed(2)}%</span>
-              </div>
-              <div className='flex justify-between font-medium text-destructive'>
-                <span>Loss %:</span>
-                <span>{lossPercentage.toFixed(2)}%</span>
-              </div>
-            </div>
+            {showSummary && (
+                 <Card className="w-full max-w-sm">
+                    <CardContent className="p-4 space-y-2">
+                        <div className='flex justify-between text-sm'>
+                            <span className='text-muted-foreground'>Total Yield Weight:</span>
+                            <span className='font-medium'>{totalYieldedWeightInKg.toFixed(3)} kg</span>
+                        </div>
+                        <div className='flex justify-between text-sm'>
+                            <span className='text-muted-foreground'>Total Yield %:</span>
+                            <span className={cn('font-medium', yieldPercentage > 100 ? 'text-destructive' : 'text-primary')}>{yieldPercentage.toFixed(2)}%</span>
+                        </div>
+                        <div className='flex justify-between text-sm'>
+                            <span className='text-muted-foreground'>Loss %:</span>
+                            <span className={cn('font-medium', lossPercentage < 0 ? 'text-destructive' : 'text-muted-foreground')}>{lossPercentage.toFixed(2)}%</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
           </div>
         </fieldset>
         <div className="flex justify-end">

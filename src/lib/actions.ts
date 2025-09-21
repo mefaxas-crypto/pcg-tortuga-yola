@@ -534,15 +534,12 @@ export async function logSale(saleData: AddSaleData) {
 
         let quantityToDeplete: number;
         if (invItem.unit === 'un.') {
-            // Convert from the base recipe unit (e.g., fl. oz) to a fraction of a 'un.'
-            // Example: 10.14 fl. oz / 250 fl. oz per un. = 0.04 un.
             const baseUnitsPerInventoryUnit = invItem.recipeUnitConversion || 1;
+            if (baseUnitsPerInventoryUnit === 0) throw new Error(`Item ${invItem.name} has a conversion factor of 0.`);
             quantityToDeplete = neededInBaseUnit / baseUnitsPerInventoryUnit;
         } else {
-            // Standard conversion (e.g., g to lbs)
             quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
         }
-
 
         const newQuantity = invItem.quantity - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.parLevel);
@@ -615,12 +612,10 @@ export async function logProduction(data: LogProductionData) {
 
           let quantityToDeplete: number;
           if (invItem.unit === 'un.') {
-              // Convert from the base recipe unit (e.g., fl. oz) to a fraction of a 'un.'
-              // Example: 10.14 fl. oz / 250 fl. oz per un. = 0.04 un.
               const baseUnitsPerInventoryUnit = invItem.recipeUnitConversion || 1;
+              if (baseUnitsPerInventoryUnit === 0) throw new Error(`Item ${invItem.name} has a conversion factor of 0.`);
               quantityToDeplete = neededInBaseUnit / baseUnitsPerInventoryUnit;
           } else {
-              // Standard conversion (e.g., g to lbs)
               quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
           }
 
@@ -650,13 +645,16 @@ export async function logProduction(data: LogProductionData) {
       transaction.set(productionLogRef, {
         logDate: serverTimestamp(),
         user: 'Chef John Doe', // Placeholder
-        producedItems: data.items.map(item => ({
-            recipeId: item.recipeId,
-            recipeName: item.name,
-            quantityProduced: item.quantityProduced,
-            yieldPerBatch: item.yield,
-            yieldUnit: item.yieldUnit,
-        })),
+        producedItems: data.items.map(item => {
+            const subRecipe = subRecipeSnaps.find(snap => snap.id === item.recipeId)?.data() as Recipe;
+            return {
+                recipeId: item.recipeId,
+                recipeName: item.name,
+                quantityProduced: item.quantityProduced,
+                yieldPerBatch: subRecipe.yield || 1,
+                yieldUnit: subRecipe.yieldUnit || 'batch',
+            }
+        }),
       });
     });
 
@@ -740,6 +738,7 @@ export async function undoProductionLog(logId: string) {
           let quantityToRestore: number;
           if (invItem.unit === 'un.') {
               const baseUnitsPerInventoryUnit = invItem.recipeUnitConversion || 1;
+              if (baseUnitsPerInventoryUnit === 0) throw new Error(`Item ${invItem.name} has a conversion factor of 0.`);
               quantityToRestore = usedInBaseUnit / baseUnitsPerInventoryUnit;
           } else {
               quantityToRestore = convert(usedInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
@@ -817,9 +816,20 @@ export async function logButchering(data: ButcheringData) {
         status: newPrimaryStatus,
       });
       
-      const totalYieldedWeightInKg = data.yieldedItems.reduce((acc, item) => {
-        const weightInKg = convert(item.weight, item.unit as Unit, 'kg' as Unit);
-        return acc + weightInKg;
+      const totalYieldedWeightInKg = data.yieldedItems.reduce((acc, yieldedItemData) => {
+          const inventoryItem = yieldedItemSnaps.find(snap => snap.id === yieldedItemData.itemId)?.data() as InventoryItem | undefined;
+          if (!inventoryItem) return acc;
+          
+          if(yieldedItemData.unit === 'un.') {
+              const weightPerUnit = inventoryItem.recipeUnitConversion || 0;
+              const baseUnit = inventoryItem.recipeUnit;
+              const totalWeightInBase = yieldedItemData.weight * weightPerUnit;
+              const weightInKg = convert(totalWeightInBase, baseUnit, 'kg' as Unit);
+              return acc + weightInKg;
+          } else {
+             const weightInKg = convert(yieldedItemData.weight, yieldedItemData.unit as Unit, 'kg' as Unit);
+             return acc + weightInKg;
+          }
       }, 0);
 
       const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
@@ -836,7 +846,15 @@ export async function logButchering(data: ButcheringData) {
         
         let costOfThisYield;
         if(useWeightBasedCosting) {
-            const itemWeightInKg = convert(yieldedItemData.weight, yieldedItemData.unit as Unit, 'kg' as Unit);
+            let itemWeightInKg;
+            if(yieldedItemData.unit === 'un.') {
+                const weightPerUnit = yieldedItem.recipeUnitConversion || 0;
+                const baseUnit = yieldedItem.recipeUnit;
+                const totalWeightInBase = yieldedItemData.weight * weightPerUnit;
+                itemWeightInKg = convert(totalWeightInBase, baseUnit, 'kg' as Unit);
+            } else {
+                itemWeightInKg = convert(yieldedItemData.weight, yieldedItemData.unit as Unit, 'kg' as Unit);
+            }
             const yieldedItemCostProportion = totalYieldedWeightInKg > 0 ? (itemWeightInKg / totalYieldedWeightInKg) : 0;
             costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
         } else {
