@@ -1,5 +1,6 @@
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -174,4 +175,16 @@ export type PhysicalCountItem = {
     physicalQuantity: number; // The final count in the item's base unit
     theoreticalQuantity: number;
     unit: Unit;
+}
+
+export type ProductionLog = {
+    id: string;
+    logDate: Date;
+    user: string;
+    producedItems: {
+        recipeId: string;
+        recipeName: string;
+        quantityProduced: number;
+        yieldUnit: string;
+    }[];
 }

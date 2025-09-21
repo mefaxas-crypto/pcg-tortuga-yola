@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -505,54 +506,40 @@ export async function logProduction(data: LogProductionData) {
   try {
     await runTransaction(db, async (transaction) => {
       // --- 1. READ PHASE ---
-      // Fetch all sub-recipes, their ingredients, and their inventory status in one go.
-      const readPromises: Promise<any>[] = [];
-      const subRecipeRefs: DocumentReference[] = [];
-      const ingredientRefs: DocumentReference[] = [];
-      const producedItemInvQueries: any[] = [];
-      
-      data.items.forEach(item => {
-        const subRecipeRef = doc(db, 'recipes', item.recipeId);
-        subRecipeRefs.push(subRecipeRef);
-        readPromises.push(transaction.get(subRecipeRef));
+      const productionLogRef = doc(collection(db, 'productionLogs'));
+      const subRecipeRefs = data.items.map(item => doc(db, 'recipes', item.recipeId));
+      const subRecipeSnaps = await Promise.all(subRecipeRefs.map(ref => transaction.get(ref)));
 
-        const producedItemQuery = query(collection(db, 'inventory'), where('materialCode', '==', item.name.toUpperCase())); // Assuming recipeCode is UPPERCASE name for now
-        producedItemInvQueries.push(producedItemQuery);
-      });
+      const allIngredientRefs: DocumentReference[] = [];
+      const ingredientRefMap = new Map<string, Recipe['ingredients']>();
 
-      const readResults = await Promise.all(readPromises);
-      
-      const subRecipeSnaps = readResults.slice(0, data.items.length);
-
-      // Now fetch the ingredients for all valid sub-recipes
-      const ingredientReadPromises: Promise<any>[] = [];
       for (let i = 0; i < subRecipeSnaps.length; i++) {
-          const subRecipeSnap = subRecipeSnaps[i];
-          if (subRecipeSnap.exists()) {
-              const subRecipe = subRecipeSnap.data() as Recipe;
-              subRecipe.ingredients.forEach(ing => {
-                  const ingRef = doc(db, 'inventory', ing.itemId);
-                  ingredientRefs.push(ingRef);
-                  ingredientReadPromises.push(transaction.get(ingRef));
-              });
-          }
+        const subRecipeSnap = subRecipeSnaps[i];
+        if (subRecipeSnap.exists()) {
+          const subRecipe = subRecipeSnap.data() as Recipe;
+          ingredientRefMap.set(subRecipe.id, subRecipe.ingredients);
+          subRecipe.ingredients.forEach(ing => {
+            const ingRef = doc(db, 'inventory', ing.itemId);
+            if (!allIngredientRefs.some(ref => ref.id === ingRef.id)) {
+              allIngredientRefs.push(ingRef);
+            }
+          });
+        }
       }
-
-      // We must fetch query results outside the transaction's get() method
-      const producedItemQuerySnaps = await Promise.all(
-        producedItemInvQueries.map(q => getDocs(q))
+      
+      const producedItemQueries = data.items.map(item =>
+        query(collection(db, 'inventory'), where('materialCode', '==', subRecipeSnaps.find(s => s.id === item.recipeId)?.data()?.recipeCode))
       );
       
-      // Now get the transaction snapshots for the results of the queries
-      const producedItemInvSnaps = await Promise.all(
-        producedItemQuerySnaps.map(snap => 
-          !snap.empty ? transaction.get(snap.docs[0].ref) : Promise.resolve(null)
-        )
-      );
+      const producedItemQuerySnaps = await Promise.all(producedItemQueries.map(q => getDocs(q)));
 
-      const ingredientSnaps = await Promise.all(ingredientReadPromises);
-      const ingredientSnapMap = new Map<string, DocumentSnapshot>(ingredientSnaps.map((snap, i) => [ingredientRefs[i].id, snap]));
-      
+      const producedItemDocRefs = producedItemQuerySnaps.map(snap => (!snap.empty ? snap.docs[0].ref : null));
+
+      const ingredientSnaps = await Promise.all(allIngredientRefs.map(ref => transaction.get(ref)));
+      const producedItemSnaps = await Promise.all(producedItemDocRefs.map(ref => ref ? transaction.get(ref) : Promise.resolve(null)));
+
+      const ingredientSnapMap = new Map<string, DocumentSnapshot>(ingredientSnaps.map(snap => [snap.id, snap]));
+
       // --- 2. WRITE PHASE ---
       for (let i = 0; i < data.items.length; i++) {
         const item = data.items[i];
@@ -590,7 +577,7 @@ export async function logProduction(data: LogProductionData) {
         }
 
         // --- Increase stock of produced sub-recipe ---
-        const producedItemInvSnap = producedItemInvSnaps[i];
+        const producedItemInvSnap = producedItemSnaps[i];
         if (!producedItemInvSnap || !producedItemInvSnap.exists()) {
           console.warn(`Sub-recipe ${subRecipe.name} not found in inventory. Creating new entry.`);
           const newInvItemRef = doc(collection(db, 'inventory'));
@@ -621,9 +608,23 @@ export async function logProduction(data: LogProductionData) {
           transaction.update(producedItemInvSnap.ref, { quantity: newQuantity, status: newStatus });
         }
       }
+
+      // --- Log the production event ---
+       transaction.set(productionLogRef, {
+        logDate: serverTimestamp(),
+        user: 'Chef John Doe', // Placeholder for now
+        producedItems: data.items.map(item => ({
+          recipeId: item.recipeId,
+          recipeName: item.name,
+          quantityProduced: item.quantityProduced,
+          yieldUnit: item.yieldUnit,
+        })),
+      });
+
     });
 
     revalidatePath('/inventory');
+    revalidatePath('/recipes');
     revalidatePath('/'); // Revalidate dashboard
     return { success: true };
   } catch (error) {
@@ -637,77 +638,71 @@ export async function logButchering(data: ButcheringData) {
   try {
     await runTransaction(db, async (transaction) => {
       // --- 1. READ PHASE ---
-      // Get the primary item document
       const primaryItemRef = doc(db, 'inventory', data.primaryItemId);
-      const primaryItemSnap = await transaction.get(primaryItemRef);
+      
+      const yieldedItemQueries = data.yieldedItems.map(item => 
+        query(collection(db, 'inventory'), where('materialCode', '==', item.materialCode))
+      );
+      
+      const yieldedQuerySnaps = await Promise.all(yieldedItemQueries.map(q => getDocs(q)));
+
+      const yieldedItemRefs = yieldedQuerySnaps.map(snap => !snap.empty ? snap.docs[0].ref : null);
+      
+      const refsToRead: (DocumentReference | null)[] = [primaryItemRef, ...yieldedItemRefs];
+      const validRefsToRead = refsToRead.filter((ref): ref is DocumentReference => ref !== null);
+
+      const allSnaps = await Promise.all(validRefsToRead.map(ref => transaction.get(ref)));
+
+      const primaryItemSnap = allSnaps[0];
       if (!primaryItemSnap.exists()) {
         throw new Error('Primary butchering item not found in inventory.');
       }
       const primaryItem = primaryItemSnap.data() as InventoryItem;
 
-      // Get all yielded item documents
-      const yieldedItemRefs = data.yieldedItems.map(item => {
-        const q = query(collection(db, 'inventory'), where('materialCode', '==', item.materialCode));
-        return q; // Storing query, not ref, as we need to execute it outside transaction.get
-      });
-
-      // Execute queries outside the transaction to get the document references
-      const yieldedItemDocRefs = (await Promise.all(yieldedItemRefs.map(q => getDocs(q)))).map(snap => !snap.empty ? snap.docs[0].ref : null);
-
-      // Now, use the transaction to get the snapshots
-      const yieldedItemSnaps = await Promise.all(
-          yieldedItemDocRefs.map(ref => ref ? transaction.get(ref) : Promise.resolve(null))
-      );
-
-      for (let i = 0; i < yieldedItemSnaps.length; i++) {
-        const yieldedItemData = data.yieldedItems[i];
-        if (!yieldedItemSnaps[i] || !yieldedItemSnaps[i]!.exists()) {
-          throw new Error(`Yielded item "${yieldedItemData.name}" could not be found in inventory. Please ensure it exists before logging butchery.`);
-        }
-      }
-
+      const yieldedItemSnaps = allSnaps.slice(1);
+      
       // --- 2. CALCULATION/LOGIC PHASE ---
       const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
       
+      if (quantityToDepleteInPurchaseUnit > primaryItem.quantity) {
+          throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity} ${primaryItem.purchaseUnit}, Required: ${quantityToDepleteInPurchaseUnit} ${primaryItem.purchaseUnit}`);
+      }
+
       const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInPurchaseUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
       
       const totalCostOfButcheredPortion = (primaryItem.purchasePrice / primaryItem.purchaseQuantity) * quantityToDepleteInPurchaseUnit;
 
       // --- 3. WRITE PHASE ---
-      // Update the primary item
       transaction.update(primaryItemRef, {
         quantity: newPrimaryQuantity,
         status: newPrimaryStatus,
       });
-
-      // Update all the yielded items
+      
       for (let i = 0; i < yieldedItemSnaps.length; i++) {
         const yieldedItemSnap = yieldedItemSnaps[i];
-        if (!yieldedItemSnap) continue;
-
         const yieldedItemData = data.yieldedItems[i];
+        if (!yieldedItemSnap || !yieldedItemSnap.exists()) {
+          throw new Error(`Yielded item "${yieldedItemData.name}" could not be found. Please ensure it exists before logging butchery.`);
+        }
+        
         const yieldedItem = yieldedItemSnap.data() as InventoryItem;
 
         const totalYieldedWeightInKg = data.yieldedItems.reduce((acc, item) => acc + item.weight, 0);
-
-        const yieldedItemCostProportion = (yieldedItemData.weight / totalYieldedWeightInKg);
+        const yieldedItemCostProportion = totalYieldedWeightInKg > 0 ? (yieldedItemData.weight / totalYieldedWeightInKg) : 0;
         const costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
         
-        // Quantity to add is its weight, converted to its own purchase unit
         const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit as Unit);
 
         const newQuantity = yieldedItem.quantity + quantityToAdd;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
         
-        // The new purchase price of the yielded item is its proportional cost.
         const newPurchasePrice = isFinite(costOfThisYield) ? costOfThisYield : yieldedItem.purchasePrice;
 
         transaction.update(yieldedItemSnap.ref, {
             quantity: newQuantity,
             status: newStatus,
             purchasePrice: newPurchasePrice,
-            // We assume the purchase quantity of the yielded item is what we just produced.
             purchaseQuantity: quantityToAdd,
         });
       }
@@ -767,3 +762,4 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
+

@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProductionForm } from './components/ProductionForm';
 import { ButcheringForm } from './components/ButcheringForm';
+import { ProductionLogHistory } from './components/ProductionLogHistory';
 
 
 export default function RecipesPage() {
@@ -46,7 +47,7 @@ export default function RecipesPage() {
         <TabsContent value="recipes">
             <RecipesTable onEdit={handleEdit} />
         </TabsContent>
-        <TabsContent value="production">
+        <TabsContent value="production" className="space-y-6">
             <Card>
                 <CardHeader>
                 <CardTitle>Log Sub-recipe Production</CardTitle>
@@ -58,6 +59,7 @@ export default function RecipesPage() {
                   <ProductionForm />
                 </CardContent>
             </Card>
+            <ProductionLogHistory />
         </TabsContent>
          <TabsContent value="butchering">
             <Card>
