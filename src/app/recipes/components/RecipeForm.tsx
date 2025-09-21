@@ -708,7 +708,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                    <Command shouldFilter={false}>
+                    <Command>
                         <CommandInput placeholder="Search for an ingredient..." />
                         <CommandList>
                         <CommandEmpty>No ingredients found.</CommandEmpty>
