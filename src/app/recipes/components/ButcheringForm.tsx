@@ -48,7 +48,7 @@ import {
 import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType, YieldItem } from '@/lib/types';
+import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
@@ -65,9 +65,9 @@ const yieldItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required.'),
   materialCode: z.string(),
   costDistributionPercentage: z.coerce.number().min(0),
-  // Add these to have the data available for calculation
-  recipeUnit: z.string().optional(),
-  recipeUnitConversion: z.coerce.number().optional(),
+  // This object will be populated with the full inventory item details
+  // for accurate frontend calculations. It is not submitted to the backend.
+  fullDetails: z.custom<InventoryItem>().optional(),
 });
 
 const formSchema = z.object({
@@ -143,8 +143,7 @@ export function ButcheringForm() {
                 unit: yieldedInventoryItem.purchaseUnit,
                 materialCode: yieldedInventoryItem.materialCode,
                 costDistributionPercentage: templateYield.costDistributionPercentage,
-                recipeUnit: yieldedInventoryItem.recipeUnit,
-                recipeUnitConversion: yieldedInventoryItem.recipeUnitConversion,
+                fullDetails: yieldedInventoryItem,
             };
         }).filter(item => item !== null) as z.infer<typeof yieldItemSchema>[];
 
@@ -157,19 +156,21 @@ export function ButcheringForm() {
 
   const totalYieldedWeightInKg = useMemo(() => {
     return yieldedItems.reduce((sum, item) => {
-      if (item.weight === 0) return sum;
+      if (item.weight === 0 || !item.fullDetails) return sum;
       let itemWeightInKg = 0;
       try {
-        if (item.unit === 'un.') {
-          // Convert unit back to its base weight/volume, then to kg
-          const weightPerUnit = item.recipeUnitConversion || 0;
-          const baseUnitOfItem = item.recipeUnit as Unit | undefined;
+        if (item.fullDetails.unit === 'un.') {
+          const weightPerUnit = item.fullDetails.recipeUnitConversion || 0;
+          const baseUnitOfItem = item.fullDetails.recipeUnit as Unit | undefined;
+          
           if (!baseUnitOfItem || weightPerUnit === 0) {
              console.warn(`Cannot calculate weight for unit-based item '${item.name}' without conversion factor.`);
              return sum;
           }
-          const totalWeightInBase = item.weight * weightPerUnit; // e.g., 5 un. * 6oz = 30oz
+          // e.g., 5 un. * 6oz/un = 30oz
+          const totalWeightInBase = item.weight * weightPerUnit; 
           itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
+
         } else {
           itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
         }
@@ -180,6 +181,7 @@ export function ButcheringForm() {
       return sum + (itemWeightInKg || 0);
     }, 0);
   }, [yieldedItems]);
+  
 
   const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
   const yieldPercentage = quantityUsedInKg > 0 ? (totalYieldedWeightInKg / quantityUsedInKg) * 100 : 0;
@@ -213,7 +215,6 @@ export function ButcheringForm() {
 
       const finalData = {
         ...values,
-        primaryItemMaterialCode: primaryItem.materialCode,
         yieldedItems: itemsWithFinalCost,
       };
 
@@ -254,8 +255,7 @@ export function ButcheringForm() {
         unit: newItem.purchaseUnit,
         materialCode: newItem.materialCode,
         costDistributionPercentage: 0,
-        recipeUnit: newItem.recipeUnit,
-        recipeUnitConversion: newItem.recipeUnitConversion,
+        fullDetails: newItem,
     });
     setNewItemSheetOpen(false); 
   };
@@ -429,7 +429,7 @@ export function ButcheringForm() {
                         />
                       </TableCell>
                        <TableCell className='text-muted-foreground'>
-                        {field.unit}
+                        {allUnits[field.unit as Unit]?.name || field.unit}
                       </TableCell>
                       <TableCell>
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
@@ -442,7 +442,7 @@ export function ButcheringForm() {
                 {fields.length === 0 && (
                      <TableRow>
                         <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                            {primaryItemId ? 'No template found. Create one or add custom items.' : 'Select a primary item to begin.'}
+                            {primaryItemId ? 'No template found for this item. Create one or add custom yield items.' : 'Select a primary item to begin.'}
                         </TableCell>
                     </TableRow>
                 )}
@@ -454,9 +454,9 @@ export function ButcheringForm() {
                 {primaryItemId && (
                     <>
                         {activeTemplate ? (
-                            <Button type="button" variant="secondary" size="icon" onClick={() => openTemplateDialog('edit')}>
-                                <Pencil className="h-4 w-4" />
-                                <span className="sr-only">Edit Template</span>
+                            <Button type="button" variant="secondary" size="sm" onClick={() => openTemplateDialog('edit')}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit Template
                             </Button>
                         ) : (
                             <Button type="button" variant='outline' onClick={() => openTemplateDialog('add')}>
