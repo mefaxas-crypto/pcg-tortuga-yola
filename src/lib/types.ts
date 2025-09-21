@@ -1,5 +1,6 @@
 
 
+
 export type InventoryItem = {
   id: string;
   materialCode: string;
@@ -157,4 +158,12 @@ export type ButcheryTemplate = {
     name: string;
     primaryItemMaterialCode: string; // The material code of the primary inventory item
     yields: YieldItem[];
+}
+
+export type PhysicalCountItem = {
+    id: string;
+    name: string;
+    physicalQuantity: number | undefined;
+    theoreticalQuantity: number;
+    unit: string;
 }

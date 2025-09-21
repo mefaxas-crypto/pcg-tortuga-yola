@@ -1,3 +1,4 @@
+
 'use client';
 
 import PageHeader from '@/components/PageHeader';
@@ -7,6 +8,8 @@ import { InventoryTable } from './components/InventoryTable';
 import { useState } from 'react';
 import { InventoryItemFormSheet } from './components/InventoryItemFormSheet';
 import type { InventoryItem } from '@/lib/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PhysicalCountTable } from './components/PhysicalCountTable';
 
 export default function InventoryPage() {
   const [sheetState, setSheetState] = useState<{
@@ -39,7 +42,20 @@ export default function InventoryPage() {
           Add New Ingredient
         </Button>
       </PageHeader>
-      <InventoryTable onEdit={handleEdit} />
+      
+      <Tabs defaultValue="list">
+        <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="list">Inventory List</TabsTrigger>
+            <TabsTrigger value="count">Physical Count</TabsTrigger>
+        </TabsList>
+        <TabsContent value="list">
+            <InventoryTable onEdit={handleEdit} />
+        </TabsContent>
+        <TabsContent value="count">
+            <PhysicalCountTable />
+        </TabsContent>
+      </Tabs>
+
       <InventoryItemFormSheet
         open={sheetState.open}
         mode={sheetState.mode}

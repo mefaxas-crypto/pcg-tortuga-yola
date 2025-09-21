@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import {
@@ -27,6 +28,7 @@ import type {
   InventoryFormData,
   InventoryItem,
   LogProductionData,
+  PhysicalCountItem,
   Recipe,
   Supplier,
   Menu,
@@ -230,6 +232,63 @@ export async function deleteInventoryItem(itemId: string) {
     throw new Error('Failed to delete inventory item');
   }
 }
+
+export async function updatePhysicalInventory(items: PhysicalCountItem[]) {
+    try {
+        await runTransaction(db, async (transaction) => {
+            const varianceLogRef = doc(collection(db, 'varianceLogs'));
+            const itemRefs = items.map(item => doc(db, 'inventory', item.id));
+
+            // Perform all reads first
+            const itemSnaps = await Promise.all(itemRefs.map(ref => transaction.get(ref)));
+
+            const variances = [];
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const itemSnap = itemSnaps[i];
+
+                if (!itemSnap.exists()) {
+                    console.warn(`Item with ID ${item.id} not found during physical count. Skipping.`);
+                    continue;
+                }
+                const invItem = itemSnap.data() as InventoryItem;
+
+                const newQuantity = item.physicalQuantity!;
+                const newStatus = getStatus(newQuantity, invItem.parLevel);
+
+                transaction.update(itemSnap.ref, {
+                    quantity: newQuantity,
+                    status: newStatus,
+                });
+
+                variances.push({
+                    itemId: item.id,
+                    itemName: item.name,
+                    theoreticalQuantity: item.theoreticalQuantity,
+                    physicalQuantity: item.physicalQuantity,
+                    variance: item.physicalQuantity! - item.theoreticalQuantity,
+                    unit: item.unit,
+                });
+            }
+            // Log the variances. In a real app, you might save this to a 'variance' collection.
+            console.log("Physical Count Variance Log:", {
+                date: new Date().toISOString(),
+                variances,
+            });
+             transaction.set(varianceLogRef, {
+                logDate: serverTimestamp(),
+                items: variances,
+            });
+
+        });
+        revalidatePath('/inventory');
+        revalidatePath('/'); // For dashboard stats
+    } catch (e) {
+        console.error('Error updating physical inventory:', e);
+        throw new Error('Failed to update physical inventory.');
+    }
+}
+
 
 // Allergen Actions
 export async function addAllergen(allergenData: AddAllergenData) {
@@ -545,7 +604,15 @@ export async function logButchering(data: ButcheringData) {
         const q = query(collection(db, 'inventory'), where('materialCode', '==', item.materialCode));
         return q; // Storing query, not ref, as we need to execute it outside transaction.get
       });
-      const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(q => getDocs(q).then(snap => !snap.empty ? transaction.get(snap.docs[0].ref) : null)));
+
+      // Execute queries outside the transaction to get the document references
+      const yieldedItemDocRefs = (await Promise.all(yieldedItemRefs.map(q => getDocs(q)))).map(snap => !snap.empty ? snap.docs[0].ref : null);
+
+      // Now, use the transaction to get the snapshots
+      const yieldedItemSnaps = await Promise.all(
+          yieldedItemDocRefs.map(ref => ref ? transaction.get(ref) : Promise.resolve(null))
+      );
+
 
       for (let i = 0; i < yieldedItemSnaps.length; i++) {
         if (!yieldedItemSnaps[i] || !yieldedItemSnaps[i]!.exists()) {
@@ -627,7 +694,12 @@ export async function logButchering(data: ButcheringData) {
     return { success: true };
   } catch (error) {
     console.error('Error during butchering log:', error);
-    throw new Error(`Failed to log butchering: ${error instanceof Error ? error.message : String(error)}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes("Not enough stock")) {
+        // Don't throw, let the UI handle it gracefully
+        return { success: false, error: errorMessage };
+    }
+    throw new Error(`Failed to log butchering: ${errorMessage}`);
   }
 }
 
@@ -650,3 +722,4 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
+
