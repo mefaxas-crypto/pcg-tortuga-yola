@@ -146,9 +146,11 @@ export type ButcheringItem = {
     name: string;
     weight: number;
     unit: Unit;
-    yieldPercentage: number;
     materialCode: string; // The material code of the yielded item
     costDistributionPercentage: number;
+    finalCostDistribution?: number; // The redistributed cost percentage
+    recipeUnit?: string;
+    recipeUnitConversion?: number;
 }
 
 export type ButcheringData = {

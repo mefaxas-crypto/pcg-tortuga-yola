@@ -45,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2, Percent } from 'lucide-react';
+import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType, YieldItem } from '@/lib/types';
@@ -57,23 +57,25 @@ import { butcheryTemplates as initialButcheryTemplates } from '@/lib/butchery-te
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { ButcheringTemplateDialog } from './ButcheringTemplateDialog';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+
+const yieldItemSchema = z.object({
+  itemId: z.string().min(1, 'Item ID is missing.'),
+  name: z.string().min(1, 'Item name is required.'),
+  weight: z.coerce.number().min(0, 'Weight must be a positive number.'),
+  unit: z.string().min(1, 'Unit is required.'),
+  materialCode: z.string(),
+  costDistributionPercentage: z.coerce.number().min(0),
+  // Add these to have the data available for calculation
+  recipeUnit: z.string().optional(),
+  recipeUnitConversion: z.coerce.number().optional(),
+});
 
 const formSchema = z.object({
   primaryItemId: z.string().min(1, 'Please select a primary item to butcher.'),
   quantityUsed: z.coerce.number().min(0.01, 'Quantity must be greater than 0.'),
   quantityUnit: z.string().min(1, 'Unit is required.'),
   yieldedItems: z
-    .array(
-      z.object({
-        itemId: z.string().min(1, 'Item ID is missing.'),
-        name: z.string().min(1, 'Item name is required.'),
-        weight: z.coerce.number().min(0, 'Weight must be a positive number.'),
-        unit: z.string().min(1, 'Unit is required.'),
-        materialCode: z.string(),
-        costDistributionPercentage: z.coerce.number().min(0),
-      }),
-    )
+    .array(yieldItemSchema)
     .min(1, 'You must have at least one yielded item.'),
 });
 
@@ -97,7 +99,7 @@ export function ButcheringForm() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'yieldedItems',
   });
@@ -125,79 +127,100 @@ export function ButcheringForm() {
     return butcheryTemplates.find(t => t.primaryItemMaterialCode === primaryItem.materialCode) || null;
   }, [primaryItemId, inventory, butcheryTemplates]);
 
+  // --- Automatic Template Loading ---
+  useEffect(() => {
+    if (activeTemplate) {
+        const templateYields = activeTemplate.yields.map(templateYield => {
+            const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
+            if (!yieldedInventoryItem) {
+                console.warn(`Item with material code ${templateYield.id} from template not found in inventory.`);
+                return null;
+            }
+            return {
+                itemId: yieldedInventoryItem.id,
+                name: yieldedInventoryItem.name,
+                weight: 0,
+                unit: yieldedInventoryItem.purchaseUnit,
+                materialCode: yieldedInventoryItem.materialCode,
+                costDistributionPercentage: templateYield.costDistributionPercentage,
+                recipeUnit: yieldedInventoryItem.recipeUnit,
+                recipeUnitConversion: yieldedInventoryItem.recipeUnitConversion,
+            };
+        }).filter(item => item !== null) as z.infer<typeof yieldItemSchema>[];
+
+        replace(templateYields);
+    } else {
+        replace([]); // Clear items if no template
+    }
+  }, [activeTemplate, inventory, replace]);
+
+
   const totalYieldedWeightInKg = useMemo(() => {
     return yieldedItems.reduce((sum, item) => {
-      const inventoryItem = inventory.find(i => i.id === item.itemId);
-      if (!inventoryItem) return sum;
-
+      if (item.weight === 0) return sum;
       let itemWeightInKg = 0;
-      if (item.unit === 'un.') {
-        // Convert unit back to its base weight/volume, then to kg
-        const weightPerUnit = inventoryItem.recipeUnitConversion || 0; // e.g., 6oz
-        const baseUnitOfItem = inventoryItem.recipeUnit; // e.g., oz
-        const totalWeightInBase = item.weight * weightPerUnit; // e.g., 5 un. * 6oz = 30oz
-        itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
-      } else {
-        itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
+      try {
+        if (item.unit === 'un.') {
+          // Convert unit back to its base weight/volume, then to kg
+          const weightPerUnit = item.recipeUnitConversion || 0;
+          const baseUnitOfItem = item.recipeUnit as Unit | undefined;
+          if (!baseUnitOfItem || weightPerUnit === 0) {
+             console.warn(`Cannot calculate weight for unit-based item '${item.name}' without conversion factor.`);
+             return sum;
+          }
+          const totalWeightInBase = item.weight * weightPerUnit; // e.g., 5 un. * 6oz = 30oz
+          itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
+        } else {
+          itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
+        }
+      } catch (error) {
+          console.error("Error converting weight for yield calculation:", error);
+          return sum;
       }
       return sum + (itemWeightInKg || 0);
     }, 0);
-  }, [yieldedItems, inventory]);
+  }, [yieldedItems]);
 
   const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
   const yieldPercentage = quantityUsedInKg > 0 ? (totalYieldedWeightInKg / quantityUsedInKg) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
 
-  const handleAddYieldedItemFromTemplate = (templateYield: YieldItem) => {
-    const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
-    if (!yieldedInventoryItem) {
-      toast({
-        variant: 'destructive',
-        title: 'Item not in Inventory',
-        description: `The yielded item "${templateYield.name}" from the template does not exist in your inventory. Please add it first.`,
-      });
-      return;
-    }
-    if (fields.some(field => field.itemId === yieldedInventoryItem.id)) {
-      toast({
-        variant: 'destructive',
-        title: 'Item already added',
-        description: `"${templateYield.name}" is already in the yielded items list.`,
-      });
-      return;
-    }
-    append({
-      itemId: yieldedInventoryItem.id,
-      name: yieldedInventoryItem.name,
-      weight: 0,
-      unit: yieldedInventoryItem.purchaseUnit,
-      materialCode: yieldedInventoryItem.materialCode,
-      costDistributionPercentage: templateYield.costDistributionPercentage,
-    });
-  }
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-        const primaryItem = inventory.find(i => i.id === values.primaryItemId);
-        if (!primaryItem) throw new Error("Primary item not found");
+      const primaryItem = inventory.find(i => i.id === values.primaryItemId);
+      if (!primaryItem) throw new Error("Primary item not found");
+
+      // Filter out items with 0 weight
+      const producedItems = values.yieldedItems.filter(item => item.weight > 0);
+
+      if (producedItems.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "No Yield Entered",
+          description: "Please enter a weight/quantity for at least one yielded item.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Re-distribute cost percentage among produced items
+      const totalCostDistribution = producedItems.reduce((sum, item) => sum + item.costDistributionPercentage, 0);
+      const itemsWithFinalCost = producedItems.map(item => ({
+        ...item,
+        finalCostDistribution: totalCostDistribution > 0 ? (item.costDistributionPercentage / totalCostDistribution) * 100 : (1 / producedItems.length) * 100, // Fallback to even distribution
+      }));
 
       const finalData = {
         ...values,
         primaryItemMaterialCode: primaryItem.materialCode,
-        yieldedItems: values.yieldedItems.map(item => {
-            const itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
-            const quantityUsedInKg = convert(values.quantityUsed, values.quantityUnit as Unit, 'kg');
-            return {
-                ...item,
-                yieldPercentage: (itemWeightInKg / quantityUsedInKg) * 100,
-            }
-        })
-      }
+        yieldedItems: itemsWithFinalCost,
+      };
+
       await logButchering(finalData);
       toast({
         title: 'Butchering Logged!',
-        description: 'Inventory has been updated and butchery template saved.',
+        description: 'Inventory has been updated.',
       });
       form.reset({
         primaryItemId: '',
@@ -218,6 +241,7 @@ export function ButcheringForm() {
     }
   }
 
+
   const handleNewItemSheetClose = () => {
     setNewItemSheetOpen(false);
   }
@@ -230,6 +254,8 @@ export function ButcheringForm() {
         unit: newItem.purchaseUnit,
         materialCode: newItem.materialCode,
         costDistributionPercentage: 0,
+        recipeUnit: newItem.recipeUnit,
+        recipeUnitConversion: newItem.recipeUnitConversion,
     });
     setNewItemSheetOpen(false); 
   };
@@ -259,7 +285,8 @@ export function ButcheringForm() {
   }
 
   const primaryItem = inventory.find(i => i.id === primaryItemId);
-  const showSummary = yieldedItems.every(item => item.weight > 0) && quantityUsed > 0 && yieldedItems.length > 0;
+  const showSummary = yieldedItems.some(item => item.weight > 0) && quantityUsed > 0;
+
 
   return (
     <>
@@ -306,7 +333,6 @@ export function ButcheringForm() {
                                 onSelect={() => {
                                   form.setValue('primaryItemId', item.id);
                                   form.setValue('quantityUnit', item.purchaseUnit);
-                                  form.setValue('yieldedItems', []); // Clear yielded items when primary changes
                                   setPopoverOpen(false);
                                 }}
                               >
@@ -383,9 +409,8 @@ export function ButcheringForm() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Yielded Item</TableHead>
-                  <TableHead className="w-[120px]">Weight / Qty</TableHead>
-                  <TableHead className="w-[80px]">Unit</TableHead>
-                  <TableHead className="w-[150px]">Cost Distribution</TableHead>
+                  <TableHead className="w-[150px]">Weight / Qty</TableHead>
+                  <TableHead className="w-[120px]">Unit</TableHead>
                   <TableHead className="w-[50px]"><span className='sr-only'>Remove</span></TableHead>
                 </TableRow>
               </TableHeader>
@@ -400,23 +425,11 @@ export function ButcheringForm() {
                         <FormField
                             control={form.control}
                             name={`yieldedItems.${index}.weight`}
-                            render={({ field }) => ( <Input type="number" step="any" {...field} /> )}
+                            render={({ field }) => ( <Input type="number" step="any" placeholder="0" {...field} /> )}
                         />
                       </TableCell>
                        <TableCell className='text-muted-foreground'>
                         {field.unit}
-                      </TableCell>
-                      <TableCell>
-                        <FormField
-                          control={form.control}
-                          name={`yieldedItems.${index}.costDistributionPercentage`}
-                          render={({ field }) => (
-                            <div className="relative">
-                               <Input type="number" className='pr-6 text-right' {...field} />
-                               <Percent className="absolute right-1.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
-                        />
                       </TableCell>
                       <TableCell>
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
@@ -429,7 +442,7 @@ export function ButcheringForm() {
                 {fields.length === 0 && (
                      <TableRow>
                         <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                            Add items from a template or create new custom yield cuts.
+                            {primaryItemId ? 'No template found. Create one or add custom items.' : 'Select a primary item to begin.'}
                         </TableCell>
                     </TableRow>
                 )}
@@ -441,50 +454,16 @@ export function ButcheringForm() {
                 {primaryItemId && (
                     <>
                         {activeTemplate ? (
-                            <div className="flex items-center gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button type="button" variant="outline">
-                                            <PlusCircle className="mr-2 h-4 w-4" /> Add From Template
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search yield cuts..." />
-                                            <CommandList>
-                                                <CommandEmpty>No cuts found in template.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {activeTemplate.yields.map((yieldItem) => (
-                                                        <CommandItem
-                                                            key={yieldItem.id}
-                                                            value={yieldItem.name}
-                                                            onSelect={() => handleAddYieldedItemFromTemplate(yieldItem)}
-                                                            className="flex justify-between items-center"
-                                                        >
-                                                            <span>{yieldItem.name}</span>
-                                                            <Check className={cn("h-4 w-4", fields.some(f => inventory.find(i => i.materialCode === yieldItem.id)?.id === f.itemId) ? "opacity-100" : "opacity-0")} />
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                <Button type="button" variant="secondary" size="icon" onClick={() => openTemplateDialog('edit')}>
-                                    <Pencil className="h-4 w-4" />
-                                    <span className="sr-only">Edit Template</span>
-                                </Button>
-                            </div>
+                            <Button type="button" variant="secondary" size="icon" onClick={() => openTemplateDialog('edit')}>
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Edit Template</span>
+                            </Button>
                         ) : (
-                            <div className='flex flex-col gap-2'>
-                                <Button type="button" variant='outline' onClick={() => openTemplateDialog('add')}>
-                                    <PlusCircle className='mr-2 h-4 w-4' />
-                                    Create New Template
-                                </Button>
-                                <p className='text-xs text-muted-foreground'>No template found for this item.</p>
-                            </div>
+                            <Button type="button" variant='outline' onClick={() => openTemplateDialog('add')}>
+                                <PlusCircle className='mr-2 h-4 w-4' />
+                                Create New Template
+                            </Button>
                         )}
-                        <Separator orientation='vertical' className='h-10 mx-2' />
                          <Button
                             type="button"
                             variant="link"
@@ -533,7 +512,7 @@ export function ButcheringForm() {
         isInternalCreation={true}
         internalCreationCategory={primaryItem?.category}
     />
-    {(activeTemplate || dialogMode === 'add') && primaryItem && (
+    {(dialogMode === 'add' || activeTemplate) && primaryItem && (
       <ButcheringTemplateDialog
         open={isTemplateDialogOpen}
         onOpenChange={setTemplateDialogOpen}
