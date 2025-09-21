@@ -163,44 +163,6 @@ export function ButcheringForm() {
     }
   }, [activeTemplate, inventory, replace]);
 
-
-  const totalYieldedWeightInKg = useMemo(() => {
-    return yieldedItems.reduce((sum, item) => {
-      if (!item.weight || item.weight === 0 || !item.fullDetails) return sum;
-      
-      let itemWeightInKg = 0;
-      try {
-        // Handle items measured by 'un.'
-        if (item.fullDetails.purchaseUnit === 'un.') {
-            const weightPerUnit = item.fullDetails.recipeUnitConversion;
-            const baseUnitOfItem = item.fullDetails.recipeUnit as Unit | undefined;
-
-            if (!baseUnitOfItem || !weightPerUnit || weightPerUnit === 0) {
-                console.warn(`Cannot calculate weight for unit-based item '${item.name}' without a valid conversion factor.`);
-                return sum;
-            }
-            // Calculate the total weight in its recipe unit (e.g., total oz for all fillets)
-            const totalWeightInBase = item.weight * weightPerUnit; 
-            // Convert that total weight to kg
-            itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
-
-        } else {
-          // Handle items measured by weight
-          itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
-        }
-      } catch (error) {
-          console.error("Error converting weight for yield calculation:", error);
-          return sum;
-      }
-      return sum + (itemWeightInKg || 0);
-    }, 0);
-  }, [yieldedItems]);
-  
-
-  const quantityUsedInKg = convert(quantityUsed, quantityUnit as Unit, 'kg');
-  const yieldPercentage = quantityUsedInKg > 0 ? (totalYieldedWeightInKg / quantityUsedInKg) * 100 : 0;
-  const lossPercentage = 100 - yieldPercentage;
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
@@ -229,7 +191,6 @@ export function ButcheringForm() {
 
       const finalData = {
         ...values,
-        primaryItemMaterialCode: primaryItem.materialCode,
         yieldedItems: itemsWithFinalCost,
       };
 
@@ -276,7 +237,6 @@ export function ButcheringForm() {
   };
 
   const primaryItem = inventory.find(i => i.id === primaryItemId);
-  const showSummary = yieldedItems.some(item => item.weight > 0) && quantityUsed > 0;
 
   return (
     <>
@@ -455,23 +415,6 @@ export function ButcheringForm() {
                     </>
                 )}
             </div>
-
-            {showSummary && (
-                <div className="w-full max-w-sm rounded-lg border bg-card text-card-foreground p-4 space-y-2">
-                    <div className='flex justify-between text-sm'>
-                        <span className='text-muted-foreground'>Total Yield Weight:</span>
-                        <span className='font-medium'>{totalYieldedWeightInKg.toFixed(3)} kg</span>
-                    </div>
-                    <div className='flex justify-between text-sm'>
-                        <span className='text-muted-foreground'>Total Yield %:</span>
-                        <span className={cn('font-medium', yieldPercentage > 100 ? 'text-destructive' : 'text-primary')}>{yieldPercentage.toFixed(2)}%</span>
-                    </div>
-                    <div className='flex justify-between text-sm'>
-                        <span className='text-muted-foreground'>Loss %:</span>
-                        <span className={cn('font-medium', lossPercentage < 0 ? 'text-destructive' : 'text-muted-foreground')}>{lossPercentage.toFixed(2)}%</span>
-                    </div>
-                </div>
-            )}
           </div>
         </fieldset>
         <div className="flex justify-end">
