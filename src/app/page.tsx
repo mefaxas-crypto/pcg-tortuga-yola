@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -18,77 +19,24 @@ import { ArrowUpRight, BarChart3, Bot, Package } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
+import { LowStockItems } from './dashboard/components/LowStockItems';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Revenue Today
-            </CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <line x1="12" x2="12" y1="2" y2="22" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$4,291.37</div>
-            <p className="text-xs text-muted-foreground">
-              +12.1% from yesterday
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sales Count</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+212</div>
-            <p className="text-xs text-muted-foreground">
-              +15% from last hour
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">
-              Items below par level
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-accent/20 border-accent/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              AI Waste Prediction
-            </CardTitle>
-            <Bot className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">~ $125.50</div>
-            <p className="text-xs text-muted-foreground">
-              Predicted waste for today
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Suspense fallback={
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      }>
+        <LowStockItems />
+      </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -99,9 +47,9 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="py-12 text-center text-muted-foreground">
-              Inventory tracking is not yet implemented.
-            </div>
+            <Suspense fallback={<div className="py-12 text-center text-muted-foreground">Loading...</div>}>
+                <LowStockItems showTable={true} />
+            </Suspense>
           </CardContent>
         </Card>
 
