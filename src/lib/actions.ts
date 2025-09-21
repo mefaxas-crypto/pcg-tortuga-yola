@@ -489,48 +489,58 @@ export async function logProduction(data: LogProductionData) {
 export async function logButchering(data: ButcheringData) {
   try {
     await runTransaction(db, async (transaction) => {
-      // 1. Fetch and validate the primary item
+      // --- 1. READ PHASE ---
+      // Get the primary item document
       const primaryItemRef = doc(db, 'inventory', data.primaryItemId);
       const primaryItemSnap = await transaction.get(primaryItemRef);
 
       if (!primaryItemSnap.exists()) {
         throw new Error('Primary butchering item not found in inventory.');
       }
-      const primaryItem = primaryItemSnap.data() as InventoryItem;
 
-      // 2. Deplete the primary item's stock
+      // Get all yielded item documents
+      const yieldedItemRefs = data.yieldedItems.map(item => doc(db, 'inventory', item.itemId));
+      const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
+
+      for (let i = 0; i < yieldedItemSnaps.length; i++) {
+        if (!yieldedItemSnaps[i].exists()) {
+          throw new Error(`Yielded item ${data.yieldedItems[i].name} could not be found in inventory.`);
+        }
+      }
+
+      // --- 2. CALCULATION/LOGIC PHASE ---
+      const primaryItem = primaryItemSnap.data() as InventoryItem;
       const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.unit as Unit);
-      
+
       // if (primaryItem.quantity < quantityToDeplete) {
       //   throw new Error(`Not enough stock for ${primaryItem.name}. You have ${primaryItem.quantity} ${primaryItem.unit} but need ${quantityToDeplete} ${primaryItem.unit}.`);
       // }
-
+      
       const newPrimaryQuantity = primaryItem.quantity - quantityToDeplete;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
+      const totalCostOfButcheredPortion = primaryItem.unitCost * quantityToDeplete;
+
+
+      // --- 3. WRITE PHASE ---
+      // Update the primary item
       transaction.update(primaryItemRef, {
         quantity: newPrimaryQuantity,
         status: newPrimaryStatus,
       });
 
-      const totalCostOfButcheredPortion = primaryItem.unitCost * quantityToDeplete;
-
-      // 3. Add or update the yielded items
-      for (const yieldedItemData of data.yieldedItems) {
-        const yieldedItemRef = doc(db, 'inventory', yieldedItemData.itemId);
-        const yieldedItemSnap = await transaction.get(yieldedItemRef);
-        
-        if (!yieldedItemSnap.exists()) {
-            throw new Error(`Yielded item ${yieldedItemData.name} could not be found in inventory.`)
-        }
-
+      // Update all the yielded items
+      for (let i = 0; i < yieldedItemSnaps.length; i++) {
+        const yieldedItemSnap = yieldedItemSnaps[i];
+        const yieldedItemData = data.yieldedItems[i];
         const yieldedItem = yieldedItemSnap.data() as InventoryItem;
+
         // The cost of the new item is proportional to its yield percentage of the total cost of the portion being butchered.
         const newYieldedItemCost = (totalCostOfButcheredPortion * (yieldedItemData.yieldPercentage / 100)) / yieldedItemData.weight;
         
         const newQuantity = yieldedItem.quantity + yieldedItemData.weight;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
 
-        transaction.update(yieldedItemRef, {
+        transaction.update(yieldedItemSnap.ref, {
             quantity: newQuantity,
             status: newStatus,
             // Update the cost based on this butchering event if it's a valid number
@@ -547,7 +557,7 @@ export async function logButchering(data: ButcheringData) {
     
     if (templateIndex > -1) {
       // Update existing template
-      const template = initialButcherTemplates[templateIndex];
+      const template = initialButcheryTemplates[templateIndex];
       data.yieldedItems.forEach(yielded => {
         if (!template.yields.some(y => y.id === yielded.materialCode)) {
           template.yields.push({ id: yielded.materialCode, name: yielded.name });
