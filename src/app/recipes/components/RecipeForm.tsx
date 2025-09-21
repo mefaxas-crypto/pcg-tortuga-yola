@@ -70,9 +70,10 @@ import { cn } from '@/lib/utils';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
 const formSchema = z.object({
-  recipeCode: z.string().min(1, 'Recipe code is required.').refine(val => !val.includes('/') && val.toLowerCase() !== 'n/a', {
-    message: 'Recipe code cannot be "N/A" or contain slashes.',
+  internalCode: z.string().min(1, 'Internal code is required.').refine(val => !val.includes('/') && val.toLowerCase() !== 'n/a', {
+    message: 'Internal code cannot be "N/A" or contain slashes.',
   }),
+  sapCode: z.string().optional(),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   isSubRecipe: z.boolean(),
   category: z.string(),
@@ -103,11 +104,11 @@ const formSchema = z.object({
       message: 'Category is required.',
     });
   }
-  if (data.isSubRecipe && !data.recipeCode) {
+  if (data.isSubRecipe && !data.internalCode) {
     ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['recipeCode'],
-        message: 'Recipe code is required for sub-recipes as it becomes its inventory ID.',
+        path: ['internalCode'],
+        message: 'Internal code is required for sub-recipes as it becomes its inventory ID.',
     });
   }
 });
@@ -166,7 +167,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      recipeCode: '',
+      internalCode: '',
+      sapCode: '',
       name: '',
       isSubRecipe: false,
       category: '',
@@ -196,7 +198,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   useEffect(() => {
     if (mode === 'edit' && recipe) {
       form.reset({
-        recipeCode: recipe.recipeCode,
+        internalCode: recipe.internalCode,
+        sapCode: recipe.sapCode,
         name: recipe.name,
         isSubRecipe: recipe.isSubRecipe,
         category: recipe.category,
@@ -257,7 +260,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                 id: doc.id,
                 name: data.name,
                 type: 'recipe',
-                code: data.recipeCode,
+                code: data.internalCode,
                 baseUnit: data.yieldUnit || 'un.',
                 costPerBaseUnit: data.totalCost / (data.yield || 1),
                 defaultRecipeUnit: data.yieldUnit || 'un.',
@@ -450,10 +453,10 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
-                name="recipeCode"
+                name="internalCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recipe Code</FormLabel>
+                    <FormLabel>Internal Code</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., SUB001" {...field} />
                     </FormControl>
@@ -464,9 +467,23 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
               />
               <FormField
                 control={form.control}
-                name="name"
+                name="sapCode"
                 render={({ field }) => (
                   <FormItem>
+                    <FormLabel>SAP Code (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 100284" {...field} />
+                    </FormControl>
+                    <FormDescription>The official SAP code for this recipe. Can be added later.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Recipe Name</FormLabel>
                     <FormControl>
                       <Input

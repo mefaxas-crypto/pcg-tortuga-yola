@@ -1,6 +1,5 @@
 
 
-
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -81,7 +80,8 @@ export type RecipeIngredient = {
 
 export type Recipe = {
   id: string;
-  recipeCode: string;
+  internalCode: string; // Used as the inventory ID for sub-recipes
+  sapCode?: string; // Official SAP code, can be added later
   name:string;
   isSubRecipe: boolean;
   category: string;

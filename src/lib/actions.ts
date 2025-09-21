@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -518,8 +519,8 @@ export async function logProduction(data: LogProductionData) {
           const recipe = snap.data() as Recipe;
           if (recipe.isSubRecipe) {
             inventoryRefsMap.set(
-              recipe.recipeCode,
-              doc(db, 'inventory', recipe.recipeCode)
+              recipe.internalCode,
+              doc(db, 'inventory', recipe.internalCode)
             );
           }
           recipe.ingredients.forEach((ing) => {
@@ -582,7 +583,7 @@ export async function logProduction(data: LogProductionData) {
           });
         }
 
-        const producedItemInvSnap = inventorySnapMap.get(subRecipe.recipeCode);
+        const producedItemInvSnap = inventorySnapMap.get(subRecipe.internalCode);
         if (producedItemInvSnap && producedItemInvSnap.exists()) {
           const producedItem = producedItemInvSnap.data() as InventoryItem;
           const newQuantity = producedItem.quantity + totalYieldQuantity;
@@ -591,10 +592,10 @@ export async function logProduction(data: LogProductionData) {
             status: getStatus(newQuantity, producedItem.parLevel),
           });
         } else {
-          const newInvItemRef = doc(db, 'inventory', subRecipe.recipeCode);
+          const newInvItemRef = doc(db, 'inventory', subRecipe.internalCode);
           const unitCost = subRecipe.totalCost / (subRecipe.yield || 1);
           transaction.set(newInvItemRef, {
-            materialCode: subRecipe.recipeCode,
+            materialCode: subRecipe.internalCode,
             name: subRecipe.name,
             category: 'Sub-recipe',
             quantity: totalYieldQuantity,
@@ -618,12 +619,15 @@ export async function logProduction(data: LogProductionData) {
       transaction.set(productionLogRef, {
         logDate: serverTimestamp(),
         user: 'Chef John Doe', // Placeholder
-        producedItems: data.items.map(item => ({
-          recipeId: item.recipeId,
-          recipeName: item.name,
-          quantityProduced: item.quantityProduced * (subRecipeSnaps.find(s=>s.id === item.recipeId)?.data()?.yield || 1),
-          yieldUnit: item.yieldUnit,
-        })),
+        producedItems: data.items.map(item => {
+          const subRecipe = subRecipeSnaps.find(s=>s.id === item.recipeId)?.data() as Recipe;
+          return {
+            recipeId: item.recipeId,
+            recipeName: item.name,
+            quantityProduced: item.quantityProduced * (subRecipe?.yield || 1),
+            yieldUnit: item.yieldUnit,
+          }
+        }),
       });
 
     });
@@ -664,7 +668,7 @@ export async function undoProductionLog(logId: string) {
       for (const recipeSnap of recipeSnaps) {
         if (recipeSnap.exists()) {
           const recipe = recipeSnap.data() as Recipe;
-          invItemRefsToFetch.add(doc(db, 'inventory', recipe.recipeCode));
+          invItemRefsToFetch.add(doc(db, 'inventory', recipe.internalCode));
           recipe.ingredients.forEach(ing => {
             const invItemId = ing.ingredientType === 'recipe' ? ing.itemCode : ing.itemId;
             invItemRefsToFetch.add(doc(db, 'inventory', invItemId));
@@ -706,7 +710,7 @@ export async function undoProductionLog(logId: string) {
         }
         
         // Deplete the produced sub-recipe
-        const producedInvItemSnap = invSnapMap.get(recipe.recipeCode);
+        const producedInvItemSnap = invSnapMap.get(recipe.internalCode);
         if (producedInvItemSnap && producedInvItemSnap.exists()) {
             const producedInvItem = producedInvItemSnap.data() as InventoryItem;
             const newQuantity = producedInvItem.quantity - producedItem.quantityProduced;
