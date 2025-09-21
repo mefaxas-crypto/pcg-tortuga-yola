@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -138,7 +137,6 @@ export function InventoryItemFormSheet({
       } else if (isInternalCreation) {
         form.reset({
           ...commonReset,
-          purchaseUnit: 'kg',
           supplierId: '',
         });
       } else {
@@ -172,7 +170,8 @@ export function InventoryItemFormSheet({
         querySnapshot.forEach((doc) => {
             categoriesData.push({ id: doc.id, ...doc.data() } as IngredientCategory);
         });
-        setCategories(categoriesData.sort((a, b) => a.name.localeCompare(b.name)));
+        // Filter out "Sub-recipe" as it's a system-reserved category for recipes only.
+        setCategories(categoriesData.filter(c => c.name !== 'Sub-recipe').sort((a, b) => a.name.localeCompare(b.name)));
     });
 
     return () => {

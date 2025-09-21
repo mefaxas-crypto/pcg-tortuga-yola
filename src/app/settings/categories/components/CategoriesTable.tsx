@@ -39,7 +39,8 @@ export function CategoriesTable() {
         querySnapshot.forEach((doc) => {
           categoriesData.push({ id: doc.id, ...doc.data() } as IngredientCategory);
         });
-        setCategories(categoriesData.sort((a, b) => a.name.localeCompare(b.name)));
+        // Filter out "Sub-recipe" as it's a system category and should not be managed here.
+        setCategories(categoriesData.filter(c => c.name !== 'Sub-recipe').sort((a, b) => a.name.localeCompare(b.name)));
         setLoading(false);
       },
       (error) => {
