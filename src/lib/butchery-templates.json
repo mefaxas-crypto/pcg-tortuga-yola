@@ -1,0 +1,27 @@
+{
+    "butcheryTemplates": [
+        {
+            "id": "template-short-loin-01",
+            "name": "Beef Short Loin Breakdown",
+            "primaryItemId": "a3sDf5G6hJkLpQ9wE2rT",
+            "yields": [
+                {
+                    "id": "yield-striploin-01",
+                    "name": "Striploin (0x1)"
+                },
+                {
+                    "id": "yield-tenderloin-01",
+                    "name": "Tenderloin (side muscle on)"
+                },
+                {
+                    "id": "yield-trim-01",
+                    "name": "Trim 80/20"
+                },
+                {
+                    "id": "yield-fat-01",
+                    "name": "Fat"
+                }
+            ]
+        }
+    ]
+}

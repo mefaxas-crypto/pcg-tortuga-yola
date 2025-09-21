@@ -18,8 +18,8 @@ export type InventoryItem = {
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
-export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier' | 'unitCost'>;
-export type EditInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier' | 'unitCost'>;
+export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
+export type EditInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
 
 
 export type Supplier = {
@@ -110,6 +110,7 @@ export type LogProductionData = {
 };
 
 export type ButcheringItem = {
+    itemId: string; // From template or custom
     name: string;
     weight: number;
     yieldPercentage: number;
@@ -120,4 +121,17 @@ export type ButcheringData = {
     quantityUsed: number;
     quantityUnit: string;
     yieldedItems: ButcheringItem[];
+}
+
+export type YieldItem = {
+  id: string;
+  name: string;
+  estimatedYield?: number;
+}
+
+export type ButcheryTemplate = {
+    id: string;
+    name: string;
+    primaryItemId: string;
+    yields: YieldItem[];
 }

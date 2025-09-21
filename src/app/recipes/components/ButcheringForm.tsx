@@ -44,13 +44,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import type { InventoryItem } from '@/lib/types';
+import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
+import { butcheryTemplates } from '@/lib/butchery-templates.json';
 
 const formSchema = z.object({
   primaryItemId: z.string().min(1, 'Please select a primary item to butcher.'),
@@ -59,6 +60,7 @@ const formSchema = z.object({
   yieldedItems: z
     .array(
       z.object({
+        itemId: z.string(), // ID from template or a generated one for custom items
         name: z.string().min(1, 'Item name is required.'),
         weight: z.coerce.number().min(0.01, 'Weight must be greater than 0.'),
       }),
@@ -82,7 +84,7 @@ export function ButcheringForm() {
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'yieldedItems',
   });
@@ -101,10 +103,40 @@ export function ButcheringForm() {
   
   const quantityUsed = form.watch('quantityUsed');
   const yieldedItems = form.watch('yieldedItems');
+  const primaryItemId = form.watch('primaryItemId');
+
+  const activeTemplate = useMemo(() => {
+    return (butcheryTemplates as ButcheryTemplateType[]).find(t => t.primaryItemId === primaryItemId);
+  }, [primaryItemId]);
+
+
   const totalYieldedWeight = yieldedItems.reduce((sum, item) => sum + (item.weight || 0), 0);
   const yieldPercentage = quantityUsed > 0 ? (totalYieldedWeight / quantityUsed) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
 
+  const handleAddYieldedItemFromTemplate = (templateYield: ButcheryTemplateType['yields'][0]) => {
+    if (fields.some(field => field.itemId === templateYield.id)) {
+      toast({
+        variant: 'destructive',
+        title: 'Item already added',
+        description: `"${templateYield.name}" is already in the yielded items list.`,
+      });
+      return;
+    }
+    append({
+      itemId: templateYield.id,
+      name: templateYield.name,
+      weight: 0,
+    });
+  }
+
+  const handleAddCustomYieldedItem = () => {
+    append({
+      itemId: `custom-${Date.now()}`, // Unique ID for custom item
+      name: '',
+      weight: 0,
+    });
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -270,6 +302,7 @@ export function ButcheringForm() {
                 {fields.map((field, index) => {
                   const itemWeight = form.getValues(`yieldedItems.${index}.weight`);
                   const itemYield = quantityUsed > 0 ? (itemWeight / quantityUsed) * 100 : 0;
+                  const isCustom = field.itemId.startsWith('custom-');
                   return (
                     <TableRow key={field.id}>
                       <TableCell>
@@ -277,7 +310,7 @@ export function ButcheringForm() {
                             control={form.control}
                             name={`yieldedItems.${index}.name`}
                             render={({ field }) => (
-                                <Input placeholder="e.g. Beef Fillet 8oz" {...field} />
+                                <Input placeholder="e.g. Beef Fillet 8oz" {...field} readOnly={!isCustom}/>
                             )}
                         />
                       </TableCell>
@@ -313,14 +346,53 @@ export function ButcheringForm() {
             </Table>
           </div>
           <div className='flex justify-between items-start'>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => append({ name: '', weight: 0 })}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Yielded Item
-            </Button>
+            <div className="flex flex-col gap-2">
+                {activeTemplate ? (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button type="button" variant="outline">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Yield From Template
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search yield cuts..." />
+                                <CommandList>
+                                    <CommandEmpty>No cuts found in template.</CommandEmpty>
+                                    <CommandGroup>
+                                        {activeTemplate.yields.map((yieldItem) => (
+                                            <CommandItem
+                                                key={yieldItem.id}
+                                                value={yieldItem.name}
+                                                onSelect={() => handleAddYieldedItemFromTemplate(yieldItem)}
+                                                className="flex justify-between items-center"
+                                            >
+                                                <span>{yieldItem.name}</span>
+                                                <Check className={cn("h-4 w-4", fields.some(f => f.itemId === yieldItem.id) ? "opacity-100" : "opacity-0")} />
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                ) : (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleAddCustomYieldedItem}
+                        disabled={!primaryItemId}
+                        title={!primaryItemId ? "Select a primary item first" : "Add custom yielded item"}
+                        >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Yielded Item
+                    </Button>
+                )}
+                {!activeTemplate && primaryItemId && (
+                    <p className='text-xs text-muted-foreground'>No template found. Add custom items.</p>
+                )}
+            </div>
+
             <div className='w-full max-w-sm space-y-2'>
               <div className='flex justify-between font-medium'>
                 <span>Total Yield Weight:</span>
