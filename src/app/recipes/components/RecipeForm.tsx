@@ -479,19 +479,19 @@ export function RecipeForm({
                                                                 </CommandItem>
                                                             ))}
                                                         </CommandGroup>
-                                                        <CommandGroup>
-                                                          <CommandItem
-                                                              onSelect={() => {
-                                                                  setIngredientSheetOpen(true);
-                                                                  setOpenPopoverIndex(null);
-                                                              }}
-                                                              className="text-primary focus:bg-primary/10 focus:text-primary"
-                                                          >
-                                                              <PlusCircle className="mr-2 h-4 w-4" />
-                                                              Create new ingredient
-                                                          </CommandItem>
-                                                        </CommandGroup>
                                                     </CommandList>
+                                                     <CommandGroup className="border-t">
+                                                      <CommandItem
+                                                          onSelect={() => {
+                                                              setIngredientSheetOpen(true);
+                                                              setOpenPopoverIndex(null);
+                                                          }}
+                                                          className="text-primary focus:bg-primary/10 focus:text-primary"
+                                                      >
+                                                          <PlusCircle className="mr-2 h-4 w-4" />
+                                                          Add New Ingredient to Inventory
+                                                      </CommandItem>
+                                                    </CommandGroup>
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
@@ -565,15 +565,6 @@ export function RecipeForm({
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Ingredient
                         </Button>
-                         <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIngredientSheetOpen(true)}
-                        >
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add New Ingredient to Inventory
-                        </Button>
                     </div>
                 </CardFooter>
             </Card>
@@ -617,4 +608,5 @@ export function RecipeForm({
     </>
   );
 }
+
 
