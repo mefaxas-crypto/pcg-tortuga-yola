@@ -207,10 +207,11 @@ export function InventoryItemFormSheet({
         }
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: `Failed to ${mode === 'add' ? 'add' : 'update'} ingredient. Please try again.`,
+        description: errorMessage.replace('Failed to add inventory item: ', '').replace('Failed to edit inventory item: ', ''),
       });
     } finally {
       setLoading(false);
@@ -218,13 +219,14 @@ export function InventoryItemFormSheet({
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // If purchase unit is 'un.' and we are adding a new item, we need conversion factor.
-    if (values.purchaseUnit === 'un.' && mode === 'add' && !values.recipeUnitConversion) {
+    // If the purchase unit is 'un.' and there is no conversion factor defined yet,
+    // we must ask the user for it before we can save the item.
+    if (values.purchaseUnit === 'un.' && !values.recipeUnitConversion) {
       setPendingFormValues(values);
       setConversionDialogOpen(true);
       return;
     }
-    // For edits or standard units, proceed directly.
+    // For standard units, or 'un.' items that already have a conversion, proceed directly.
     await completeSubmission(values);
   }
 
