@@ -10,12 +10,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RecipesTable } from './components/RecipesTable';
 import type { Recipe } from '@/lib/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ProductionForm } from './components/ProductionForm';
 
 
 export default function RecipesPage() {
@@ -47,21 +48,13 @@ export default function RecipesPage() {
         <TabsContent value="production">
             <Card>
                 <CardHeader>
-                <CardTitle>Production & Yield Management</CardTitle>
-                <CardDescription>Define specs for production and fabrication to calculate true cost and inventory.</CardDescription>
+                <CardTitle>Log Production</CardTitle>
+                <CardDescription>
+                  Record the production of a sub-recipe. This will deplete the required raw ingredients from your inventory and increase the stock of the finished sub-recipe.
+                </CardDescription>
                 </CardHeader>
                 <CardContent>
-                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[300px]">
-                    <div className="flex flex-col items-center gap-1 text-center">
-                    <Flame className="h-12 w-12 text-muted-foreground" />
-                    <h3 className="text-2xl mt-4 font-bold tracking-tight">
-                        Production Specs Coming Soon
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        Define specs for butchering and other production processes to calculate true cost and inventory.
-                    </p>
-                    </div>
-                </div>
+                  <ProductionForm />
                 </CardContent>
             </Card>
         </TabsContent>

@@ -25,6 +25,7 @@ import type {
   EditMenuData,
   EditRecipeData,
   InventoryItem,
+  LogProductionData,
   Recipe,
   Supplier,
 } from './types';
@@ -313,5 +314,97 @@ export async function logSale(saleData: AddSaleData) {
   } catch (error) {
     console.error('Error logging sale and depleting inventory: ', error);
     throw new Error('Failed to log sale.');
+  }
+}
+
+// Production Actions
+export async function logProduction(data: LogProductionData) {
+  try {
+    await runTransaction(db, async (transaction) => {
+      // 1. Fetch the sub-recipe being produced
+      const subRecipeRef = doc(db, 'recipes', data.recipeId);
+      const subRecipeSnap = await transaction.get(subRecipeRef);
+      if (!subRecipeSnap.exists() || !subRecipeSnap.data().isSubRecipe) {
+        throw new Error('Invalid sub-recipe selected for production.');
+      }
+      const subRecipe = subRecipeSnap.data() as Recipe;
+
+      // 2. Deplete the raw ingredients used in the production
+      for (const ingredient of subRecipe.ingredients) {
+        const invItemRef = doc(db, 'inventory', ingredient.itemId);
+        const invItemSnap = await transaction.get(invItemRef);
+        if (!invItemSnap.exists()) {
+          console.warn(`Ingredient ${ingredient.name} not found in inventory. Skipping depletion.`);
+          continue;
+        }
+        const invItem = invItemSnap.data() as InventoryItem;
+        
+        const quantityToDeplete = convert(
+            ingredient.quantity * data.quantityProduced,
+            ingredient.unit as any,
+            invItem.unit as any,
+        );
+
+        const newQuantity = invItem.quantity - quantityToDeplete;
+        const newStatus = getStatus(newQuantity, invItem.parLevel);
+
+        transaction.update(invItemRef, { 
+          quantity: newQuantity,
+          status: newStatus
+        });
+      }
+
+      // 3. Increase the stock of the produced sub-recipe
+      // Sub-recipes are also inventory items, so we find it there.
+      const producedItemQuery = query(collection(db, 'inventory'), where('materialCode', '==', subRecipe.recipeCode));
+      const producedItemSnap = await getDocs(producedItemQuery);
+      
+      if (producedItemSnap.empty) {
+        // If the sub-recipe doesn't exist as an inventory item, we should create it.
+        // This is a safeguard, ideally it should exist.
+        console.warn(`Sub-recipe ${subRecipe.name} not found in inventory. Creating a new entry.`);
+        
+        const newInvItemRef = doc(collection(db, 'inventory'));
+        const newQuantity = data.quantityProduced * (subRecipe.yield || 1);
+        
+        transaction.set(newInvItemRef, {
+            materialCode: subRecipe.recipeCode,
+            name: subRecipe.name,
+            category: subRecipe.category,
+            quantity: newQuantity,
+            unit: subRecipe.yieldUnit || 'unit',
+            purchaseUnit: 'Production',
+            conversionFactor: 1,
+            parLevel: 0, // Default par level
+            supplierId: '', // No supplier for produced items
+            supplier: 'In-house',
+            purchasePrice: 0,
+            unitCost: subRecipe.totalCost / (subRecipe.yield || 1),
+            allergens: [],
+            status: getStatus(newQuantity, 0),
+        });
+
+      } else {
+        const producedItemRef = producedItemSnap.docs[0].ref;
+        const producedItem = producedItemSnap.docs[0].data() as InventoryItem;
+        
+        const quantityToAdd = data.quantityProduced * (subRecipe.yield || 1);
+        const newQuantity = producedItem.quantity + quantityToAdd;
+        const newStatus = getStatus(newQuantity, producedItem.parLevel);
+
+        transaction.update(producedItemRef, {
+          quantity: newQuantity,
+          status: newStatus
+        });
+      }
+    });
+
+    revalidatePath('/inventory');
+    revalidatePath('/'); // Revalidate dashboard
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error during production logging:', error);
+    throw new Error('Failed to log production.');
   }
 }
