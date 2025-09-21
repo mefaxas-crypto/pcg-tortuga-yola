@@ -167,7 +167,7 @@ export function ButcheringForm() {
 
   const totalYieldedWeightInKg = useMemo(() => {
     return yieldedItems.reduce((sum, item) => {
-      if (item.weight === 0 || !item.fullDetails) return sum;
+      if (!item.weight || item.weight === 0 || !item.fullDetails) return sum;
       let itemWeightInKg = 0;
       try {
         if (item.fullDetails.unit === 'un.') {
