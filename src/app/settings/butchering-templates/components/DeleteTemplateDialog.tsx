@@ -58,7 +58,7 @@ export function DeleteTemplateDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            template "{templateName}".
+            template &quot;{templateName}&quot;.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -58,7 +58,7 @@ export function DeleteMenuDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            menu "{menuName}" from your records.
+            menu &quot;{menuName}&quot; from your records.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

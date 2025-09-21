@@ -21,7 +21,7 @@ export default function PurchasingPage() {
                 Purchase Order System Coming Soon
               </h3>
               <p className="text-sm text-muted-foreground">
-                You'll be able to create, receive, and track purchase orders here.
+                You&apos;ll be able to create, receive, and track purchase orders here.
               </p>
             </div>
           </div>

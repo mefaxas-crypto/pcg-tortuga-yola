@@ -38,7 +38,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -70,7 +69,7 @@ import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { cn } from '@/lib/utils';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
-const formSchema = z.object({
+export const formSchema = z.object({
   internalCode: z.string(),
   sapCode: z.string().optional(),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),

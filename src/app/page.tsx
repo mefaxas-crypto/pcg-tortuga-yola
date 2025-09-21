@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { topSellingItems } from '@/lib/data';
-import { ArrowUpRight, BarChart3, Bot, Package } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
@@ -58,7 +58,7 @@ export default function Home() {
             <div className="grid gap-2">
               <CardTitle>Top Selling Items</CardTitle>
               <CardDescription>
-                Today's most popular menu items.
+                Today&apos;s most popular menu items.
               </CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">

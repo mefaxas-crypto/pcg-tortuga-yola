@@ -14,6 +14,9 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { Percent } from 'lucide-react';
 import type { UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
+import { formSchema as recipeFormSchema } from './RecipeForm';
+
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -23,7 +26,7 @@ const formatCurrency = (value: number) => {
 };
 
 interface RecipeFinancialsCardProps {
-  form: UseFormReturn<any>; // Easiest to pass the whole form object
+  form: UseFormReturn<z.infer<typeof recipeFormSchema>>;
   totalRecipeCost: number;
   isSubRecipe: boolean;
 }

@@ -376,7 +376,7 @@ export function ButcheringForm() {
                       <SelectContent>
                         {Object.keys(allUnits).map((unitKey) => (
                           <SelectItem key={unitKey} value={unitKey}>
-                            {(allUnits as any)[unitKey].name}
+                            {(allUnits as Record<string, {name: string}>)[unitKey].name}
                           </SelectItem>
                         ))}
                       </SelectContent>

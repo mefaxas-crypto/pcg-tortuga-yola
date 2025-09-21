@@ -78,7 +78,7 @@ export function CategoryFormSheet({
             Add a New Ingredient Category
           </SheetTitle>
           <SheetDescription>
-            Enter the name of the new category. Click save when you're done.
+            Enter the name of the new category. Click save when you&apos;re done.
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>

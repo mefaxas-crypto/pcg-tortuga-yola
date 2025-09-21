@@ -57,7 +57,7 @@ export function DeleteInventoryItemDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            ingredient "{itemName}" from your inventory.
+            ingredient &quot;{itemName}&quot; from your inventory.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

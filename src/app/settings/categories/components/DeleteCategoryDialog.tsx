@@ -58,7 +58,7 @@ export function DeleteCategoryDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            category "{categoryName}" from your records. This will not delete ingredients within this category.
+            category &quot;{categoryName}&quot; from your records. This will not delete ingredients within this category.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

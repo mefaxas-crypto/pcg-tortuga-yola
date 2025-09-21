@@ -176,21 +176,18 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, open, setOpen, openMobile, setOpenMobile } = useSidebar()
-    const [isHovering, setIsHovering] = React.useState(false);
+    const { isMobile, state, setOpen, openMobile, setOpenMobile } = useSidebar()
     const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     const handleMouseEnter = () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      setIsHovering(true);
       setOpen(true);
     };
   
     const handleMouseLeave = () => {
       timeoutRef.current = setTimeout(() => {
-        setIsHovering(false);
         setOpen(false);
       }, 300); // 300ms delay before collapsing
     };

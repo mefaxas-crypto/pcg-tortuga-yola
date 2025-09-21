@@ -57,7 +57,7 @@ export function DeleteSupplierDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            supplier "{supplierName}" from your records.
+            supplier &quot;{supplierName}&quot; from your records.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -77,7 +77,7 @@ export function AllergenFormSheet({
             Add a New Allergen
           </SheetTitle>
           <SheetDescription>
-            Enter the name of the new allergen. Click save when you're done.
+            Enter the name of the new allergen. Click save when you&apos;re done.
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>

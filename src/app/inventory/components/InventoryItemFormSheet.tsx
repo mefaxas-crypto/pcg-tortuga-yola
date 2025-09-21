@@ -27,7 +27,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem, editInventoryItem } from '@/lib/actions';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Supplier, InventoryItem, Allergen, IngredientCategory } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -111,7 +111,7 @@ export function InventoryItemFormSheet({
     },
   });
 
-  const commonReset = {
+  const commonReset = useCallback(() => ({
       materialCode: '',
       name: '',
       category: '',
@@ -124,13 +124,13 @@ export function InventoryItemFormSheet({
       quantity: 0,
       recipeUnit: undefined,
       recipeUnitConversion: undefined,
-  };
+  }), []);
 
   useEffect(() => {
     if (open) {
       if (mode === 'edit' && item) {
         form.reset({
-          ...commonReset,
+          ...commonReset(),
           ...item,
           purchaseQuantity: item.purchaseQuantity,
           supplierId: item.supplierId || '',
@@ -138,15 +138,15 @@ export function InventoryItemFormSheet({
         });
       } else if (isInternalCreation) {
         form.reset({
-          ...commonReset,
+          ...commonReset(),
           supplierId: '',
           category: internalCreationCategory || '',
         });
       } else {
-        form.reset(commonReset);
+        form.reset(commonReset());
       }
     }
-  }, [item, mode, form, open, isInternalCreation, internalCreationCategory]);
+  }, [item, mode, form, open, isInternalCreation, internalCreationCategory, commonReset]);
 
   useEffect(() => {
     const qSuppliers = query(collection(db, 'suppliers'));

@@ -16,7 +16,6 @@ import {
   where,
   writeBatch,
   DocumentReference,
-  DocumentSnapshot,
   setDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
@@ -39,7 +38,7 @@ import type {
   Supplier,
 } from './types';
 import {revalidatePath} from 'next/cache';
-import { allUnits, Unit, convert, getBaseUnit } from './conversions';
+import { Unit, convert, getBaseUnit } from './conversions';
 
 // We are defining a specific type for adding a supplier
 // that doesn't require the `id` field, as it will be auto-generated.
@@ -522,19 +521,16 @@ export async function logSale(saleData: AddSaleData) {
 
       // 3. Deplete each ingredient
       for (const recipeIngredient of recipe.ingredients) {
-        const itemToDepleteRef = recipeIngredient.ingredientType === 'recipe' 
-          ? query(collection(db, 'inventory'), where('materialCode', '==', recipeIngredient.itemCode))
-          : doc(db, 'inventory', recipeIngredient.itemId);
-
         let invItemSnap;
-
         if (recipeIngredient.ingredientType === 'recipe') {
-            const querySnapshot = await getDocs(itemToDepleteRef as any); // Can't use transaction.get() on queries
-            if (!querySnapshot.empty) {
+            const itemToDepleteQuery = query(collection(db, 'inventory'), where('materialCode', '==', recipeIngredient.itemCode));
+            const querySnapshot = await getDocs(itemToDepleteQuery);
+             if (!querySnapshot.empty) {
                 invItemSnap = await transaction.get(querySnapshot.docs[0].ref);
             }
         } else {
-            invItemSnap = await transaction.get(itemToDepleteRef as any);
+            const itemToDepleteRef = doc(db, 'inventory', recipeIngredient.itemId);
+            invItemSnap = await transaction.get(itemToDepleteRef);
         }
 
         if (!invItemSnap || !invItemSnap.exists()) {

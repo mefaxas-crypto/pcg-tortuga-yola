@@ -57,7 +57,7 @@ export function DeleteRecipeDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            recipe "{recipeName}" from your records.
+            recipe &quot;{recipeName}&quot; from your records.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -6,11 +6,25 @@ import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
+import { Inter, Playfair_Display } from 'next/font/google';
 
 export const metadata: Metadata = {
   title: 'PCG Kitchen Manager',
   description: 'A comprehensive kitchen management system.',
 };
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-playfair-display',
+});
+
 
 export default function RootLayout({
   children,
@@ -18,12 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={`${inter.variable} ${playfairDisplay.variable}`}>
       <body className={cn('font-body antialiased min-h-screen')}>
         <SidebarProvider>
           <Sidebar>

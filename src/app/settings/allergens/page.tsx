@@ -4,7 +4,6 @@ import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { useState } from 'react';
-import type { Allergen } from '@/lib/types';
 import { AllergenFormSheet } from './components/AllergenFormSheet';
 import { AllergensTable } from './components/AllergensTable';
 

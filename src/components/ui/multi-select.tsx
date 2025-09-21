@@ -53,7 +53,7 @@ interface MultiSelectProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
   className?: string;
 }
 
-export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
+const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
   (
     {
       options,
@@ -63,7 +63,6 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
       placeholder = 'Select options',
       animation = 0,
       maxCount = 3,
-      asChild = false,
       className,
       ...props
     },
@@ -223,7 +222,10 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
     );
   },
 );
+MultiSelect.displayName = "MultiSelect";
 
 const Separator = () => {
   return <div className="mx-2 h-4 w-px bg-muted-foreground" />;
 };
+
+export { MultiSelect };

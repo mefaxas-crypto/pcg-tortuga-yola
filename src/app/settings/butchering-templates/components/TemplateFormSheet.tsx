@@ -117,9 +117,10 @@ export function TemplateFormSheet({
     return () => unsubscribe();
   }, []);
 
+  const watchedYields = form.watch('yields');
   const totalDistribution = useMemo(() => {
-    return form.getValues('yields').reduce((sum, y) => sum + y.costDistributionPercentage, 0);
-  }, [form.watch('yields')]);
+    return watchedYields.reduce((sum, y) => sum + y.costDistributionPercentage, 0);
+  }, [watchedYields]);
 
 
   const handleClose = () => {
@@ -183,7 +184,6 @@ export function TemplateFormSheet({
   }
 
   const primaryItemMaterialCode = form.watch('primaryItemMaterialCode');
-  const primaryItem = inventory.find(i => i.materialCode === primaryItemMaterialCode);
 
   const currentYields = form.watch('yields');
   const availableInventoryToAdd = inventory.filter(

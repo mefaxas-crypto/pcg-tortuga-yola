@@ -82,7 +82,7 @@ export function UnitConversionDialog({
         <DialogHeader>
           <DialogTitle>Define Unit Conversion</DialogTitle>
           <DialogDescription>
-            You've purchased "{itemName}" as a 'unit'. Please define how it
+            You&apos;ve purchased &quot;{itemName}&quot; as a &apos;unit&apos;. Please define how it
             should be measured in recipes.
           </DialogDescription>
         </DialogHeader>

@@ -57,7 +57,7 @@ export function DeleteAllergenDialog({
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
-            allergen "{allergenName}" from your records. Any ingredients marked with this allergen will not be updated automatically.
+            allergen &quot;{allergenName}&quot; from your records. Any ingredients marked with this allergen will not be updated automatically.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
