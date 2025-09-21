@@ -15,7 +15,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   
   // The 'use' hook must be called at the top level.
-  const resolvedParams = use(params);
+  const resolvedParams = use(Promise.resolve(params));
   const { id } = resolvedParams;
 
   useEffect(() => {
