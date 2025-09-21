@@ -697,21 +697,31 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
               <h4 className="font-medium">Add Ingredient</h4>
               <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <div className="relative w-full md:w-[300px]">
-                    <Command>
-                      <CommandInput placeholder="Search inventory & sub-recipes..." />
-                      <CommandList>
-                        {/* This list will be shown inside the popover */}
-                      </CommandList>
-                    </Command>
-                  </div>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full md:w-[300px] justify-start text-left font-normal"
+                  >
+                    <ChevronsUpDown className="mr-2 h-4 w-4" />
+                    Search inventory & sub-recipes...
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                   <Command>
-                    {/* Re-using CommandInput here to show it inside Popover */}
-                    <CommandInput placeholder="Search for an ingredient..." autoFocus />
+                    <CommandInput placeholder="Search for an ingredient..." />
                     <CommandList>
-                      <CommandEmpty>No ingredients found.</CommandEmpty>
+                      <CommandEmpty>
+                        <CommandItem
+                            onSelect={() => {
+                                setIngredientPopoverOpen(false);
+                                setNewIngredientSheetOpen(true);
+                            }}
+                            className='justify-center'
+                            >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Create New Ingredient
+                        </CommandItem>
+                      </CommandEmpty>
                       <CommandGroup heading="Sub-Recipes">
                         {selectableItems.filter(item => item.type === 'recipe').map((item) => (
                           <CommandItem
@@ -746,18 +756,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                             {item.name}
                           </CommandItem>
                         ))}
-                      </CommandGroup>
-                      <CommandSeparator />
-                      <CommandGroup>
-                        <CommandItem
-                          onSelect={() => {
-                            setIngredientPopoverOpen(false);
-                            setNewIngredientSheetOpen(true);
-                          }}
-                        >
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Create New Ingredient
-                        </CommandItem>
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -797,3 +795,5 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
+
+    
