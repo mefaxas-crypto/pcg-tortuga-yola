@@ -170,7 +170,7 @@ export function ButcheringForm() {
       if (item.weight === 0 || !item.fullDetails) return sum;
       let itemWeightInKg = 0;
       try {
-        if (item.fullDetails.purchaseUnit === 'un.') {
+        if (item.fullDetails.unit === 'un.') {
             const weightPerUnit = item.fullDetails.recipeUnitConversion;
             const baseUnitOfItem = item.fullDetails.recipeUnit as Unit | undefined;
 
@@ -490,4 +490,3 @@ export function ButcheringForm() {
     </>
   );
 }
-
