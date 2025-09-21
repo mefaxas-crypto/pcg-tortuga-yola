@@ -234,7 +234,9 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
   const { subRecipeSelectable, inventoryOnlySelectable } = useMemo(() => {
     const subRecipes = selectableItems.filter(item => item.type === 'recipe');
+    // Get a set of material codes that belong to sub-recipes
     const subRecipeCodes = new Set(subRecipes.map(item => item.code));
+    // Filter inventory items to exclude any that are also sub-recipes
     const inventory = selectableItems.filter(item => item.type === 'inventory' && !subRecipeCodes.has(item.code));
     return { subRecipeSelectable: subRecipes, inventoryOnlySelectable: inventory };
   }, [selectableItems]);
@@ -645,11 +647,17 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
           {/* Ingredients Card */}
           <Card>
-            <CardHeader>
-              <CardTitle>Ingredients</CardTitle>
-              <CardDescription>
-                Add ingredients from your inventory or other sub-recipes.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Ingredients</CardTitle>
+                <CardDescription>
+                  Add ingredients from your inventory or other sub-recipes.
+                </CardDescription>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setNewIngredientSheetOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Ingredient
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -762,19 +770,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           </PopoverAnchor>
                           <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                               <CommandList>
-                                <CommandEmpty>
-                                  <CommandGroup>
-                                    <CommandItem
-                                      onSelect={() => {
-                                        setIngredientPopoverOpen(false);
-                                        setNewIngredientSheetOpen(true);
-                                      }}
-                                    >
-                                      <PlusCircle className="mr-2 h-4 w-4" />
-                                      Create New Ingredient
-                                    </CommandItem>
-                                  </CommandGroup>
-                                </CommandEmpty>
+                                <CommandEmpty>No results found.</CommandEmpty>
                                 <CommandGroup heading="Sub-Recipes">
                                   {subRecipeSelectable.map((item) => (
                                     <CommandItem
