@@ -39,26 +39,26 @@ export default function RecipesPage() {
       <Tabs defaultValue="recipes">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="recipes">Recipes</TabsTrigger>
-          <TabsTrigger value="fabrication">Fabrication</TabsTrigger>
+          <TabsTrigger value="production">Production</TabsTrigger>
         </TabsList>
         <TabsContent value="recipes">
             <RecipesTable onEdit={handleEdit} />
         </TabsContent>
-        <TabsContent value="fabrication">
+        <TabsContent value="production">
             <Card>
                 <CardHeader>
-                <CardTitle>Fabrication & Yield Management</CardTitle>
-                <CardDescription>Define specs for butchering and fabrication to calculate true cost and inventory.</CardDescription>
+                <CardTitle>Production & Yield Management</CardTitle>
+                <CardDescription>Define specs for production and fabrication to calculate true cost and inventory.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[300px]">
                     <div className="flex flex-col items-center gap-1 text-center">
                     <Flame className="h-12 w-12 text-muted-foreground" />
                     <h3 className="text-2xl mt-4 font-bold tracking-tight">
-                        Fabrication Specs Coming Soon
+                        Production Specs Coming Soon
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        Define specs for butchering and fabrication to calculate true cost and inventory.
+                        Define specs for butchering and other production processes to calculate true cost and inventory.
                     </p>
                     </div>
                 </div>
