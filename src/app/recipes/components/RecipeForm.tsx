@@ -697,14 +697,15 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                 <h4 className="font-medium">Add Ingredient</h4>
                 <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
                     <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full md:w-[300px] justify-between"
-                    >
-                        Search inventory & sub-recipes...
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isIngredientPopoverOpen}
+                            className="w-full md:w-[300px] justify-between"
+                        >
+                            Search inventory & sub-recipes...
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                     <Command>
