@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -73,7 +72,7 @@ const formSchema = z.object({
   recipeCode: z.string().min(1, 'Recipe code is required.'),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   isSubRecipe: z.boolean(),
-  category: z.string().min(1, 'Category is required.'),
+  category: z.string(),
   menuId: z.string().optional(),
   yield: z.coerce.number().min(0).optional(),
   yieldUnit: z.string().optional(),
@@ -93,6 +92,14 @@ const formSchema = z.object({
     .min(1, 'A recipe must have at least one ingredient.'),
   contingencyPercentage: z.coerce.number().min(0).default(5),
   foodCostPercentage: z.coerce.number().min(0).max(100).default(30),
+}).superRefine((data, ctx) => {
+  if (!data.isSubRecipe && !data.category) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['category'],
+      message: 'Category is required.',
+    });
+  }
 });
 
 type RecipeFormProps = {
@@ -135,8 +142,6 @@ const availableUnits = [
   { value: 'oz', label: 'oz' },
   { value: 'floz', label: 'fl oz' },
   { value: 'unit', label: 'unit' },
-  { value: 'portion', label: 'portion' },
-  { value: 'each', label: 'each' },
 ];
 
 
@@ -310,7 +315,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     quantity: number,
     unit: string,
   ) => {
-    const ingredient = fields[index];
+    const ingredient = form.getValues(`ingredients.${index}`);
     const details = itemDetails[ingredient.itemId];
     if (!details) return;
 
@@ -347,6 +352,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     const recipeData = {
       ...values,
+      category: values.isSubRecipe ? 'Sub-recipe' : values.category,
       totalCost: totalRecipeCost,
       menuId: values.menuId === 'none' ? '' : values.menuId,
     };
@@ -386,6 +392,10 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     if (isSubRecipe) {
       form.setValue('menuId', 'none');
       form.setValue('category', 'Sub-recipe');
+    } else {
+       if (form.getValues('category') === 'Sub-recipe') {
+        form.setValue('category', '');
+       }
     }
   }, [isSubRecipe, form]);
 
@@ -521,8 +531,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {availableUnits.map(unit => (
-                                <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
+                             {Object.keys(allUnits).map(key => (
+                                <SelectItem key={key} value={key}>{allUnits[key as keyof typeof allUnits].name}</SelectItem>
                             ))}
                           </SelectContent>
                       </Select>
@@ -605,21 +615,21 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         <Input
                           type="number"
                           step="any"
-                          value={field.quantity}
-                          onChange={(e) =>
+                          defaultValue={field.quantity}
+                          onBlur={(e) =>
                             handleIngredientChange(
                               index,
                               parseFloat(e.target.value) || 0,
-                              field.unit,
+                              form.getValues(`ingredients.${index}.unit`),
                             )
                           }
                         />
                       </TableCell>
                       <TableCell>
                         <Select
-                          value={field.unit}
+                          defaultValue={field.unit}
                           onValueChange={(value) =>
-                            handleIngredientChange(index, field.quantity, value)
+                            handleIngredientChange(index, form.getValues(`ingredients.${index}.quantity`), value)
                           }
                         >
                           <SelectTrigger>
