@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import type { Recipe, InventoryItem, Menu } from '@/lib/types';
 import { addRecipe, editRecipe } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -156,6 +156,12 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
   const [itemDetails, setItemDetails] = useState<ItemDetails>({});
 
+  // Refs for keyboard navigation flow
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const quantityInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const unitSelectsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const lastAddedIngredientIndex = useRef<number | null>(null);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -178,6 +184,15 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     control: form.control,
     name: 'ingredients',
   });
+  
+  // Effect to focus on the new quantity input
+  useEffect(() => {
+    if (lastAddedIngredientIndex.current !== null) {
+      const index = lastAddedIngredientIndex.current;
+      quantityInputsRef.current[index]?.focus();
+      lastAddedIngredientIndex.current = null;
+    }
+  }, [fields.length]);
 
   const watchIngredients = form.watch('ingredients');
   const totalRecipeCost = useMemo(() => {
@@ -307,6 +322,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       return;
     }
 
+    const newIndex = fields.length;
     append({
       itemId: item.id,
       ingredientType: item.type,
@@ -316,6 +332,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       unit: item.defaultRecipeUnit, // Use the new default recipe unit
       totalCost: 0,
     });
+    lastAddedIngredientIndex.current = newIndex;
+
 
     // Store original details for conversion
     setItemDetails((prev) => ({
@@ -662,6 +680,13 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           type="number"
                           step="any"
                           defaultValue={field.quantity}
+                          ref={(el) => { quantityInputsRef.current[index] = el; }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              unitSelectsRef.current[index]?.focus();
+                            }
+                          }}
                           onBlur={(e) =>
                             handleIngredientChange(
                               index,
@@ -678,7 +703,15 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                             handleIngredientChange(index, form.getValues(`ingredients.${index}.quantity`), value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger
+                            ref={(el) => { unitSelectsRef.current[index] = el; }}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 searchInputRef.current?.focus();
+                               }
+                             }}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -714,6 +747,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         <Command>
                           <PopoverAnchor>
                             <CommandInput
+                              ref={searchInputRef}
                               value={searchValue}
                               onValueChange={(search) => {
                                 setSearchValue(search);
@@ -761,7 +795,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                       value={item.name}
                                       onSelect={() => handleIngredientAdd(item)}
                                     >
-                                      <Check className={cn('mr-2 h-4 w-4', fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0')} />
+                                      <Check className={cn('mr-2h-4 w-4', fields.some(i => i.itemId === item.id) ? 'opacity-100' : 'opacity-0')} />
                                       {item.name}
                                     </CommandItem>
                                   ))}
