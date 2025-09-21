@@ -135,8 +135,10 @@ export function RecipeForm({
   useEffect(() => {
     if (recipe && recipe.ingredients) {
       setSearchQueries(recipe.ingredients.map(ing => ing.name));
+    } else if (fields.length > 0 && searchQueries.length === 0) {
+      setSearchQueries(Array(fields.length).fill(''));
     }
-  }, [recipe]);
+  }, [recipe, fields.length, searchQueries.length]);
 
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
@@ -425,27 +427,33 @@ export function RecipeForm({
                                             name={`ingredients.${index}.inventoryItemId`}
                                             render={({ field: inventoryItemField }) => (
                                                 <FormItem>
-                                                    <Popover open={openPopoverIndex === index} onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}>
-                                                      <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                          <Input
-                                                            placeholder="Search ingredients..."
-                                                            value={currentSearchQuery}
-                                                            onChange={(e) => {
-                                                              const newQueries = [...searchQueries];
-                                                              newQueries[index] = e.target.value;
-                                                              setSearchQueries(newQueries);
-                                                              if (openPopoverIndex !== index) {
-                                                                  setOpenPopoverIndex(index);
-                                                              }
-                                                            }}
-                                                            onFocus={() => setOpenPopoverIndex(index)}
-                                                          />
-                                                        </FormControl>
-                                                      </PopoverTrigger>
-                                                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                        {/* Content will be added in the next step */}
-                                                      </PopoverContent>
+                                                    <Popover
+                                                        open={openPopoverIndex === index}
+                                                        onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}
+                                                    >
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Input
+                                                                    placeholder="Search ingredients..."
+                                                                    value={currentSearchQuery}
+                                                                    onChange={(e) => {
+                                                                        const newQueries = [...searchQueries];
+                                                                        newQueries[index] = e.target.value;
+                                                                        setSearchQueries(newQueries);
+                                                                        if (openPopoverIndex !== index) {
+                                                                            setOpenPopoverIndex(index);
+                                                                        }
+                                                                        form.setValue(`ingredients.${index}.inventoryItemId`, '');
+                                                                    }}
+                                                                    onFocus={() => {
+                                                                        setOpenPopoverIndex(index);
+                                                                    }}
+                                                                />
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                            {/* Content will be added in the next step */}
+                                                        </PopoverContent>
                                                     </Popover>
                                                     <FormMessage />
                                                 </FormItem>
@@ -564,3 +572,4 @@ export function RecipeForm({
   );
 }
 
+    
