@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -424,8 +425,19 @@ export async function editRecipe(id: string, recipeData: Omit<Recipe, 'id'>) {
 
 export async function deleteRecipe(recipeId: string) {
   try {
-    await deleteDoc(doc(db, 'recipes', recipeId));
+    const recipeRef = doc(db, 'recipes', recipeId);
+    const recipeSnap = await getDoc(recipeRef);
+    if (recipeSnap.exists()) {
+      const recipeData = recipeSnap.data() as Recipe;
+      if (recipeData.isSubRecipe) {
+        // If it's a sub-recipe, delete its corresponding inventory item.
+        const inventoryRef = doc(db, 'inventory', recipeData.internalCode);
+        await deleteDoc(inventoryRef);
+      }
+    }
+    await deleteDoc(recipeRef);
     revalidatePath('/recipes');
+    revalidatePath('/inventory');
     return {success: true};
   } catch (e) {
     console.error('Error deleting recipe: ', e);
@@ -595,11 +607,12 @@ export async function logProduction(data: LogProductionData) {
           }
           const invItem = invItemSnap.data() as InventoryItem;
           
-          // Calculate total amount of ingredient needed in its recipe unit (e.g., 'g', 'ml')
-          const totalIngredientNeeded = ingredient.quantity * itemToProduce.quantityProduced;
+          // Calculate total amount of ingredient needed for all batches in its recipe unit (e.g., 'g', 'ml')
+          const totalIngredientNeededInRecipeUnit = ingredient.quantity * itemToProduce.quantityProduced;
           
-          // Convert this amount to the inventory's tracking unit (e.g., 'kg', 'lt') for depletion
-          const quantityToDeplete = convert(totalIngredientNeeded, ingredient.unit as Unit, invItem.unit as Unit);
+          // Convert this amount to the inventory's base recipe unit, then to the final tracking unit.
+          const neededInBaseUnit = convert(totalIngredientNeededInRecipeUnit, ingredient.unit as Unit, invItem.recipeUnit as Unit);
+          const quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
           
           const newQuantity = invItem.quantity - quantityToDeplete;
           transaction.update(invItemSnap.ref, {
