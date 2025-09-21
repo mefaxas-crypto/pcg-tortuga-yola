@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -48,7 +49,7 @@ const formSchema = z.object({
   purchaseUnit: z.string().min(1, 'Purchase Unit is required.'),
   conversionFactor: z.coerce.number().min(0.0001, 'Conversion factor must be positive.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
-  supplierId: z.string().min(1, 'Supplier is required.'),
+  supplierId: z.string().optional(),
   purchasePrice: z.coerce.number().min(0, 'Purchase price must be a positive number.'),
   unitCost: z.coerce.number().min(0, 'Unit cost must be a positive number.'),
   allergens: z.array(z.string()).optional(),
@@ -78,7 +79,8 @@ const purchaseUnits = [
     // Individual Items
     'Each', 'Unit', 'Pack',
     // Special
-    'Butchery'
+    'Butchery',
+    'Production',
 ];
 
 // Units for use in recipes and internal tracking
@@ -103,6 +105,9 @@ export function InventoryItemFormSheet({
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
   const { toast } = useToast();
+  
+  // A flag to determine if the form is for a butchered/produced item.
+  const isInternalCreation = !!onItemCreated;
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -150,24 +155,41 @@ export function InventoryItemFormSheet({
           unitCost: item.unitCost || 0,
           allergens: item.allergens || [],
         });
-      } else {
-        form.reset({
+      } else if (isInternalCreation) {
+        // Defaults for butchering/production items
+         form.reset({
           materialCode: '',
           name: '',
           category: 'Meat',
           quantity: 0,
-          unit: 'kg', // Default for new butchered items
-          purchaseUnit: 'Butchery', // Default
+          unit: 'kg',
+          purchaseUnit: 'Butchery',
           conversionFactor: 1,
           parLevel: 0,
-          supplierId: suppliers.find(s => s.name === 'In-house Butchery')?.id || '',
+          supplierId: '', // No supplier needed, will default to 'In-house' on server
+          purchasePrice: 0,
+          unitCost: 0, // Cost is calculated during the butchering log
+          allergens: [],
+        });
+      } else {
+        // Standard "Add Ingredient" defaults
+        form.reset({
+          materialCode: '',
+          name: '',
+          category: '',
+          quantity: 0,
+          unit: '',
+          purchaseUnit: '',
+          conversionFactor: 1,
+          parLevel: 0,
+          supplierId: '',
           purchasePrice: 0,
           unitCost: 0,
           allergens: [],
         });
       }
     }
-  }, [item, mode, form, open, suppliers]);
+  }, [item, mode, form, open, isInternalCreation]);
 
   useEffect(() => {
     const qSuppliers = query(collection(db, 'suppliers'));
@@ -355,73 +377,78 @@ export function InventoryItemFormSheet({
                   />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
+            {!isInternalCreation && (
+                <>
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="purchaseUnit"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Purchase Unit</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="e.g., Case" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {purchaseUnits.map(unit => (
+                                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
                     control={form.control}
-                    name="purchaseUnit"
+                    name="purchasePrice"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Purchase Unit</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="e.g., Case" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {purchaseUnits.map(unit => (
-                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                        <FormLabel>Purchase Price</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} />
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
                     />
-                <FormField
-                  control={form.control}
-                  name="purchasePrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Purchase Price</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                </div>
 
-               <FormField
-                  control={form.control}
-                  name="conversionFactor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Conversion Factor</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.001" placeholder="e.g., 5000" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormDescription>How many recipe units are in one purchase unit?</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              
-               <FormField
-                  control={form.control}
-                  name="unitCost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit Cost (Auto-calculated)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} readOnly className="bg-muted/50" value={field.value || ''} />
-                      </FormControl>
-                      <FormDescription>The cost for one recipe unit (e.g., cost per gram).</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField
+                    control={form.control}
+                    name="conversionFactor"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Conversion Factor</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.001" placeholder="e.g., 5000" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription>How many recipe units are in one purchase unit?</FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                
+                <FormField
+                    control={form.control}
+                    name="unitCost"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Unit Cost (Auto-calculated)</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.001" placeholder="e.g., 0.05" {...field} readOnly className="bg-muted/50" value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription>The cost for one recipe unit (e.g., cost per gram).</FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </>
+            )}
+
               <FormField
                 control={form.control}
                 name="parLevel"
@@ -435,28 +462,32 @@ export function InventoryItemFormSheet({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="supplierId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Supplier</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a supplier" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {suppliers.map(supplier => (
-                          <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              
+              {!isInternalCreation && (
+                  <FormField
+                    control={form.control}
+                    name="supplierId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Supplier</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a supplier" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {suppliers.map(supplier => (
+                              <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
+              
               <FormField
                 control={form.control}
                 name="allergens"

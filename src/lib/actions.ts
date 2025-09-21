@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -118,7 +119,7 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
   }
 }
 
-async function getSupplierName(supplierId: string): Promise<string> {
+async function getSupplierName(supplierId?: string): Promise<string> {
     if (!supplierId) {
         return 'In-house'; // Or whatever default you prefer
     }
