@@ -421,7 +421,64 @@ export async function logProduction(data: LogProductionData) {
 }
 
 export async function logButchering(data: ButcheringData) {
-    // Placeholder function for now
-    console.log("Logging butchering data:", data);
+  try {
+    await runTransaction(db, async (transaction) => {
+      // 1. Fetch and validate the primary item
+      const primaryItemRef = doc(db, 'inventory', data.primaryItemId);
+      const primaryItemSnap = await transaction.get(primaryItemRef);
+
+      if (!primaryItemSnap.exists()) {
+        throw new Error('Primary butchering item not found in inventory.');
+      }
+      const primaryItem = primaryItemSnap.data() as InventoryItem;
+
+      // 2. Deplete the primary item's stock
+      const quantityToDeplete = convert(data.quantityUsed, data.quantityUnit as any, primaryItem.unit as any);
+      
+      if (primaryItem.quantity < quantityToDeplete) {
+        throw new Error(`Not enough stock for ${primaryItem.name}.`);
+      }
+
+      const newPrimaryQuantity = primaryItem.quantity - quantityToDeplete;
+      const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
+      transaction.update(primaryItemRef, {
+        quantity: newPrimaryQuantity,
+        status: newPrimaryStatus,
+      });
+
+      const totalCostOfButcheredPortion = primaryItem.unitCost * quantityToDeplete;
+
+      // 3. Add or update the yielded items
+      for (const yieldedItem of data.yieldedItems) {
+        const newYieldedItemCost = totalCostOfButcheredPortion * (yieldedItem.yieldPercentage / 100) / yieldedItem.weight;
+
+        const newInvItemRef = doc(collection(db, 'inventory'));
+        const newQuantity = yieldedItem.weight;
+        transaction.set(newInvItemRef, {
+            name: yieldedItem.name,
+            materialCode: `BUTCH-${primaryItem.materialCode}-${Date.now()}`, // Generate a unique code
+            category: primaryItem.category,
+            quantity: newQuantity,
+            unit: 'kg', // Assuming yielded items are measured in kg for now
+            purchaseUnit: 'Butchery',
+            conversionFactor: 1,
+            parLevel: 0,
+            supplier: 'In-house Butchery',
+            supplierId: '',
+            purchasePrice: 0, // Not purchased
+            unitCost: newYieldedItemCost,
+            allergens: primaryItem.allergens || [],
+            status: getStatus(newQuantity, 0),
+        });
+      }
+    });
+
+    revalidatePath('/inventory');
+    revalidatePath('/');
+
     return { success: true };
+  } catch (error) {
+    console.error('Error during butchering log:', error);
+    throw new Error(`Failed to log butchering: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
