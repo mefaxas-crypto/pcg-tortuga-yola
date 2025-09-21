@@ -70,9 +70,7 @@ import { cn } from '@/lib/utils';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
 const formSchema = z.object({
-  internalCode: z.string().min(1, 'Internal code is required.').refine(val => !val.includes('/') && val.toLowerCase() !== 'n/a', {
-    message: 'Internal code cannot be "N/A" or contain slashes.',
-  }),
+  internalCode: z.string(),
   sapCode: z.string().optional(),
   name: z.string().min(2, 'Recipe name must be at least 2 characters.'),
   isSubRecipe: z.boolean(),
@@ -102,13 +100,6 @@ const formSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['category'],
       message: 'Category is required.',
-    });
-  }
-  if (data.isSubRecipe && !data.internalCode) {
-    ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['internalCode'],
-        message: 'Internal code is required for sub-recipes as it becomes its inventory ID.',
     });
   }
 });
@@ -167,7 +158,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      internalCode: '',
+      internalCode: `SUB${Date.now()}`, // Auto-generate for new recipes
       sapCode: '',
       name: '',
       isSubRecipe: false,
@@ -199,7 +190,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     if (mode === 'edit' && recipe) {
       form.reset({
         internalCode: recipe.internalCode,
-        sapCode: recipe.sapCode,
+        sapCode: recipe.sapCode || '',
         name: recipe.name,
         isSubRecipe: recipe.isSubRecipe,
         category: recipe.category,
@@ -453,14 +444,16 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
-                name="internalCode"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Internal Code</FormLabel>
+                    <FormLabel>Recipe Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., SUB001" {...field} />
+                      <Input
+                        placeholder="e.g., Classic Tomato Soup"
+                        {...field}
+                      />
                     </FormControl>
-                    <FormDescription>A unique code for this recipe. If it's a sub-recipe, this will be its inventory ID.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -475,22 +468,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                       <Input placeholder="e.g., 100284" {...field} />
                     </FormControl>
                     <FormDescription>The official SAP code for this recipe. Can be added later.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Recipe Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Classic Tomato Soup"
-                        {...field}
-                      />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
