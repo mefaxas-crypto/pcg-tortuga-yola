@@ -98,8 +98,11 @@ export type Sale = {
 export type AddSaleData = Omit<Sale, 'id'>;
 
 export type ProductionItem = {
-  recipeId: string; // The ID of the sub-recipe to produce
-  quantityProduced: number; // How many batches/yields were made
+  recipeId: string;
+  name: string;
+  yield: number;
+  yieldUnit: string;
+  quantityProduced: number;
 };
 
 export type LogProductionData = {
