@@ -38,7 +38,7 @@ import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 
 const recipeIngredientSchema = z.object({
   inventoryItemId: z.string().min(1, 'Please select an ingredient.'),
@@ -136,12 +136,15 @@ export function RecipeForm({
 
   // Initialize search queries based on fields
   useEffect(() => {
-    if (recipe && recipe.ingredients) {
-        setSearchQueries(recipe.ingredients.map(ing => ing.name));
-    } else if (fields.length > 0 && searchQueries.length !== fields.length) {
-      setSearchQueries(fields.map(field => ''));
+    if (fields.length > searchQueries.length) {
+      const newQueries = [...searchQueries];
+      for(let i = searchQueries.length; i < fields.length; i++) {
+        const field = fields[i] as any;
+        newQueries.push(field.name || '');
+      }
+      setSearchQueries(newQueries);
     }
-  }, [fields.length, recipe]);
+  }, [fields, searchQueries]);
 
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
@@ -198,10 +201,16 @@ export function RecipeForm({
 
     if (mode === 'add' && fields.length === 0) {
       addEmptyIngredient();
+    } else if (mode === 'edit' && recipe) {
+       setSearchQueries(recipe.ingredients.map(ing => ing.name));
     }
 
+    return () => {
+      unsubscribeInventory();
+      unsubscribeMenus();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast, mode]);
+  }, [toast, mode, recipe]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -429,31 +438,34 @@ export function RecipeForm({
                                     <TableCell className="pt-2 pb-3 text-muted-foreground">{selectedItem?.materialCode || '-'}</TableCell>
                                     <TableCell className="pt-2 pb-3">
                                       <Popover
-                                        key={field.id}
                                         open={openPopoverIndex === index}
-                                        onOpenChange={(isOpen) => setOpenPopoverIndex(isOpen ? index : null)}
+                                        onOpenChange={(isOpen) => {
+                                          if (!isOpen) setOpenPopoverIndex(null)
+                                        }}
                                       >
                                         <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Search ingredients..."
-                                                    value={currentSearchQuery}
-                                                    onChange={(e) => {
-                                                      const newQueries = [...searchQueries];
-                                                      newQueries[index] = e.target.value;
-                                                      setSearchQueries(newQueries);
-                                                      if (e.target.value) {
-                                                          setOpenPopoverIndex(index);
-                                                      } else {
-                                                          setOpenPopoverIndex(null);
-                                                      }
-                                                    }}
-                                                    onFocus={() => {
-                                                        if(currentSearchQuery) setOpenPopoverIndex(index)
-                                                    }}
-                                                    className="w-full"
-                                                />
-                                            </FormControl>
+                                          <FormControl>
+                                            <Input
+                                                placeholder="Search ingredients..."
+                                                value={currentSearchQuery}
+                                                onChange={(e) => {
+                                                    const newQueries = [...searchQueries];
+                                                    newQueries[index] = e.target.value;
+                                                    setSearchQueries(newQueries);
+                                                    form.setValue(`ingredients.${index}.inventoryItemId`, ''); // Reset if user types
+                                                    
+                                                    if (e.target.value) {
+                                                        setOpenPopoverIndex(index);
+                                                    } else {
+                                                        setOpenPopoverIndex(null);
+                                                    }
+                                                }}
+                                                onFocus={() => {
+                                                    if (currentSearchQuery) setOpenPopoverIndex(index);
+                                                }}
+                                                className="w-full"
+                                            />
+                                          </FormControl>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                             <Command>
@@ -585,4 +597,3 @@ export function RecipeForm({
     </>
   );
 }
-
