@@ -48,11 +48,11 @@ import {
 import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
+import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType, YieldItem } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit } from '@/lib/conversions';
-import { logButchering } from '@/lib/actions';
+import { addButcheryTemplate, logButchering } from '@/lib/actions';
 import { butcheryTemplates as initialButcheryTemplates } from '@/lib/butchery-templates.json';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { ButcheringTemplateDialog } from './ButcheringTemplateDialog';
@@ -68,6 +68,7 @@ const formSchema = z.object({
         name: z.string().min(1, 'Item name is required.'),
         weight: z.coerce.number().min(0.01, 'Weight must be greater than 0.'),
         materialCode: z.string(),
+        costDistributionPercentage: z.number(),
       }),
     )
     .min(1, 'You must have at least one yielded item.'),
@@ -80,6 +81,7 @@ export function ButcheringForm() {
   const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
   const [butcheryTemplates, setButcheryTemplates] = useState<ButcheryTemplateType[]>(initialButcheryTemplates);
   const [isTemplateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('edit');
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -124,7 +126,7 @@ export function ButcheringForm() {
   const yieldPercentage = quantityUsed > 0 ? (totalYieldedWeight / quantityUsed) * 100 : 0;
   const lossPercentage = 100 - yieldPercentage;
 
-  const handleAddYieldedItemFromTemplate = (templateYield: { id: string, name: string }) => {
+  const handleAddYieldedItemFromTemplate = (templateYield: YieldItem) => {
     const yieldedInventoryItem = inventory.find(i => i.materialCode === templateYield.id);
     if (!yieldedInventoryItem) {
       toast({
@@ -147,6 +149,7 @@ export function ButcheringForm() {
       name: yieldedInventoryItem.name,
       weight: 0,
       materialCode: yieldedInventoryItem.materialCode,
+      costDistributionPercentage: templateYield.costDistributionPercentage,
     });
   }
 
@@ -200,6 +203,7 @@ export function ButcheringForm() {
         name: newItem.name,
         weight: 0,
         materialCode: newItem.materialCode,
+        costDistributionPercentage: 0, // Default cost distribution
     });
     setNewItemSheetOpen(false); // Close the sheet after appending
   };
@@ -210,7 +214,25 @@ export function ButcheringForm() {
     );
     setTemplateDialogOpen(false);
   }
+  
+  const handleCreateTemplate = async (newTemplate: ButcheryTemplateType) => {
+    try {
+        await addButcheryTemplate(newTemplate);
+        setButcheryTemplates(current => [...current, newTemplate]);
+        toast({ title: 'Template Created!', description: `New template for "${newTemplate.name}" was saved.` });
+        setTemplateDialogOpen(false);
+    } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: 'Error Creating Template' });
+    }
+  };
 
+  const openTemplateDialog = (mode: 'add' | 'edit') => {
+    setDialogMode(mode);
+    setTemplateDialogOpen(true);
+  }
+
+  const primaryItem = inventory.find(i => i.id === primaryItemId);
 
   return (
     <>
@@ -382,55 +404,62 @@ export function ButcheringForm() {
           </div>
           <div className='flex justify-between items-start'>
             <div className="flex flex-col gap-2">
-                {activeTemplate ? (
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                          <PopoverTrigger asChild>
-                              <Button type="button" variant="outline">
-                                  <PlusCircle className="mr-2 h-4 w-4" /> Add Yield From Template
-                              </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                              <Command>
-                                  <CommandInput placeholder="Search yield cuts..." />
-                                  <CommandList>
-                                      <CommandEmpty>No cuts found in template.</CommandEmpty>
-                                      <CommandGroup>
-                                          {activeTemplate.yields.map((yieldItem) => (
-                                              <CommandItem
-                                                  key={yieldItem.id}
-                                                  value={yieldItem.name}
-                                                  onSelect={() => handleAddYieldedItemFromTemplate(yieldItem)}
-                                                  className="flex justify-between items-center"
-                                              >
-                                                  <span>{yieldItem.name}</span>
-                                                  <Check className={cn("h-4 w-4", fields.some(f => inventory.find(i => i.materialCode === yieldItem.id)?.id === f.itemId) ? "opacity-100" : "opacity-0")} />
-                                              </CommandItem>
-                                          ))}
-                                      </CommandGroup>
-                                  </CommandList>
-                              </Command>
-                          </PopoverContent>
-                      </Popover>
-                      <Button type="button" variant="secondary" size="icon" onClick={() => setTemplateDialogOpen(true)}>
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Edit Template</span>
-                      </Button>
-                    </div>
-                ) : (
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setNewItemSheetOpen(true)}
-                        disabled={!primaryItemId}
-                        title={!primaryItemId ? "Select a primary item first" : "Add custom yielded item"}
+                {primaryItemId && (
+                    <>
+                        {activeTemplate ? (
+                            <div className="flex items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button type="button" variant="outline">
+                                            <PlusCircle className="mr-2 h-4 w-4" /> Add From Template
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search yield cuts..." />
+                                            <CommandList>
+                                                <CommandEmpty>No cuts found in template.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {activeTemplate.yields.map((yieldItem) => (
+                                                        <CommandItem
+                                                            key={yieldItem.id}
+                                                            value={yieldItem.name}
+                                                            onSelect={() => handleAddYieldedItemFromTemplate(yieldItem)}
+                                                            className="flex justify-between items-center"
+                                                        >
+                                                            <span>{yieldItem.name}</span>
+                                                            <Check className={cn("h-4 w-4", fields.some(f => inventory.find(i => i.materialCode === yieldItem.id)?.id === f.itemId) ? "opacity-100" : "opacity-0")} />
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <Button type="button" variant="secondary" size="icon" onClick={() => openTemplateDialog('edit')}>
+                                    <Pencil className="h-4 w-4" />
+                                    <span className="sr-only">Edit Template</span>
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className='flex flex-col gap-2'>
+                                <Button type="button" variant='outline' onClick={() => openTemplateDialog('add')}>
+                                    <PlusCircle className='mr-2 h-4 w-4' />
+                                    Create New Template
+                                </Button>
+                                <p className='text-xs text-muted-foreground'>No template found for this item.</p>
+                            </div>
+                        )}
+                        <Button
+                            type="button"
+                            variant="link"
+                            className='p-0 h-auto self-start'
+                            onClick={() => setNewItemSheetOpen(true)}
                         >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add New Yield Item
-                    </Button>
-                )}
-                {!activeTemplate && primaryItemId && (
-                    <p className='text-xs text-muted-foreground'>No template found. Add custom items.</p>
+                             <PlusCircle className="mr-2 h-3 w-3" />
+                            Add Custom Yield Item
+                        </Button>
+                    </>
                 )}
             </div>
 
@@ -464,17 +493,22 @@ export function ButcheringForm() {
         mode="add"
         isInternalCreation={true}
     />
-    {activeTemplate && (
+    {(activeTemplate || dialogMode === 'add') && primaryItem && (
       <ButcheringTemplateDialog
         open={isTemplateDialogOpen}
         onOpenChange={setTemplateDialogOpen}
-        template={activeTemplate}
+        template={activeTemplate || { 
+            id: `template-${primaryItem.materialCode}-${Date.now()}`,
+            name: `${primaryItem.name} Breakdown`,
+            primaryItemMaterialCode: primaryItem.materialCode,
+            yields: []
+        }}
         inventoryItems={inventory}
         onTemplateUpdate={handleTemplateUpdate}
+        onTemplateCreate={handleCreateTemplate}
+        mode={dialogMode}
       />
     )}
     </>
   );
 }
-
-    

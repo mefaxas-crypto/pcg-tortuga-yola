@@ -785,12 +785,17 @@ export async function logButchering(data: ButcheringData) {
       }
       const primaryItem = primaryItemSnap.data() as InventoryItem;
 
-      // Get yielded item documents
       const yieldedItemRefs = data.yieldedItems.map(item => doc(db, 'inventory', item.itemId));
       const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
       
+      const totalCostOfButcheredPortion = (primaryItem.purchasePrice / primaryItem.purchaseQuantity) * data.quantityUsed;
+      const totalDistributionPercentage = data.yieldedItems.reduce((acc, item) => acc + item.costDistributionPercentage, 0);
+
+      const useWeightBasedCosting = totalDistributionPercentage !== 100;
+      if (useWeightBasedCosting) {
+        console.warn('Cost distribution percentages do not add up to 100. Falling back to weight-based costing.');
+      }
       
-      // --- 2. CALCULATION/LOGIC PHASE ---
       const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
       
       if (quantityToDepleteInPurchaseUnit > primaryItem.quantity) {
@@ -800,9 +805,6 @@ export async function logButchering(data: ButcheringData) {
       const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInPurchaseUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
       
-      const totalCostOfButcheredPortion = (primaryItem.purchasePrice / primaryItem.purchaseQuantity) * quantityToDepleteInPurchaseUnit;
-
-      // --- 3. WRITE PHASE ---
       transaction.update(primaryItemRef, {
         quantity: newPrimaryQuantity,
         status: newPrimaryStatus,
@@ -819,9 +821,14 @@ export async function logButchering(data: ButcheringData) {
         }
         
         const yieldedItem = yieldedItemSnap.data() as InventoryItem;
-
-        const yieldedItemCostProportion = totalYieldedWeightInKg > 0 ? (yieldedItemData.weight / totalYieldedWeightInKg) : 0;
-        const costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
+        
+        let costOfThisYield;
+        if(useWeightBasedCosting) {
+            const yieldedItemCostProportion = totalYieldedWeightInKg > 0 ? (yieldedItemData.weight / totalYieldedWeightInKg) : 0;
+            costOfThisYield = totalCostOfButcheredPortion * yieldedItemCostProportion;
+        } else {
+            costOfThisYield = totalCostOfButcheredPortion * (yieldedItemData.costDistributionPercentage / 100);
+        }
         
         const quantityToAdd = convert(yieldedItemData.weight, 'kg' as Unit, yieldedItem.purchaseUnit as Unit);
 
@@ -839,45 +846,53 @@ export async function logButchering(data: ButcheringData) {
       }
     });
 
-    // 4. Update the butchery template
     const templateIndex = initialButcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
-    const primaryItem = await getDoc(doc(db, 'inventory', data.primaryItemId)).then(d => d.data() as InventoryItem);
-    
     if (templateIndex > -1) {
       const template = initialButcheryTemplates[templateIndex];
       data.yieldedItems.forEach(yielded => {
-        if (!template.yields.some(y => y.id === yielded.materialCode)) {
-          template.yields.push({ id: yielded.materialCode, name: yielded.name });
+        const existingYield = template.yields.find(y => y.id === yielded.materialCode);
+        if (existingYield) {
+            existingYield.costDistributionPercentage = yielded.costDistributionPercentage;
+        } else {
+            template.yields.push({ id: yielded.materialCode, name: yielded.name, costDistributionPercentage: yielded.costDistributionPercentage });
         }
-      });
-    } else {
-      initialButcheryTemplates.push({
-        id: `template-${data.primaryItemMaterialCode}-${Date.now()}`,
-        name: `${primaryItem.name} Breakdown`,
-        primaryItemMaterialCode: data.primaryItemMaterialCode,
-        yields: data.yieldedItems.map(y => ({ id: y.materialCode, name: y.name }))
       });
     }
 
     revalidatePath('/inventory');
     revalidatePath('/recipes');
-revalidatePath('/');
+    revalidatePath('/');
 
     return { success: true };
   } catch (error) {
     console.error('Error during butchering log:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    if (errorMessage.includes("Not enough stock")) {
-        return { success: false, error: errorMessage };
-    }
     throw new Error(`Failed to log butchering: ${errorMessage}`);
   }
 }
 
+export async function addButcheryTemplate(template: ButcheryTemplate) {
+    try {
+        console.log('Adding butchery template:', template);
+        // This is a mock implementation. In a real app, you would save this to a database.
+        const templateExists = initialButcheryTemplates.some(t => t.id === template.id || t.primaryItemMaterialCode === template.primaryItemMaterialCode);
+        if (templateExists) {
+            throw new Error("A template for this item already exists.");
+        }
+        initialButcheryTemplates.push(template);
+        revalidatePath('/recipes');
+        return { success: true };
+    } catch (error) {
+        console.error('Error adding butchery template:', error);
+        throw new Error('Failed to add butchery template.');
+    }
+}
+
+
 export async function updateButcheryTemplate(template: ButcheryTemplate) {
   try {
     console.log('Updating butchery template:', template);
-
+    // This is a mock implementation. In a real app, you would save this to a database.
     const templateIndex = initialButcheryTemplates.findIndex(t => t.id === template.id);
     if (templateIndex > -1) {
       initialButcheryTemplates[templateIndex] = template;
@@ -893,5 +908,3 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
-
-    

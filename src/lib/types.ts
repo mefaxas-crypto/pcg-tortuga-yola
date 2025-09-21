@@ -147,6 +147,7 @@ export type ButcheringItem = {
     weight: number;
     yieldPercentage: number;
     materialCode: string; // The material code of the yielded item
+    costDistributionPercentage: number;
 }
 
 export type ButcheringData = {
@@ -160,6 +161,7 @@ export type ButcheringData = {
 export type YieldItem = {
   id: string; // Material Code
   name: string;
+  costDistributionPercentage: number;
 }
 
 export type ButcheryTemplate = {
