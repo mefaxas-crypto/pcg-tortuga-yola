@@ -794,28 +794,16 @@ export async function logButchering(data: ButcheringData) {
       const yieldedItemRefs = producedItems.map(item => doc(db, 'inventory', item.itemId));
       const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
       
-      const costOfPrimaryItemPerRecipeUnit = primaryItem.unitCost;
-      const primaryItemUsedInRecipeUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.recipeUnit as Unit);
-      const totalCostOfButcheredPortion = costOfPrimaryItemPerRecipeUnit * primaryItemUsedInRecipeUnit;
-
-      const quantityToDepleteInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
+      const quantityUsedInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
       
-      if (quantityToDepleteInPurchaseUnit > primaryItem.quantity) {
-          throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity} ${primaryItem.purchaseUnit}, Required: ${quantityToDepleteInPurchaseUnit} ${primaryItem.purchaseUnit}`);
+      if (quantityUsedInPurchaseUnit > primaryItem.quantity) {
+          throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity} ${primaryItem.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit} ${primaryItem.purchaseUnit}`);
       }
-      
-      const totalCostDistribution = producedItems.reduce((sum, item) => sum + item.costDistributionPercentage, 0);
-      if (totalCostDistribution === 0) {
-          throw new Error("Total cost distribution percentage cannot be zero. Please assign cost distribution in the butchering template.");
-      }
-      const itemsWithFinalCost = producedItems.map(item => ({
-        ...item,
-        finalCostDistribution: (item.costDistributionPercentage / totalCostDistribution) * 100,
-      }));
 
+      const costOfButcheredPortion = primaryItem.purchasePrice * (quantityUsedInPurchaseUnit / primaryItem.purchaseQuantity);
 
       // --- 2. WRITE PHASE ---
-      const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInPurchaseUnit;
+      const newPrimaryQuantity = primaryItem.quantity - quantityUsedInPurchaseUnit;
       const newPrimaryStatus = getStatus(newPrimaryQuantity, primaryItem.parLevel);
       
       transaction.update(primaryItemRef, {
@@ -825,30 +813,28 @@ export async function logButchering(data: ButcheringData) {
       
       const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
 
-      for (let i = 0; i < itemsWithFinalCost.length; i++) {
-        const yieldedItemData = itemsWithFinalCost[i];
+      for (let i = 0; i < producedItems.length; i++) {
+        const yieldedItemData = producedItems[i];
         const yieldedItemSnap = yieldedItemSnaps[i];
         
         if (!yieldedItemSnap.exists()) {
           throw new Error(`Yielded item "${yieldedItemData.name}" could not be found. Please ensure it exists before logging butchery.`);
         }
-        
         const yieldedItem = yieldedItemSnap.data() as InventoryItem;
         
-        const costOfThisYield = totalCostOfButcheredPortion * (yieldedItemData.finalCostDistribution! / 100);
+        const costOfThisYield = costOfButcheredPortion * (yieldedItemData.costDistributionPercentage / 100);
         
-        const quantityToAddInPurchaseUnit = yieldedItemData.weight;
-        const quantityToAddInRecipeUnit = convert(quantityToAddInPurchaseUnit, yieldedItem.purchaseUnit as Unit, yieldedItem.recipeUnit as Unit);
-
+        const quantityToAddInPurchaseUnit = yieldedItemData.weight; // The form's 'weight' is the quantity in the item's purchase unit
         const newQuantity = yieldedItem.quantity + quantityToAddInPurchaseUnit;
         const newStatus = getStatus(newQuantity, yieldedItem.parLevel);
         
-        const newUnitCost = quantityToAddInRecipeUnit > 0 ? costOfThisYield / quantityToAddInRecipeUnit : 0;
+        // Calculate new purchase price based on the distributed cost for the quantity added
+        const newPurchasePrice = quantityToAddInPurchaseUnit > 0 ? costOfThisYield / quantityToAddInPurchaseUnit : 0;
         
         transaction.update(yieldedItemSnap.ref, {
             quantity: newQuantity,
             status: newStatus,
-            unitCost: isFinite(newUnitCost) ? newUnitCost : 0,
+            purchasePrice: isFinite(newPurchasePrice) ? newPurchasePrice : yieldedItem.purchasePrice, // Keep old price if new is not valid
         });
 
         yieldedItemsForLog.push({
@@ -867,7 +853,7 @@ export async function logButchering(data: ButcheringData) {
           primaryItem: {
               itemId: primaryItemSnap.id,
               itemName: primaryItem.name,
-              quantityUsed: quantityToDepleteInPurchaseUnit,
+              quantityUsed: quantityUsedInPurchaseUnit,
               unit: primaryItem.purchaseUnit as Unit,
           },
           yieldedItems: yieldedItemsForLog,
@@ -992,5 +978,3 @@ export async function deleteButcheryTemplate(id: string) {
         throw new Error('Failed to delete butchery template');
     }
 }
-
-
