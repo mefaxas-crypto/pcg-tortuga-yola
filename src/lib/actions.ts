@@ -1,6 +1,5 @@
 
 
-
 'use server';
 
 import {
@@ -101,7 +100,6 @@ export async function addInventoryItem(formData: InventoryFormData) {
   try {
     const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
     
-    // The unit for inventory tracking is always the purchase unit
     const inventoryUnit = purchaseUnit;
 
     let unitCost = 0;
@@ -998,3 +996,4 @@ export async function deleteButcheryTemplate(id: string) {
         throw new Error('Failed to delete butchery template');
     }
 }
+
