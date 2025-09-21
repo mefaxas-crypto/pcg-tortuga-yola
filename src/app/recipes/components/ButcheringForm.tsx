@@ -183,7 +183,7 @@ export function ButcheringForm() {
       toast({
         variant: 'destructive',
         title: 'Error Logging Butchering',
-        description: errorMessage,
+        description: errorMessage.replace('Failed to log butchering: ', ''), // Show a cleaner message
       });
     } finally {
       setLoading(false);
@@ -476,3 +476,5 @@ export function ButcheringForm() {
     </>
   );
 }
+
+    
