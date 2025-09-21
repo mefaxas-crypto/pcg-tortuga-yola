@@ -2,7 +2,7 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Settings, Shapes, Knife } from 'lucide-react';
+import { List, Settings, Shapes, UtensilsCrossed } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -45,7 +45,7 @@ export default function SettingsPage() {
          <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                <Knife />
+                <UtensilsCrossed />
                 Butchering Templates
                 </CardTitle>
                 <CardDescription>
