@@ -791,7 +791,12 @@ export async function logButchering(data: ButcheringData) {
       }
       const primaryItem = primaryItemSnap.data() as InventoryItem;
 
-      const yieldedItemRefs = data.yieldedItems.map(item => doc(db, 'inventory', item.itemId));
+      const producedItems = data.yieldedItems.filter(item => item.weight > 0);
+      if (producedItems.length === 0) {
+        throw new Error("No yielded items with a weight greater than 0 were provided.");
+      }
+
+      const yieldedItemRefs = producedItems.map(item => doc(db, 'inventory', item.itemId));
       const yieldedItemSnaps = await Promise.all(yieldedItemRefs.map(ref => transaction.get(ref)));
       
       const totalCostOfButcheredPortion = (primaryItem.unitCost * primaryItem.recipeUnitConversion) * data.quantityUsed;
@@ -801,6 +806,14 @@ export async function logButchering(data: ButcheringData) {
       if (quantityToDepleteInPurchaseUnit > primaryItem.quantity) {
           throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity} ${primaryItem.purchaseUnit}, Required: ${quantityToDepleteInPurchaseUnit} ${primaryItem.purchaseUnit}`);
       }
+      
+      // Re-distribute cost percentage among produced items
+      const totalCostDistribution = producedItems.reduce((sum, item) => sum + item.costDistributionPercentage, 0);
+      const itemsWithFinalCost = producedItems.map(item => ({
+        ...item,
+        finalCostDistribution: totalCostDistribution > 0 ? (item.costDistributionPercentage / totalCostDistribution) * 100 : (1 / producedItems.length) * 100, // Fallback to even distribution
+      }));
+
 
       // --- 2. WRITE PHASE ---
       const newPrimaryQuantity = primaryItem.quantity - quantityToDepleteInPurchaseUnit;
@@ -813,8 +826,8 @@ export async function logButchering(data: ButcheringData) {
       
       const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
 
-      for (let i = 0; i < data.yieldedItems.length; i++) {
-        const yieldedItemData = data.yieldedItems[i];
+      for (let i = 0; i < itemsWithFinalCost.length; i++) {
+        const yieldedItemData = itemsWithFinalCost[i];
         const yieldedItemSnap = yieldedItemSnaps[i];
         
         if (!yieldedItemSnap.exists()) {
@@ -845,7 +858,7 @@ export async function logButchering(data: ButcheringData) {
         });
 
         yieldedItemsForLog.push({
-            itemId: yieldedItem.id,
+            itemId: yieldedItemSnap.id,
             itemName: yieldedItem.name,
             quantityYielded: quantityToAdd,
             unit: yieldedItem.purchaseUnit as Unit,
@@ -858,7 +871,7 @@ export async function logButchering(data: ButcheringData) {
           logDate: serverTimestamp(),
           user: 'Chef John Doe', // Placeholder
           primaryItem: {
-              itemId: primaryItem.id,
+              itemId: primaryItemSnap.id,
               itemName: primaryItem.name,
               quantityUsed: quantityToDepleteInPurchaseUnit,
               unit: primaryItem.purchaseUnit as Unit,
@@ -875,7 +888,7 @@ export async function logButchering(data: ButcheringData) {
     return { success: true };
   } catch (error) {
     console.error('Error during butchering log:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(e);
     throw new Error(`Failed to log butchering: ${errorMessage}`);
   }
 }
@@ -977,3 +990,4 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
     throw new Error('Failed to update butchery template.');
   }
 }
+
