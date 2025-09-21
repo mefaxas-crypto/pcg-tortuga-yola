@@ -63,7 +63,7 @@ const yieldItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required.'),
   materialCode: z.string(),
   costDistributionPercentage: z.coerce.number().min(0),
-  fullDetails: z.custom<InventoryItem>().optional(),
+  fullDetails: z.custom<InventoryItem>(),
 });
 
 const formSchema = z.object({
@@ -126,7 +126,7 @@ export function ButcheringForm() {
   
   const quantityUsed = form.watch('quantityUsed');
   const quantityUnit = form.watch('quantityUnit');
-  const yieldedItems = form.watch('yieldedItems');
+  const watchedYieldedItems = form.watch('yieldedItems');
   const primaryItemId = form.watch('primaryItemId');
 
   const activeTemplate = useMemo(() => {
@@ -161,7 +161,7 @@ export function ButcheringForm() {
   }, [activeTemplate, inventory, replace]);
 
   const { totalYieldWeight, yieldPercentage, lossPercentage } = useMemo(() => {
-    if (quantityUsed <= 0 || yieldedItems.length === 0 || yieldedItems.some(i => !i.fullDetails)) {
+    if (quantityUsed <= 0 || !watchedYieldedItems || watchedYieldedItems.length === 0) {
       return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
     }
   
@@ -171,24 +171,18 @@ export function ButcheringForm() {
         return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
       }
       
-      const totalYieldInGrams = yieldedItems.reduce((sum, item) => {
-        if (!item.fullDetails || item.weight <= 0) return sum;
+      const totalYieldInGrams = watchedYieldedItems.reduce((sum, item) => {
+        if (!item.fullDetails || !item.weight || item.weight <= 0) return sum;
   
         const details = item.fullDetails;
         let itemWeightInGrams = 0;
   
-        // `item.weight` is the quantity entered by the user (e.g., 5 units, or 1 lb)
-        // `details.purchaseUnit` is the unit for that quantity (e.g., 'un.', 'lbs')
-  
         if (details.purchaseUnit === 'un.') {
-            // For 'un.' items, we need to convert the number of units to a weight.
-            // e.g., 5 un. * (6 oz / un.) -> convert to grams
             if (details.recipeUnit && details.recipeUnitConversion > 0) {
                 const totalWeightInRecipeUnits = item.weight * details.recipeUnitConversion;
                 itemWeightInGrams = convert(totalWeightInRecipeUnits, details.recipeUnit as Unit, 'g');
             }
         } else {
-            // For weight-based items, just convert the entered weight to grams.
             itemWeightInGrams = convert(item.weight, details.purchaseUnit as Unit, 'g');
         }
         
@@ -207,7 +201,7 @@ export function ButcheringForm() {
       return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
     }
   
-  }, [yieldedItems, quantityUsed, quantityUnit]);
+  }, [watchedYieldedItems, quantityUsed, quantityUnit]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
