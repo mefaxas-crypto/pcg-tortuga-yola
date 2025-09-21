@@ -1,4 +1,5 @@
 
+
 /**
  * @fileOverview A library of functions for converting between different units of measurement.
  * This library handles weight, volume, and will be expanded to handle item-specific densities.
@@ -19,7 +20,7 @@ export const allUnits = {
   'lt':   { name: 'Lt',      type: 'volume', factor: 1000 },
   'ml':   { name: 'mL',      type: 'volume', factor: 1 },
   'floz': { name: 'fl. oz',  type: 'volume', factor: 29.5735 },
-  'un':   { name: 'un.',     type: 'each',   factor: 1 },
+  'un.':   { name: 'un.',     type: 'each',   factor: 1 },
 };
 
 export type Unit = keyof typeof allUnits;
