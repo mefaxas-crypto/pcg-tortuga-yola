@@ -63,8 +63,6 @@ const yieldItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required.'),
   materialCode: z.string(),
   costDistributionPercentage: z.coerce.number().min(0),
-  // This object will be populated with the full inventory item details
-  // for accurate frontend calculations. It is not submitted to the backend.
   fullDetails: z.custom<InventoryItem>().optional(),
 });
 
@@ -137,7 +135,6 @@ export function ButcheringForm() {
     return butcheryTemplates.find(t => t.primaryItemMaterialCode === primaryItem.materialCode) || null;
   }, [primaryItemId, inventory, butcheryTemplates]);
 
-  // --- Automatic Template Loading ---
   useEffect(() => {
     if (activeTemplate) {
         const templateYields = activeTemplate.yields.map(templateYield => {
@@ -163,13 +160,16 @@ export function ButcheringForm() {
     }
   }, [activeTemplate, inventory, replace]);
 
-    const { totalYieldWeight, yieldPercentage, lossPercentage } = useMemo(() => {
-    if (quantityUsed <= 0 || yieldedItems.length === 0) {
+  const { totalYieldWeight, yieldPercentage, lossPercentage } = useMemo(() => {
+    if (quantityUsed <= 0 || yieldedItems.length === 0 || yieldedItems.some(i => !i.fullDetails)) {
       return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
     }
 
     try {
       const quantityUsedInGrams = convert(quantityUsed, quantityUnit as Unit, 'g');
+      if (quantityUsedInGrams === 0) {
+        return { totalYieldWeight: 0, yieldPercentage: 0, lossPercentage: 100 };
+      }
       
       const totalYieldInGrams = yieldedItems.reduce((sum, item) => {
         if (item.weight <= 0 || !item.fullDetails) return sum;
@@ -177,14 +177,19 @@ export function ButcheringForm() {
         const details = item.fullDetails;
         let itemWeightInGrams = 0;
 
-        if (details.unit === 'un.') {
-          // It's a 'unit' item, we need to convert its yield (e.g. 6oz) to grams
-          const weightPerUnit = convert(details.recipeUnitConversion, details.recipeUnit as Unit, 'g');
-          itemWeightInGrams = item.weight * weightPerUnit;
+        // The weight entered in the form is in the item's purchaseUnit
+        const enteredWeight = item.weight;
+        const enteredUnit = details.purchaseUnit as Unit;
+
+        if (details.purchaseUnit === 'un.') {
+            // It's a 'unit' item, we need to convert its yield (e.g. 6oz) to grams
+            const weightPerUnitInGrams = convert(details.recipeUnitConversion, details.recipeUnit as Unit, 'g');
+            itemWeightInGrams = enteredWeight * weightPerUnitInGrams;
         } else {
-          // It's already a weight item, just convert to grams
-          itemWeightInGrams = convert(item.weight, item.unit as Unit, 'g');
+            // It's already a weight item, just convert to grams
+            itemWeightInGrams = convert(enteredWeight, enteredUnit, 'g');
         }
+        
         return sum + itemWeightInGrams;
       }, 0);
       
@@ -208,7 +213,6 @@ export function ButcheringForm() {
       const primaryItem = inventory.find(i => i.id === values.primaryItemId);
       if (!primaryItem) throw new Error("Primary item not found");
 
-      // Filter out items with 0 weight
       const producedItems = values.yieldedItems.filter(item => item.weight > 0);
 
       if (producedItems.length === 0) {
@@ -221,7 +225,6 @@ export function ButcheringForm() {
         return;
       }
 
-      // Re-distribute cost percentage among produced items
       const totalCostDistribution = producedItems.reduce((sum, item) => sum + item.costDistributionPercentage, 0);
       const itemsWithFinalCost = producedItems.map(item => ({
         ...item,
