@@ -2,7 +2,7 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Settings, Shapes } from 'lucide-react';
+import { List, Settings, Shapes, Knife } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -39,6 +39,22 @@ export default function SettingsPage() {
             <CardContent>
                 <Button asChild>
                 <Link href="/settings/categories">Manage Categories</Link>
+                </Button>
+            </CardContent>
+        </Card>
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                <Knife />
+                Butchering Templates
+                </CardTitle>
+                <CardDescription>
+                Create and manage templates for butchering primary cuts into yields.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild>
+                <Link href="/settings/butchering-templates">Manage Templates</Link>
                 </Button>
             </CardContent>
         </Card>

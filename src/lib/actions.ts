@@ -40,7 +40,6 @@ import type {
 } from './types';
 import {revalidatePath} from 'next/cache';
 import { allUnits, Unit, convert, getBaseUnit } from './conversions';
-import { butcheryTemplates as initialButcheryTemplates } from './butchery-templates.json';
 
 // We are defining a specific type for adding a supplier
 // that doesn't require the `id` field, as it will be auto-generated.
@@ -888,7 +887,7 @@ export async function logButchering(data: ButcheringData) {
     return { success: true };
   } catch (error) {
     console.error('Error during butchering log:', error);
-    const errorMessage = error instanceof Error ? error.message : String(e);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to log butchering: ${errorMessage}`);
   }
 }
@@ -953,35 +952,31 @@ export async function undoButcheringLog(logId: string) {
 }
 
 
-export async function addButcheryTemplate(template: ButcheryTemplate) {
+export async function addButcheryTemplate(templateData: Omit<ButcheryTemplate, 'id'>) {
     try {
-        console.log('Adding butchery template:', template);
-        // This is a mock implementation. In a real app, you would save this to a database.
-        const templateExists = initialButcheryTemplates.some(t => t.id === template.id || t.primaryItemMaterialCode === template.primaryItemMaterialCode);
-        if (templateExists) {
-            throw new Error("A template for this item already exists.");
+        const q = query(collection(db, 'butcheryTemplates'), where('primaryItemMaterialCode', '==', templateData.primaryItemMaterialCode));
+        const existing = await getDocs(q);
+        if (!existing.empty) {
+            throw new Error(`A template for this primary item already exists.`);
         }
-        initialButcheryTemplates.push(template);
+
+        const docRef = await addDoc(collection(db, 'butcheryTemplates'), templateData);
+        revalidatePath('/settings/butchering-templates');
         revalidatePath('/recipes');
-        return { success: true };
+        return { success: true, id: docRef.id };
     } catch (error) {
         console.error('Error adding butchery template:', error);
-        throw new Error('Failed to add butchery template.');
+        throw new Error(`Failed to add butchery template: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
 
-export async function updateButcheryTemplate(template: ButcheryTemplate) {
+export async function updateButcheryTemplate(id: string, templateData: Partial<ButcheryTemplate>) {
   try {
-    console.log('Updating butchery template:', template);
-    // This is a mock implementation. In a real app, you would save this to a database.
-    const templateIndex = initialButcheryTemplates.findIndex(t => t.id === template.id);
-    if (templateIndex > -1) {
-      initialButcheryTemplates[templateIndex] = template;
-    } else {
-      throw new Error("Template not found for update.");
-    }
+    const templateRef = doc(db, 'butcheryTemplates', id);
+    await updateDoc(templateRef, templateData);
     
+    revalidatePath('/settings/butchering-templates');
     revalidatePath('/recipes');
 
     return { success: true };
@@ -991,3 +986,14 @@ export async function updateButcheryTemplate(template: ButcheryTemplate) {
   }
 }
 
+export async function deleteButcheryTemplate(id: string) {
+    try {
+        await deleteDoc(doc(db, 'butcheryTemplates', id));
+        revalidatePath('/settings/butchering-templates');
+        revalidatePath('/recipes');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting butchery template: ', e);
+        throw new Error('Failed to delete butchery template');
+    }
+}

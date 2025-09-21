@@ -45,18 +45,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, ChevronsUpDown, Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
-import { addButcheryTemplate, logButchering } from '@/lib/actions';
-import { butcheryTemplates as initialButcheryTemplates } from '@/lib/butchery-templates.json';
+import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
-import { ButcheringTemplateDialog } from './ButcheringTemplateDialog';
 import { Card, CardContent } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 const yieldItemSchema = z.object({
   itemId: z.string().min(1, 'Item ID is missing.'),
@@ -80,13 +79,12 @@ const formSchema = z.object({
 });
 
 export function ButcheringForm() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
-  const [butcheryTemplates, setButcheryTemplates] = useState<ButcheryTemplateType[]>(initialButcheryTemplates);
-  const [isTemplateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('edit');
+  const [butcheryTemplates, setButcheryTemplates] = useState<ButcheryTemplateType[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -105,15 +103,28 @@ export function ButcheringForm() {
   });
 
   useEffect(() => {
-    const q = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const qInv = query(collection(db, 'inventory'));
+    const unsubscribeInv = onSnapshot(qInv, (snapshot) => {
       const invItems: InventoryItem[] = [];
       snapshot.forEach((doc) => {
         invItems.push({ id: doc.id, ...doc.data() } as InventoryItem);
       });
       setInventory(invItems.sort((a, b) => a.name.localeCompare(b.name)));
     });
-    return () => unsubscribe();
+
+    const qTemplates = query(collection(db, 'butcheryTemplates'));
+    const unsubscribeTemplates = onSnapshot(qTemplates, (snapshot) => {
+        const templates: ButcheryTemplateType[] = [];
+        snapshot.forEach((doc) => {
+            templates.push({ id: doc.id, ...doc.data() } as ButcheryTemplateType);
+        });
+        setButcheryTemplates(templates);
+    });
+
+    return () => {
+        unsubscribeInv();
+        unsubscribeTemplates();
+    };
   }, []);
   
   const quantityUsed = form.watch('quantityUsed');
@@ -159,17 +170,16 @@ export function ButcheringForm() {
       if (item.weight === 0 || !item.fullDetails) return sum;
       let itemWeightInKg = 0;
       try {
-        if (item.fullDetails.unit === 'un.') {
-          const weightPerUnit = item.fullDetails.recipeUnitConversion || 0;
-          const baseUnitOfItem = item.fullDetails.recipeUnit as Unit | undefined;
-          
-          if (!baseUnitOfItem || weightPerUnit === 0) {
-             console.warn(`Cannot calculate weight for unit-based item '${item.name}' without conversion factor.`);
-             return sum;
-          }
-          // e.g., 5 un. * 6oz/un = 30oz
-          const totalWeightInBase = item.weight * weightPerUnit; 
-          itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
+        if (item.fullDetails.purchaseUnit === 'un.') {
+            const weightPerUnit = item.fullDetails.recipeUnitConversion;
+            const baseUnitOfItem = item.fullDetails.recipeUnit as Unit | undefined;
+
+            if (!baseUnitOfItem || !weightPerUnit || weightPerUnit === 0) {
+                console.warn(`Cannot calculate weight for unit-based item '${item.name}' without conversion factor.`);
+                return sum;
+            }
+            const totalWeightInBase = item.weight * weightPerUnit; 
+            itemWeightInKg = convert(totalWeightInBase, baseUnitOfItem, 'kg');
 
         } else {
           itemWeightInKg = convert(item.weight, item.unit as Unit, 'kg');
@@ -215,6 +225,7 @@ export function ButcheringForm() {
 
       const finalData = {
         ...values,
+        primaryItemMaterialCode: primaryItem.materialCode,
         yieldedItems: itemsWithFinalCost,
       };
 
@@ -259,34 +270,9 @@ export function ButcheringForm() {
     });
     setNewItemSheetOpen(false); 
   };
-  
-  const handleTemplateUpdate = (updatedTemplate: ButcheryTemplateType) => {
-    setButcheryTemplates(currentTemplates => 
-      currentTemplates.map(t => t.id === updatedTemplate.id ? updatedTemplate : t)
-    );
-    setTemplateDialogOpen(false);
-  }
-  
-  const handleCreateTemplate = async (newTemplate: ButcheryTemplateType) => {
-    try {
-        await addButcheryTemplate(newTemplate);
-        setButcheryTemplates(current => [...current, newTemplate]);
-        toast({ title: 'Template Created!', description: `New template for "${newTemplate.name}" was saved.` });
-        setTemplateDialogOpen(false);
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Error Creating Template' });
-    }
-  };
-
-  const openTemplateDialog = (mode: 'add' | 'edit') => {
-    setDialogMode(mode);
-    setTemplateDialogOpen(true);
-  }
 
   const primaryItem = inventory.find(i => i.id === primaryItemId);
   const showSummary = yieldedItems.some(item => item.weight > 0) && quantityUsed > 0;
-
 
   return (
     <>
@@ -442,7 +428,7 @@ export function ButcheringForm() {
                 {fields.length === 0 && (
                      <TableRow>
                         <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                            {primaryItemId ? 'No template found for this item. Create one or add custom yield items.' : 'Select a primary item to begin.'}
+                            {primaryItemId ? 'No template found for this item. Create or edit templates in Settings.' : 'Select a primary item to begin.'}
                         </TableCell>
                     </TableRow>
                 )}
@@ -453,18 +439,7 @@ export function ButcheringForm() {
             <div className="flex items-center gap-2">
                 {primaryItemId && (
                     <>
-                        {activeTemplate ? (
-                            <Button type="button" variant="secondary" size="sm" onClick={() => openTemplateDialog('edit')}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Template
-                            </Button>
-                        ) : (
-                            <Button type="button" variant='outline' onClick={() => openTemplateDialog('add')}>
-                                <PlusCircle className='mr-2 h-4 w-4' />
-                                Create New Template
-                            </Button>
-                        )}
-                         <Button
+                        <Button
                             type="button"
                             variant="link"
                             className='p-0 h-auto self-center'
@@ -512,22 +487,7 @@ export function ButcheringForm() {
         isInternalCreation={true}
         internalCreationCategory={primaryItem?.category}
     />
-    {(dialogMode === 'add' || activeTemplate) && primaryItem && (
-      <ButcheringTemplateDialog
-        open={isTemplateDialogOpen}
-        onOpenChange={setTemplateDialogOpen}
-        template={activeTemplate || { 
-            id: `template-${primaryItem.materialCode}-${Date.now()}`,
-            name: `${primaryItem.name} Breakdown`,
-            primaryItemMaterialCode: primaryItem.materialCode,
-            yields: []
-        }}
-        inventoryItems={inventory}
-        onTemplateUpdate={handleTemplateUpdate}
-        onTemplateCreate={handleCreateTemplate}
-        mode={dialogMode}
-      />
-    )}
     </>
   );
 }
+
