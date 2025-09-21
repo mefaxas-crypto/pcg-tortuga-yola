@@ -94,7 +94,9 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
 
     const supplierName = await getSupplierName(itemData.supplierId);
 
-    const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
+    const unitCost = itemData.purchasePrice > 0 && itemData.conversionFactor > 0 
+        ? itemData.purchasePrice / itemData.conversionFactor 
+        : itemData.unitCost || 0;
 
     const fullItemData = {
       ...itemData,
@@ -111,7 +113,7 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
     };
 
     revalidatePath('/inventory');
-    revalidatePath('/recipes/butchering');
+    revalidatePath('/recipes/**');
     return newItem;
   } catch (e) {
     console.error('Error adding document: ', e);
@@ -143,7 +145,9 @@ export async function editInventoryItem(
 
     const supplierName = await getSupplierName(itemData.supplierId);
 
-    const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
+    const unitCost = itemData.purchasePrice > 0 && itemData.conversionFactor > 0 
+        ? itemData.purchasePrice / itemData.conversionFactor 
+        : itemData.unitCost || 0;
 
     await updateDoc(itemRef, {
       ...itemData,

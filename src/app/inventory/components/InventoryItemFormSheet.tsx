@@ -131,11 +131,12 @@ export function InventoryItemFormSheet({
   const conversionFactor = form.watch('conversionFactor');
 
   useEffect(() => {
-    if (purchasePrice !== undefined && conversionFactor > 0) {
+    // Only auto-calculate unit cost for non-internal items
+    if (!isInternalCreation && purchasePrice !== undefined && conversionFactor > 0) {
       const newUnitCost = purchasePrice / conversionFactor;
       form.setValue('unitCost', newUnitCost, { shouldValidate: true });
     }
-  }, [purchasePrice, conversionFactor, form]);
+  }, [purchasePrice, conversionFactor, form, isInternalCreation]);
 
 
   useEffect(() => {
@@ -160,14 +161,14 @@ export function InventoryItemFormSheet({
          form.reset({
           materialCode: '',
           name: '',
-          category: 'Meat',
-          quantity: 0,
-          unit: 'kg',
+          category: 'Meat', // Default category for butchered items
+          quantity: 0, // Starts with 0 quantity, will be updated by butchering log
+          unit: 'kg', // Default unit for butchered items
           purchaseUnit: 'Butchery',
-          conversionFactor: 1,
+          conversionFactor: 1, // 1:1 since it's created internally
           parLevel: 0,
           supplierId: '', // No supplier needed, will default to 'In-house' on server
-          purchasePrice: 0,
+          purchasePrice: 0, // No direct purchase price
           unitCost: 0, // Cost is calculated during the butchering log
           allergens: [],
         });
@@ -281,9 +282,9 @@ export function InventoryItemFormSheet({
       <SheetContent className="overflow-y-auto">
         <Form {...form}>
           <SheetHeader>
-            <SheetTitle>{mode === 'add' ? 'Add a New Ingredient' : 'Edit Ingredient'}</SheetTitle>
+            <SheetTitle>{isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient')}</SheetTitle>
             <SheetDescription>
-              {mode === 'add' ? 'Enter the details of the new ingredient.' : 'Update the details for this ingredient.'}
+              {isInternalCreation ? 'Enter details for this new cut. Cost will be calculated from the butchering log.' : (mode === 'add' ? 'Enter the details of the new ingredient.' : 'Update the details for this ingredient.')}
             </SheetDescription>
           </SheetHeader>
           <form
@@ -323,7 +324,7 @@ export function InventoryItemFormSheet({
                   render={({ field }) => (
                       <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
                           <FormControl>
                           <SelectTrigger>
                               <SelectValue placeholder="Select a category" />
@@ -347,7 +348,7 @@ export function InventoryItemFormSheet({
                       <FormItem>
                       <FormLabel>Quantity</FormLabel>
                       <FormControl>
-                          <Input type="number" {...field} value={field.value || ''} />
+                          <Input type="number" {...field} value={field.value || ''} disabled={isInternalCreation} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -359,7 +360,7 @@ export function InventoryItemFormSheet({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Recipe Unit</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="e.g., g, ml" />
