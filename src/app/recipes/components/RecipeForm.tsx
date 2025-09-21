@@ -97,6 +97,7 @@ export function RecipeForm({
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
+  const [openPopover, setOpenPopover] = useState<number | null>(null);
 
   
   const { toast } = useToast();
@@ -132,6 +133,16 @@ export function RecipeForm({
     control: form.control,
     name: 'ingredients',
   });
+
+  useEffect(() => {
+    if (mode === 'add') {
+      // Preload with 4 empty rows
+      for (let i = 0; i < 4; i++) {
+        append({ inventoryItemId: '', name: '', materialCode: '', unit: '', unitPrice: 0, quantity: 0, totalCost: 0 });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [append, mode]);
 
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
@@ -372,12 +383,6 @@ export function RecipeForm({
             />
           </div>
           
-            <RecipeFinancialsCard 
-                form={form}
-                totalRecipeCost={totalRecipeCost}
-                isSubRecipe={isSubRecipe}
-            />
-
             <Card>
                 <CardHeader>
                     <CardTitle>Ingredients</CardTitle>
@@ -396,7 +401,149 @@ export function RecipeForm({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {/* We will map over 'fields' here later */}
+                             {fields.map((field, index) => (
+                                <TableRow key={field.id}>
+                                    <TableCell>
+                                        <FormField
+                                        control={form.control}
+                                        name={`ingredients.${index}.materialCode`}
+                                        render={({ field }) => (
+                                            <Input {...field} disabled />
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                        control={form.control}
+                                        name={`ingredients.${index}.inventoryItemId`}
+                                        render={({ field }) => (
+                                            <Popover open={openPopover === index} onOpenChange={(isOpen) => setOpenPopover(isOpen ? index : null)}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                        "w-full justify-between",
+                                                        !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {field.value
+                                                        ? inventory.find(
+                                                            (item) => item.id === field.value
+                                                          )?.name
+                                                        : "Select ingredient"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search ingredient..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>
+                                                                <div className='p-4 text-sm'>
+                                                                    No ingredient found.
+                                                                    <Button size="sm" className='mt-2 w-full' onClick={() => setIngredientSheetOpen(true)}>Add New Ingredient</Button>
+                                                                </div>
+                                                            </CommandEmpty>
+                                                            <CommandGroup>
+                                                            {inventory.map((item) => (
+                                                                <CommandItem
+                                                                value={item.name}
+                                                                key={item.id}
+                                                                onSelect={() => {
+                                                                    const selectedItem = inventory.find(i => i.id === item.id);
+                                                                    if (selectedItem) {
+                                                                        update(index, { 
+                                                                            ...ingredients[index],
+                                                                            inventoryItemId: selectedItem.id,
+                                                                            name: selectedItem.name,
+                                                                            materialCode: selectedItem.materialCode,
+                                                                            unit: selectedItem.unitOfStock,
+                                                                            unitPrice: selectedItem.unitPrice,
+                                                                        });
+                                                                        const quantity = form.getValues(`ingredients.${index}.quantity`);
+                                                                        form.setValue(`ingredients.${index}.totalCost`, (quantity || 0) * selectedItem.unitPrice);
+                                                                    }
+                                                                    setOpenPopover(null);
+                                                                }}
+                                                                >
+                                                                <Check
+                                                                    className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    item.id === field.value
+                                                                        ? "opacity-100"
+                                                                        : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {item.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                        control={form.control}
+                                        name={`ingredients.${index}.quantity`}
+                                        render={({ field }) => (
+                                            <Input 
+                                                type="number"
+                                                {...field} 
+                                                onChange={(e) => {
+                                                    field.onChange(e);
+                                                    const unitPrice = form.getValues(`ingredients.${index}.unitPrice`);
+                                                    form.setValue(`ingredients.${index}.totalCost`, Number(e.target.value) * unitPrice);
+                                                }}
+                                            />
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                        control={form.control}
+                                        name={`ingredients.${index}.unit`}
+                                        render={({ field }) => (
+                                            <Input {...field} disabled />
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <FormField
+                                        control={form.control}
+                                        name={`ingredients.${index}.unitPrice`}
+                                        render={({ field }) => (
+                                            <span>{formatCurrency(field.value)}</span>
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <FormField
+                                        control={form.control}
+                                        name={`ingredients.${index}.totalCost`}
+                                        render={({ field }) => (
+                                            <span>{formatCurrency(field.value)}</span>
+                                        )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => remove(index)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -405,12 +552,19 @@ export function RecipeForm({
                         type="button"
                         variant="outline"
                         size="sm"
+                        onClick={() => append({ inventoryItemId: '', name: '', materialCode: '', unit: '', unitPrice: 0, quantity: 0, totalCost: 0 })}
                     >
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Ingredient
                     </Button>
                 </CardFooter>
             </Card>
+
+            <RecipeFinancialsCard 
+                form={form}
+                totalRecipeCost={totalRecipeCost}
+                isSubRecipe={isSubRecipe}
+            />
           
             <FormField
               control={form.control}
