@@ -54,7 +54,6 @@ import {
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
   PopoverAnchor,
 } from '@/components/ui/popover';
 import {
@@ -66,7 +65,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
+import { Check, PlusCircle, Trash2 } from 'lucide-react';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { cn } from '@/lib/utils';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
@@ -153,7 +152,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
   const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
 
   const [itemDetails, setItemDetails] = useState<ItemDetails>({});
 
@@ -212,6 +210,13 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
     return [...invSelectable, ...subSelectable].sort((a,b) => a.name.localeCompare(b.name));
   }, [inventoryItems, subRecipeItems]);
+
+  const { subRecipeSelectable, inventoryOnlySelectable } = useMemo(() => {
+    const subRecipes = selectableItems.filter(item => item.type === 'recipe');
+    const subRecipeCodes = new Set(subRecipes.map(item => item.code));
+    const inventory = selectableItems.filter(item => item.type === 'inventory' && !subRecipeCodes.has(item.code));
+    return { subRecipeSelectable: subRecipes, inventoryOnlySelectable: inventory };
+  }, [selectableItems]);
 
 
   useEffect(() => {
@@ -284,13 +289,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
       unsubMenus();
     };
   }, [mode, recipe?.id]);
-
-  const { subRecipeSelectable, inventoryOnlySelectable } = useMemo(() => {
-    const subRecipes = selectableItems.filter(item => item.type === 'recipe');
-    const subRecipeCodes = new Set(subRecipes.map(item => item.code));
-    const inventory = selectableItems.filter(item => item.type === 'inventory' && !subRecipeCodes.has(item.code));
-    return { subRecipeSelectable: subRecipes, inventoryOnlySelectable: inventory };
-  }, [selectableItems]);
 
 
   const handleIngredientAdd = (item: SelectableItem) => {
@@ -422,15 +420,6 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     }
   }
   
-  const handleSearchValueChange = (value: string) => {
-    setSearchValue(value);
-    if(value) {
-        setIngredientPopoverOpen(true);
-    } else {
-        setIngredientPopoverOpen(false);
-    }
-  };
-
   const isSubRecipe = form.watch('isSubRecipe');
 
   useEffect(() => {
@@ -716,25 +705,31 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     <TableCell colSpan={2}>
                       <Popover open={isIngredientPopoverOpen} onOpenChange={setIngredientPopoverOpen}>
                           <PopoverAnchor>
-                            <Command>
+                            <Command shouldFilter={false}>
                               <CommandInput
                                 placeholder="Search to add ingredient..."
-                                onValueChange={handleSearchValueChange}
+                                onValueChange={(value) => {
+                                  if (value) {
+                                    setIngredientPopoverOpen(true);
+                                  } else {
+                                    setIngredientPopoverOpen(false);
+                                  }
+                                }}
                               />
                               <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                                 <CommandList>
                                   <CommandEmpty>
-                                    <CommandGroup>
-                                      <CommandItem
-                                        onSelect={() => {
-                                          setIngredientPopoverOpen(false);
-                                          setNewIngredientSheetOpen(true);
-                                        }}
-                                      >
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Create New Ingredient
-                                      </CommandItem>
-                                    </CommandGroup>
+                                      <CommandGroup>
+                                        <CommandItem
+                                          onSelect={() => {
+                                            setIngredientPopoverOpen(false);
+                                            setNewIngredientSheetOpen(true);
+                                          }}
+                                        >
+                                          <PlusCircle className="mr-2 h-4 w-4" />
+                                          Create New Ingredient
+                                        </CommandItem>
+                                      </CommandGroup>
                                   </CommandEmpty>
                                   <CommandGroup heading="Sub-Recipes">
                                     {subRecipeSelectable.map((item) => (
@@ -805,5 +800,3 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
-
-    
