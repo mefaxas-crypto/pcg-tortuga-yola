@@ -39,6 +39,7 @@ import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Check } from 'lucide-react';
+import { allUnits } from '@/lib/conversions';
 
 
 const recipeIngredientSchema = z.object({
@@ -133,12 +134,6 @@ export function RecipeForm({
     control: form.control,
     name: 'ingredients',
   });
-
-  useEffect(() => {
-    if (mode === 'add' && fields.length === 0) {
-      append(initialIngredient);
-    }
-  }, [append, mode, fields.length]);
 
   const isSubRecipe = form.watch('isSubRecipe');
   const ingredients = form.watch('ingredients');
@@ -500,11 +495,22 @@ export function RecipeForm({
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <FormField
+                                    <FormField
                                         control={form.control}
                                         name={`ingredients.${index}.unit`}
                                         render={({ field }) => (
-                                            <Input {...field} disabled />
+                                          <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Unit" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              {Object.keys(allUnits).map(unit => (
+                                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
                                         )}
                                         />
                                     </TableCell>
