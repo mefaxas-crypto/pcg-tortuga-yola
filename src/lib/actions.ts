@@ -19,21 +19,18 @@ import {
 import {db} from './firebase';
 import type {
   AddAllergenData,
-  AddInventoryItemData,
   AddMenuData,
   AddRecipeData,
   AddSaleData,
   ButcheringData,
-  EditInventoryItemData,
-  EditMenuData,
-  EditRecipeData,
+  InventoryFormData,
   InventoryItem,
   LogProductionData,
   Recipe,
   Supplier,
 } from './types';
 import {revalidatePath} from 'next/cache';
-import { Unit, convert } from './conversions';
+import { allUnits, Unit, convert } from './conversions';
 import { butcheryTemplates } from './butchery-templates.json';
 
 // We are defining a specific type for adding a supplier
@@ -91,22 +88,44 @@ function getStatus(
   }
 }
 
-export async function addInventoryItem(itemData: AddInventoryItemData) {
+// Determines the base unit for an item (e.g., g, ml, or each)
+function getBaseUnit(purchaseUnit: Unit): Unit {
+    const unitInfo = allUnits[purchaseUnit];
+    if (unitInfo.type === 'weight') return 'g';
+    if (unitInfo.type === 'volume') return 'ml';
+    return 'each';
+}
+
+export async function addInventoryItem(formData: InventoryFormData) {
   try {
-    const status = getStatus(itemData.quantity, itemData.parLevel);
+    const { purchaseQuantity, purchaseUnit, purchasePrice, ...restOfForm } = formData;
+    
+    // Determine the base unit for inventory tracking
+    const baseUnit = getBaseUnit(purchaseUnit as Unit);
 
-    const supplierName = await getSupplierName(itemData.supplierId);
-
-    const unitCost = itemData.purchasePrice > 0 && itemData.conversionFactor > 0 
-        ? itemData.purchasePrice / itemData.conversionFactor 
-        : itemData.unitCost || 0;
+    // Calculate how many base units are in one purchase unit.
+    // e.g. if purchase is 1kg, base is g, conversion is 1000
+    const conversionFromPurchaseToBase = convert(1, purchaseUnit as Unit, baseUnit as Unit);
+    const totalBaseUnitsInPurchase = purchaseQuantity * conversionFromPurchaseToBase;
+    
+    // Calculate cost per single base unit (e.g. cost per gram)
+    const unitCost = totalBaseUnitsInPurchase > 0 ? purchasePrice / totalBaseUnitsInPurchase : 0;
+    
+    const quantity = formData.quantity || 0; // Initial stock
+    const status = getStatus(quantity, formData.parLevel);
+    const supplierName = await getSupplierName(formData.supplierId);
 
     const fullItemData = {
-      ...itemData,
+      ...restOfForm,
+      quantity,
       status,
       supplier: supplierName,
-      unitCost,
-      supplierId: itemData.supplierId || '', // Ensure supplierId is not undefined
+      supplierId: formData.supplierId || '',
+      purchaseUnit: purchaseUnit, // e.g. 'kg'
+      conversionFactor: purchaseQuantity, // e.g. 1
+      unit: baseUnit, // e.g. 'g'
+      purchasePrice,
+      unitCost: isFinite(unitCost) ? unitCost : 0,
     };
 
     const docRef = await addDoc(collection(db, 'inventory'), fullItemData);
@@ -141,24 +160,41 @@ async function getSupplierName(supplierId?: string): Promise<string> {
 
 export async function editInventoryItem(
   id: string,
-  itemData: EditInventoryItemData
+  formData: InventoryFormData
 ) {
   try {
     const itemRef = doc(db, 'inventory', id);
-    const status = getStatus(itemData.quantity, itemData.parLevel);
+    const itemSnap = await getDoc(itemRef);
+    if (!itemSnap.exists()) throw new Error("Item not found");
+    const currentItem = itemSnap.data() as InventoryItem;
 
-    const supplierName = await getSupplierName(itemData.supplierId);
+    const { purchaseQuantity, purchaseUnit, purchasePrice, ...restOfForm } = formData;
+    
+    const baseUnit = getBaseUnit(purchaseUnit as Unit);
+    const conversionFromPurchaseToBase = convert(1, purchaseUnit as Unit, baseUnit as Unit);
+    const totalBaseUnitsInPurchase = purchaseQuantity * conversionFromPurchaseToBase;
+    const unitCost = totalBaseUnitsInPurchase > 0 ? purchasePrice / totalBaseUnitsInPurchase : 0;
 
-    const unitCost = itemData.purchasePrice > 0 && itemData.conversionFactor > 0 
-        ? itemData.purchasePrice / itemData.conversionFactor 
-        : itemData.unitCost || 0;
+    // Use current quantity if not provided in form (form doesn't have current stock)
+    const quantity = currentItem.quantity;
+    const status = getStatus(quantity, formData.parLevel);
+    const supplierName = await getSupplierName(formData.supplierId);
 
-    await updateDoc(itemRef, {
-      ...itemData,
+    const dataToUpdate = {
+      ...restOfForm,
+      quantity,
       status,
       supplier: supplierName,
-      unitCost,
-    });
+      supplierId: formData.supplierId || '',
+      purchaseUnit: purchaseUnit,
+      conversionFactor: purchaseQuantity,
+      unit: baseUnit,
+      purchasePrice,
+      unitCost: isFinite(unitCost) ? unitCost : 0,
+    };
+
+    await updateDoc(itemRef, dataToUpdate);
+
     revalidatePath('/inventory');
     revalidatePath('/recipes/**'); 
     return {success: true};
@@ -214,7 +250,7 @@ export async function addRecipe(recipeData: AddRecipeData) {
   }
 }
 
-export async function editRecipe(id: string, recipeData: EditRecipeData) {
+export async function editRecipe(id: string, recipeData: Omit<Recipe, 'id'>) {
   try {
     const recipeRef = doc(db, 'recipes', id);
     await updateDoc(recipeRef, recipeData);
@@ -239,7 +275,7 @@ export async function deleteRecipe(recipeId: string) {
 }
 
 // Menu Actions
-export async function addMenu(menuData: AddMenuData) {
+export async function addMenu(menuData: Omit<Menu, 'id'>) {
   try {
     const docRef = await addDoc(collection(db, 'menus'), menuData);
     revalidatePath('/menus');
@@ -250,7 +286,7 @@ export async function addMenu(menuData: AddMenuData) {
   }
 }
 
-export async function editMenu(id: string, menuData: EditMenuData) {
+export async function editMenu(id: string, menuData: Omit<Menu, 'id'>) {
   try {
     const menuRef = doc(db, 'menus', id);
     await updateDoc(menuRef, menuData);

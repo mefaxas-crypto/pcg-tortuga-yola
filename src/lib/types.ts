@@ -5,21 +5,35 @@ export type InventoryItem = {
   materialCode: string;
   name: string;
   category: string;
-  quantity: number;
-  unit: string; // The unit for recipes (e.g., kg, L, unit)
-  purchaseUnit: string; // The unit you buy from the supplier (e.g., Case, Box)
-  conversionFactor: number; // How many recipe units are in one purchase unit
-  parLevel: number;
+  quantity: number; // Current stock in the `unit`
+  unit: string; // The base unit for inventory tracking and costing (e.g., g, ml, each).
+  purchaseUnit: string; // The unit of the purchaseQuantity (e.g., kg, L, Case)
+  conversionFactor: number; // How many of the `unit` are in one `purchaseUnit`. e.g. purchaseUnit=kg, unit=g, conversionFactor=1000
+  parLevel: number; // Re-order point in the base `unit`
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
-  purchasePrice: number;
+  purchasePrice: number; // Price for one purchaseUnit
   unitCost: number; // The cost of a single recipe unit (e.g., price per gram)
-  allergens?: string[]; // This is now an array of strings
+  allergens?: string[];
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
-export type AddInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
-export type EditInventoryItemData = Omit<InventoryItem, 'id' | 'status' | 'supplier'>;
+// This is the data received from the form
+export type InventoryFormData = {
+  materialCode: string;
+  name: string;
+  category: string;
+  purchaseQuantity: number;
+  purchaseUnit: string;
+  purchasePrice: number;
+  parLevel: number;
+  supplierId?: string;
+  allergens?: string[];
+  quantity?: number; // Optional initial stock
+}
+
+export type AddInventoryItemData = InventoryFormData;
+export type EditInventoryItemData = InventoryFormData;
 
 
 export type Supplier = {

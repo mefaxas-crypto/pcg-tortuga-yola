@@ -42,20 +42,20 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { SupplierFormSheet } from '@/app/suppliers/components/SupplierFormSheet';
 import { PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { allUnits } from '@/lib/conversions';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'SAP Code is required.'),
   name: z.string().min(2, 'Ingredient name must be at least 2 characters.'),
   category: z.string().min(1, 'Category is required.'),
-  quantity: z.coerce.number().min(0, 'Quantity cannot be negative.'),
-  unit: z.string().optional(),
-  purchaseUnit: z.string().min(1, 'Presentation/Purchase Unit is required.'),
-  conversionFactor: z.coerce.number().min(0.0001, 'Conversion factor must be positive.'),
+  purchaseQuantity: z.coerce.number().min(0.0001, 'Purchase quantity must be positive.'),
+  purchaseUnit: z.string().min(1, 'Purchase unit is required.'),
+  purchasePrice: z.coerce.number().min(0, 'Cost must be a positive number.'),
   parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
   supplierId: z.string().optional(),
-  purchasePrice: z.coerce.number().min(0, 'Cost must be a positive number.'),
-  unitCost: z.coerce.number().min(0, 'Unit cost must be a positive number.'),
   allergens: z.array(z.string()).optional(),
+  // Internal fields, not shown on form
+  quantity: z.coerce.number().optional().default(0),
 });
 
 type InventoryItemFormSheetProps = {
@@ -70,13 +70,10 @@ type InventoryItemFormSheetProps = {
 // --- Standardized Unit Definitions ---
 
 const categories = ['Produce', 'Meat', 'Dairy', 'Dry Goods', 'Beverages', 'Other'];
-
-const purchaseUnits = [
-    'Case', 'Box', 'Bottle', 'Bag', 'Jar', 'Can', 'Carton',
-    'kg', 'lb', 'l', 'gal', 'Each', 'Unit', 'Pack',
-    'Butchery', 'Production',
-];
-
+const availableUnits = Object.keys(allUnits).map(key => ({
+    value: key,
+    label: allUnits[key as keyof typeof allUnits].name
+}));
 
 export function InventoryItemFormSheet({
   open,
@@ -98,50 +95,36 @@ export function InventoryItemFormSheet({
       materialCode: '',
       name: '',
       category: '',
-      quantity: 0,
-      unit: '',
-      purchaseUnit: '',
-      conversionFactor: 1,
+      purchaseQuantity: 1,
+      purchaseUnit: 'kg',
+      purchasePrice: 0,
       parLevel: 0,
       supplierId: '',
-      purchasePrice: 0,
-      unitCost: 0,
       allergens: [],
+      quantity: 0,
     },
   });
 
-  const purchasePrice = form.watch('purchasePrice');
-  const conversionFactor = form.watch('conversionFactor');
-
-  useEffect(() => {
-    if (purchasePrice !== undefined && conversionFactor > 0) {
-      const newUnitCost = purchasePrice / conversionFactor;
-      form.setValue('unitCost', newUnitCost, { shouldValidate: true });
-    }
-  }, [purchasePrice, conversionFactor, form]);
-
-
-  useEffect(() => {
-    const commonReset = {
+  const commonReset = {
       materialCode: '',
       name: '',
       category: '',
-      quantity: 0,
-      unit: '',
-      purchaseUnit: '',
-      conversionFactor: 1,
+      purchaseQuantity: 1,
+      purchaseUnit: 'kg',
+      purchasePrice: 0,
       parLevel: 0,
       supplierId: '',
-      purchasePrice: 0,
-      unitCost: 0,
       allergens: [],
-    };
-  
+      quantity: 0,
+  };
+
+  useEffect(() => {
     if (open) {
       if (mode === 'edit' && item) {
         form.reset({
           ...commonReset,
           ...item,
+          purchaseQuantity: item.conversionFactor,
           supplierId: item.supplierId || '',
           allergens: item.allergens || [],
         });
@@ -149,8 +132,7 @@ export function InventoryItemFormSheet({
         form.reset({
           ...commonReset,
           category: 'Meat', // Default category for butchered items
-          unit: 'kg', // Default unit for butchered items
-          purchaseUnit: 'Butchery',
+          purchaseUnit: 'kg',
           supplierId: '',
         });
       } else {
@@ -199,21 +181,15 @@ export function InventoryItemFormSheet({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-        const dataToSave = {
-            ...values,
-            // Set a default unit if not provided, for background calculations
-            unit: values.unit || (values.category === 'Beverages' ? 'ml' : 'g')
-        }
-
         if (mode === 'edit' && item) {
-            await editInventoryItem(item.id, dataToSave);
+            await editInventoryItem(item.id, values);
              toast({
                 title: 'Ingredient Updated',
                 description: `"${values.name}" has been updated.`,
             });
             onClose();
         } else {
-            const newItem = await addInventoryItem(dataToSave);
+            const newItem = await addInventoryItem(values);
             toast({
                 title: 'Ingredient Added',
                 description: `"${values.name}" has been added to your inventory.`,
@@ -242,7 +218,9 @@ export function InventoryItemFormSheet({
   }));
 
   const formTitle = isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient');
-  const formDescription = isInternalCreation ? 'Enter details for this new cut. The supplier will be set to "In-house" automatically.' : 'Enter the details of the new ingredient.';
+  const formDescription = isInternalCreation 
+    ? 'Enter details for this new cut. The supplier will be set to "In-house" automatically.' 
+    : 'Enter the details of the ingredient as you would purchase it.';
 
   return (
     <>
@@ -266,7 +244,7 @@ export function InventoryItemFormSheet({
                     control={form.control}
                     name="materialCode"
                     render={({ field }) => (
-                        <FormItem className="md:col-span-2">
+                        <FormItem>
                         <FormLabel>Codigo Sap (SAP Code)</FormLabel>
                         <FormControl>
                             <Input placeholder="e.g., 1006335" {...field} />
@@ -292,7 +270,7 @@ export function InventoryItemFormSheet({
                     control={form.control}
                     name="category"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className='md:col-span-2'>
                         <FormLabel>Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
                             <FormControl>
@@ -315,42 +293,57 @@ export function InventoryItemFormSheet({
                 <Separator />
                 <h4 className="text-lg font-medium">Purchase Info</h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <FormField
-                        control={form.control}
-                        name="purchaseUnit"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Presentation</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                     <div className='md:col-span-2 grid grid-cols-3 gap-2 items-end'>
+                         <FormField
+                            control={form.control}
+                            name="purchaseQuantity"
+                            render={({ field }) => (
+                                <FormItem className='col-span-1'>
+                                <FormLabel>Purchase Qty</FormLabel>
                                 <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="e.g., Case, Box, 5L Can" />
-                                </SelectTrigger>
+                                    <Input type="number" step="any" placeholder="e.g., 750" {...field} value={field.value || ''} disabled={isInternalCreation} />
                                 </FormControl>
-                                <SelectContent>
-                                {purchaseUnits.map(unit => (
-                                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
+                                <FormMessage />
+                                </FormItem>
+                            )}
                         />
-                    <FormField
-                        control={form.control}
-                        name="purchasePrice"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Presentation Cost</FormLabel>
-                            <FormControl>
-                                <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} disabled={isInternalCreation} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                        <FormField
+                            control={form.control}
+                            name="purchaseUnit"
+                            render={({ field }) => (
+                                <FormItem className='col-span-1'>
+                                <FormLabel>Purchase Unit</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isInternalCreation}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Unit" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {availableUnits.map(unit => (
+                                        <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="purchasePrice"
+                            render={({ field }) => (
+                                <FormItem className='col-span-1'>
+                                <FormLabel>for (Price)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" step="0.01" placeholder="e.g., 24.99" {...field} value={field.value || ''} disabled={isInternalCreation} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                     </div>
                     {!isInternalCreation && (
                         <FormField
                             control={form.control}
@@ -393,20 +386,6 @@ export function InventoryItemFormSheet({
                             </FormItem>
                         )}
                         />
-                    {/* Hidden but required field for conversion */}
-                    <FormField
-                        control={form.control}
-                        name="conversionFactor"
-                        render={({ field }) => (
-                            <FormItem className="hidden">
-                            <FormLabel>Conversion Factor</FormLabel>
-                            <FormControl>
-                                <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                 </div>
                  
                  <Separator />
