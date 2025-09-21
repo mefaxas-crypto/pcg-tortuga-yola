@@ -87,7 +87,7 @@ export function MenuForm({ mode, menu }: MenuFormProps) {
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'items',
   });
@@ -248,7 +248,7 @@ export function MenuForm({ mode, menu }: MenuFormProps) {
                   <DialogHeader>
                     <DialogTitle>Select a Recipe to Add</DialogTitle>
                   </DialogHeader>
-                  <Command>
+                  <Command shouldFilter={false}>
                     <CommandInput placeholder="Search for a recipe..." />
                     <CommandList>
                       <CommandEmpty>No recipes found.</CommandEmpty>

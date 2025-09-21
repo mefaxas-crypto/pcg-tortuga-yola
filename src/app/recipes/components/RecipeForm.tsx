@@ -465,7 +465,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl">
                             <DialogHeader><DialogTitle>Select an Ingredient</DialogTitle></DialogHeader>
-                            <Command>
+                            <Command shouldFilter={false}>
                                 <CommandInput placeholder="Search inventory..."/>
                                 <CommandList>
                                     <CommandEmpty>No inventory items found.</CommandEmpty>
