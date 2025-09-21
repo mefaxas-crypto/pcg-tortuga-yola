@@ -59,6 +59,7 @@ type InventoryItemFormSheetProps = {
   mode: 'add' | 'edit';
   item?: InventoryItem;
   onClose: () => void;
+  onItemCreated?: (newItem: InventoryItem) => void;
 };
 
 // --- Standardized Unit Definitions ---
@@ -94,6 +95,7 @@ export function InventoryItemFormSheet({
   mode,
   item,
   onClose,
+  onItemCreated,
 }: InventoryItemFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -152,11 +154,11 @@ export function InventoryItemFormSheet({
           name: '',
           category: '',
           quantity: 0,
-          unit: '',
-          purchaseUnit: '',
+          unit: 'kg', // Default for new butchered items
+          purchaseUnit: 'Butchery', // Default
           conversionFactor: 1,
           parLevel: 0,
-          supplierId: '',
+          supplierId: '', // Will be set to in-house
           purchasePrice: 0,
           unitCost: 0,
           allergens: [],
@@ -219,14 +221,20 @@ export function InventoryItemFormSheet({
                 title: 'Ingredient Updated',
                 description: `"${values.name}" has been updated.`,
             });
+            onClose();
         } else {
-            await addInventoryItem(values);
+            const newItem = await addInventoryItem(values);
             toast({
                 title: 'Ingredient Added',
                 description: `"${values.name}" has been added to your inventory.`,
             });
+            if(onItemCreated && newItem) {
+                onItemCreated(newItem);
+            } else {
+                onClose();
+            }
         }
-      onClose();
+      
     } catch (error) {
       console.error(error);
       toast({

@@ -64,6 +64,7 @@ const formSchema = z.object({
         itemId: z.string().min(1, 'Item ID is missing.'),
         name: z.string().min(1, 'Item name is required.'),
         weight: z.coerce.number().min(0.01, 'Weight must be greater than 0.'),
+        materialCode: z.string(),
       }),
     )
     .min(1, 'You must have at least one yielded item.'),
@@ -140,6 +141,7 @@ export function ButcheringForm() {
       itemId: yieldedInventoryItem.id,
       name: yieldedInventoryItem.name,
       weight: 0,
+      materialCode: yieldedInventoryItem.materialCode,
     });
   }
 
@@ -153,16 +155,13 @@ export function ButcheringForm() {
         ...values,
         primaryItemMaterialCode: primaryItem.materialCode,
         yieldedItems: values.yieldedItems.map(item => {
-            const invItem = inventory.find(i => i.id === item.itemId);
-            if (!invItem) throw new Error(`Yielded item ${item.name} not found in inventory.`);
             return {
                 ...item,
-                materialCode: invItem.materialCode,
                 yieldPercentage: (item.weight / values.quantityUsed) * 100,
             }
         })
       }
-      await logButchering(finalData);
+      await logButchering(finalData as any); // Type assertion to handle the discrepancy temporarily
       toast({
         title: 'Butchering Logged!',
         description: 'Inventory has been updated and butchery template saved.',
@@ -188,10 +187,18 @@ export function ButcheringForm() {
 
   const handleNewItemSheetClose = () => {
     setNewItemSheetOpen(false);
-    // Re-fetch or re-set inventory data here if a new item was added
-    // For simplicity, we can just let the onSnapshot handle it,
-    // but in a more complex app you might want to trigger a refresh.
   }
+
+  const handleNewItemCreated = (newItem: InventoryItem) => {
+    append({
+        itemId: newItem.id,
+        name: newItem.name,
+        weight: 0,
+        materialCode: newItem.materialCode,
+    });
+    setNewItemSheetOpen(false); // Close the sheet after appending
+  };
+
 
   return (
     <>
@@ -435,6 +442,7 @@ export function ButcheringForm() {
     <InventoryItemFormSheet 
         open={isNewItemSheetOpen}
         onClose={handleNewItemSheetClose}
+        onItemCreated={handleNewItemCreated}
         mode="add"
     />
     </>

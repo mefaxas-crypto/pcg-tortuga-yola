@@ -95,15 +95,23 @@ export async function addInventoryItem(itemData: AddInventoryItemData) {
 
     const unitCost = itemData.conversionFactor > 0 ? itemData.purchasePrice / itemData.conversionFactor : 0;
 
-    const docRef = await addDoc(collection(db, 'inventory'), {
+    const fullItemData = {
       ...itemData,
       status,
       supplier: supplierName,
       unitCost,
-    });
+    };
+
+    const docRef = await addDoc(collection(db, 'inventory'), fullItemData);
+
+    const newItem: InventoryItem = {
+      id: docRef.id,
+      ...fullItemData,
+    };
+
     revalidatePath('/inventory');
     revalidatePath('/recipes/butchering');
-    return {success: true, id: docRef.id};
+    return newItem;
   } catch (e) {
     console.error('Error adding document: ', e);
     throw new Error('Failed to add inventory item');
@@ -489,6 +497,7 @@ export async function logButchering(data: ButcheringData) {
     // This is NOT safe for concurrent use, but for this demo it illustrates the concept.
     // In a real app, this should be a database transaction or a more robust system.
     const templateIndex = butcheryTemplates.findIndex(t => t.primaryItemMaterialCode === data.primaryItemMaterialCode);
+    const primaryItem = await getDoc(doc(db, 'inventory', data.primaryItemId)).then(d => d.data() as InventoryItem);
     
     if (templateIndex > -1) {
       // Update existing template
