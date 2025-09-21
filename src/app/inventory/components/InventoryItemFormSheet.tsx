@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -72,7 +73,7 @@ const purchaseUnits = [
     // By Weight
     'kg', 'lb',
     // By Volume
-    'L', 'gal',
+    'l', 'gal',
     // Individual Items
     'Each', 'Unit', 'Pack'
 ];
@@ -82,7 +83,7 @@ const recipeUnits = [
     // Weight
     'g', 'kg', 'oz', 'lb',
     // Volume
-    'mL', 'L', 'fl. oz', 'cup', 'tbsp', 'tsp',
+    'ml', 'l', 'floz', 'cup', 'tbsp', 'tsp',
     // Individual Items
     'unit', 'each', 'slice', 'portion'
 ];
@@ -329,7 +330,7 @@ export function InventoryItemFormSheet({
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="e.g., g, mL" />
+                              <SelectValue placeholder="e.g., g, ml" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -466,9 +467,11 @@ export function InventoryItemFormSheet({
               />
             </fieldset>
             <SheetFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                Cancel
-              </Button>
+              <SheetClose asChild>
+                <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                  Cancel
+                </Button>
+              </SheetClose>
               <Button type="submit" disabled={loading}>
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>

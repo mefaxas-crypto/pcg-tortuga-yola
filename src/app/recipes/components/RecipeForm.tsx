@@ -37,9 +37,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -61,10 +61,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from '@/components/ui/command';
 import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { RecipeFinancialsCard } from './RecipeFinancialsCard';
 import { cn } from '@/lib/utils';
+import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 
 const formSchema = z.object({
   recipeCode: z.string().min(1, 'Recipe code is required.'),
@@ -120,6 +122,8 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isIngredientPopoverOpen, setIngredientPopoverOpen] = useState(false);
+  const [isNewIngredientSheetOpen, setNewIngredientSheetOpen] = useState(false);
+
   const [inventoryItemDetails, setInventoryItemDetails] =
     useState<InventoryItemDetails>({});
 
@@ -520,6 +524,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                       <TableCell>
                         <Input
                           type="number"
+                          step="any"
                           value={field.quantity}
                           onChange={(e) =>
                             handleIngredientChange(
@@ -587,7 +592,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                     <Command shouldFilter={false}>
                         <CommandInput placeholder="Search for an ingredient..." />
                         <CommandList>
@@ -608,6 +613,18 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                                 {item.name}
                             </CommandItem>
                             ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                            <CommandItem
+                                onSelect={() => {
+                                    setIngredientPopoverOpen(false);
+                                    setNewIngredientSheetOpen(true);
+                                }}
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Create New Ingredient
+                            </CommandItem>
                         </CommandGroup>
                         </CommandList>
                     </Command>
@@ -639,6 +656,11 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
           </Button>
         </div>
       </form>
+      <InventoryItemFormSheet
+        open={isNewIngredientSheetOpen}
+        onClose={() => setNewIngredientSheetOpen(false)}
+        mode="add"
+       />
     </Form>
   );
 }
