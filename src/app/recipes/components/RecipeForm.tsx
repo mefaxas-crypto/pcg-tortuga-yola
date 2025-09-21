@@ -61,7 +61,7 @@ const formSchema = z.object({
   yield: z.coerce.number().min(0, 'Yield must be a positive number.').optional(),
   yieldUnit: z.string().optional(),
   notes: z.string().optional(),
-  ingredients: z.array(recipeIngredientSchema).min(1, 'A recipe must have at least one ingredient.'),
+  ingredients: z.array(recipeIngredientSchema),
   contingencyPercentage: z.coerce.number().min(0).max(100).optional(),
   foodCostPercentage: z.coerce.number().min(0).max(100).optional(),
 }).superRefine((data, ctx) => {
@@ -114,6 +114,7 @@ export function RecipeForm({
         isSubRecipe: recipe.isSubRecipe || false,
         contingencyPercentage: recipe.contingencyPercentage || 5,
         foodCostPercentage: recipe.foodCostPercentage || 30,
+        ingredients: recipe.ingredients || [],
       } : 
       {
         recipeCode: '',
@@ -414,107 +415,6 @@ export function RecipeForm({
             />
           </div>
           
-           <Card>
-                <CardHeader>
-                    <CardTitle>Ingredients</CardTitle>
-                </CardHeader>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className='w-[100px]'>Code</TableHead>
-                            <TableHead>Ingredient</TableHead>
-                            <TableHead className='w-[120px]'>Quantity</TableHead>
-                            <TableHead className='w-[80px]'>Unit</TableHead>
-                            <TableHead className='w-[120px] text-right'>Unit Price</TableHead>
-                            <TableHead className='w-[120px] text-right'>Total Cost</TableHead>
-                            <TableHead className='w-[50px]'></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                         {fields.map((field, index) => {
-                            const selectedItemName = form.watch(`ingredients.${index}.name`);
-                            const materialCode = form.watch(`ingredients.${index}.materialCode`);
-                            const unit = form.watch(`ingredients.${index}.unit`);
-                            const unitPrice = form.watch(`ingredients.${index}.unitPrice`) || 0;
-                            const totalCost = form.watch(`ingredients.${index}.totalCost`) || 0;
-                            
-                            return (
-                                <TableRow key={field.id} className="align-top">
-                                    <TableCell className="pt-3.5 pb-3 text-muted-foreground">{materialCode || '-'}</TableCell>
-                                    <TableCell className="pt-3.5 pb-3 text-sm">{selectedItemName || 'N/A'}</TableCell>
-                                    <TableCell className="pt-2 pb-3">
-                                        <FormField
-                                            control={form.control}
-                                            name={`ingredients.${index}.quantity`}
-                                            render={({ field: quantityField }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                <Input 
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    placeholder="Qty"
-                                                    ref={(el) => { quantityInputRefs.current[index] = el; }}
-                                                    value={quantityField.value || ''}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        quantityField.onChange(value);
-                                                        
-                                                        const newQuantity = parseFloat(value);
-                                                        const currentUnitPrice = form.getValues(`ingredients.${index}.unitPrice`) || 0;
-
-                                                        if (!isNaN(newQuantity) && newQuantity > 0) {
-                                                            const newTotal = newQuantity * currentUnitPrice;
-                                                            form.setValue(`ingredients.${index}.totalCost`, newTotal);
-                                                        } else {
-                                                            form.setValue(`ingredients.${index}.totalCost`, 0);
-                                                        }
-                                                    }}
-                                                />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="pt-3.5 pb-3 text-sm text-muted-foreground">{unit}</TableCell>
-                                    <TableCell className="pt-3.5 pb-3 text-right text-sm text-muted-foreground">{formatCurrency(unitPrice)}</TableCell>
-                                    <TableCell className="pt-3.5 pb-3 text-right text-sm font-medium">{formatCurrency(totalCost)}</TableCell>
-                                    <TableCell className="pt-2 pb-3">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-destructive h-9 w-9"
-                                            onClick={() => handleRemoveIngredient(index)}
-                                            disabled={fields.length <= 1}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-                <CardFooter className="flex-col items-stretch gap-4 !p-6">
-                    <FormMessage className={cn(!form.formState.errors.ingredients ? "hidden" : "")}>
-                        {form.formState.errors.ingredients?.root?.message || form.formState.errors.ingredients?.message}
-                    </FormMessage>
-
-                    <div className="flex items-center gap-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => addEmptyIngredient()}
-                        >
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Ingredient
-                        </Button>
-                    </div>
-                </CardFooter>
-            </Card>
-
             <RecipeFinancialsCard 
                 form={form}
                 totalRecipeCost={totalRecipeCost}
