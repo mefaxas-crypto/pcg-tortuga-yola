@@ -500,9 +500,18 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Yield Unit</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., portions" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                          <SelectTrigger>
+                              <SelectValue placeholder="e.g., portion" />
+                          </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                          {Object.keys(allUnits).map(unitKey => (
+                              <SelectItem key={unitKey} value={unitKey}>{(allUnits as any)[unitKey].name}</SelectItem>
+                          ))}
+                          </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -740,3 +749,5 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
     </Form>
   );
 }
+
+    
