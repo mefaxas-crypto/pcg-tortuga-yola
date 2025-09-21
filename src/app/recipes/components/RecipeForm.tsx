@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -123,7 +124,6 @@ const recipeCategories = [
   'Dessert',
   'Beverage',
   'Side',
-  'Sub-recipe',
 ];
 
 export function RecipeForm({ mode, recipe }: RecipeFormProps) {
