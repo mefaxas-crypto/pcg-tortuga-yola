@@ -12,10 +12,10 @@ This file tracks our development progress to ensure we build the app logically, 
 
 *   **1.2 Managing Raw Ingredients:** This is the heart of the system.
     *   [x] "Inventory" page exists.
-    *   [x] Overhaul the "Add New Ingredient" functionality to include all the detailed fields (SKU, units, costs, par level, etc.).
+    *   [x] Overhaul the "Add New Ingredient" functionality to include all the detailed fields (SKU, units, costs, Min/Max levels, etc.).
     *   [x] Implement Edit & Delete functionality for ingredients.
     *   [x] Implement Physical Stock Takes & Variance Reporting.
-    *   **Note on Par Levels:** Currently, the `parLevel` is measured in the recipe/presentation `unit` (e.g., individual eggs), not the `purchaseUnit` (e.g., cases). A future enhancement could add a conversion factor to allow setting par levels by the purchase unit.
+    *   **Note on Stock Levels:** The system has been upgraded to use a more professional Min/Max stock level system instead of a single par level. This allows for better cost and storage control.
 
 *   **1.3 Managing Foundational Data:** Simple but necessary lists for ingredients and recipes.
     *   [x] Create a dedicated "Allergens" data model and management UI (in "Settings").
@@ -31,7 +31,6 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Implement UI to create "Menus" by combining recipes.
     *   [x] Make the "Menu" dropdown in the recipe form functional.
     *   [x] Analyze menu profitability.
-    *   **Note on Unit Conversion**: When building the unit conversion engine, the recipe form should allow inputting various units (e.g., 'cup', 'tbsp') but always calculate the final cost based on a standard unit like grams.
 
 *   **2.2 Inventory Depletion & Sales Tracking:**
     *   [x] Implement a "Sales" page to log which menu items are sold.
@@ -66,9 +65,11 @@ This file tracks our development progress to ensure we build the app logically, 
 ## PHASE 4: WORLD-CLASS AI INTEGRATION
 
 *   **4.1 AI-Powered Purchasing Agent:**
-    *   [ ] Implement demand forecasting based on sales history, seasonality, and events.
+    *   [ ] Implement AI-driven demand forecasting based on sales history, seasonality, and **hotel occupancy forecasts**.
+    *   [ ] Create a tool in the ingredient form to generate **dynamically adjusted Min/Max stock levels**.
     *   [ ] Generate optimized purchase orders to minimize waste and stockouts.
     *   [ ] Track and analyze supplier price fluctuations over time to recommend cost-effective choices.
+    *   [ ] Display AI-suggested Min/Max levels directly on the **Create Purchase Order form** for easy comparison at the moment of ordering.
 
 *   **4.2 Dynamic Menu Engineering:**
     *   [ ] Implement AI-driven suggestions for menu pricing and item placement to maximize profitability.
@@ -80,4 +81,3 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
     *   [x] **(Existing)** Implement "Waste Prediction" tool.
     *   [x] **(Existing)** Implement "Intelligent Recipe Suggestions" tool.
-
