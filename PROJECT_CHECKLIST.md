@@ -45,9 +45,10 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Update PO status (e.g., Pending, Partially Received, Received).
 
 *   **2.4 Multi-Outlet & Central Kitchen Support:**
-    *   [ ] Create "Outlets" data model and management UI.
+    *   [ ] Create "Outlets" data model and management UI (e.g., "Hotel", "Restaurant").
+    *   [ ] **Strategy:** Refactor inventory to separate shared "Item Specifications" (in `/inventory`) from outlet-specific "Stock Levels" (in a new `/inventoryStock` collection).
+    *   [ ] Scope all data (sales, inventory views, purchasing) to a specific outlet, likely via a global state/context.
     *   [ ] Implement inventory transfers between outlets.
-    *   [ ] Scope all data (sales, inventory, purchasing) to a specific outlet.
 
 ## PHASE 3: PROFESSIONAL & ENTERPRISE FEATURES
 
@@ -79,3 +80,4 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
     *   [x] **(Existing)** Implement "Waste Prediction" tool.
     *   [x] **(Existing)** Implement "Intelligent Recipe Suggestions" tool.
+
