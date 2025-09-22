@@ -15,7 +15,7 @@ const compat = new FlatCompat({
 export default tseslint.config(
     // Ignore the build output directory to prevent false errors
     {
-        ignores: [".next/**"],
+        ignores: [".next/**", "next-env.d.ts"],
     },
     ...compat.extends("next/core-web-vitals"),
     ...tseslint.configs.recommended,
@@ -23,12 +23,18 @@ export default tseslint.config(
         rules: {
             "react/react-in-jsx-scope": "off",
             "react/prop-types": "off",
+            "react/display-name": "off",
             "@typescript-eslint/no-unused-vars": [
                 "warn",
                 { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
             ],
             "@typescript-eslint/no-explicit-any": "warn",
             "@typescript-eslint/ban-ts-comment": "off",
+            "react/no-unescaped-entities": "error",
+            "@typescript-eslint/no-empty-interface": "off",
+            "@typescript-eslint/no-require-imports": "error",
         },
     }
 );
+
+    
