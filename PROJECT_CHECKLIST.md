@@ -39,8 +39,8 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Make the "Low Stock" notification on the dashboard dynamic and meaningful.
 
 *   **2.3 Purchasing & Receiving:**
-    *   [ ] Implement a "Purchasing" page to create purchase orders for suppliers.
-    *   [ ] Automatically suggest items to reorder based on "Low Stock" levels.
+    *   [x] Implement a "Purchasing" page to create purchase orders for suppliers.
+    *   [x] Automatically suggest items to reorder based on "Low Stock" levels.
     *   [ ] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
 
 ## PHASE 3: ADVANCED FEATURES & ANALYTICS
@@ -49,6 +49,22 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] **(Backend)** Implement Firebase Cloud Functions to aggregate data for complex reports (e.g., sales by supplier, historical variance analysis).
     *   [ ] **(Frontend)** Build the UI for the "Reports" page to display the aggregated data from the backend functions.
 
-*   **3.2 AI-Powered Tools:**
+*   **3.2 AI-Powered Tools (Existing):**
     *   [x] Implement "Waste Prediction" tool.
     *   [x] Implement "Intelligent Recipe Suggestions" tool.
+
+## PHASE 4: WORLD-CLASS AI INTEGRATION (FUTURE)
+
+*   **4.1 AI-Powered Purchasing Agent:**
+    *   [ ] Implement demand forecasting based on sales history, seasonality, and events.
+    *   [ ] Generate optimized purchase orders to minimize waste and stockouts.
+    *   [ ] Track and analyze supplier price fluctuations over time to recommend cost-effective choices.
+
+*   **4.2 Dynamic Menu Engineering:**
+    *   [ ] Implement AI-driven suggestions for menu pricing and item placement to maximize profitability.
+    *   [ ] Generate compelling, professional menu descriptions for new or existing items.
+    *   [ ] Create entire themed menus based on high-level concepts and inventory analysis.
+
+*   **4.3 Advanced Operational Intelligence:**
+    *   [ ] Automatically generate daily prep lists for kitchen staff based on sales forecasts.
+    *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
