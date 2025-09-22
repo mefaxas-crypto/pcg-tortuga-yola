@@ -38,22 +38,31 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] When a menu item is sold, automatically deduct the corresponding ingredient quantities from the inventory.
     *   [x] Make the "Low Stock" notification on the dashboard dynamic and meaningful.
 
-*   **2.3 Purchasing & Receiving:**
+*   **2.3 Purchasing & Receiving (The Closed Loop):**
     *   [x] Implement a "Purchasing" page to create purchase orders for suppliers.
     *   [x] Automatically suggest items to reorder based on "Low Stock" levels.
     *   [ ] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
+    *   [ ] Update PO status (e.g., Pending, Partially Received, Received).
 
-## PHASE 3: ADVANCED FEATURES & ANALYTICS
+## PHASE 3: PROFESSIONAL & ENTERPRISE FEATURES
 
-*   **3.1 Advanced Reporting:**
-    *   [ ] **(Backend)** Implement Firebase Cloud Functions to aggregate data for complex reports (e.g., sales by supplier, historical variance analysis).
-    *   [ ] **(Frontend)** Build the UI for the "Reports" page to display the aggregated data from the backend functions.
+*   **3.1 Advanced Reporting & Analytics:**
+    *   [ ] Build UI for "Reports" page to display meaningful data.
+    *   [ ] Implement Actual vs. Theoretical Food Cost reporting.
+    *   [ ] Implement historical variance analysis to identify trends.
+    *   [ ] Add Profit & Loss reporting by menu item and category.
 
-*   **3.2 AI-Powered Tools (Existing):**
-    *   [x] Implement "Waste Prediction" tool.
-    *   [x] Implement "Intelligent Recipe Suggestions" tool.
+*   **3.2 Multi-Outlet & Central Kitchen Support:**
+    *   [ ] Create "Outlets" data model and management UI.
+    *   [ ] Implement inventory transfers between outlets.
+    *   [ ] Scope all data (sales, inventory, purchasing) to a specific outlet.
 
-## PHASE 4: WORLD-CLASS AI INTEGRATION (FUTURE)
+*   **3.3 User Roles & Permissions:**
+    *   [ ] Implement a user authentication system.
+    *   [ ] Define roles (Admin, Chef, Purchasing Manager).
+    *   [ ] Restrict access to pages and actions based on user role.
+
+## PHASE 4: WORLD-CLASS AI INTEGRATION
 
 *   **4.1 AI-Powered Purchasing Agent:**
     *   [ ] Implement demand forecasting based on sales history, seasonality, and events.
@@ -68,3 +77,5 @@ This file tracks our development progress to ensure we build the app logically, 
 *   **4.3 Advanced Operational Intelligence:**
     *   [ ] Automatically generate daily prep lists for kitchen staff based on sales forecasts.
     *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
+    *   [x] **(Existing)** Implement "Waste Prediction" tool.
+    *   [x] **(Existing)** Implement "Intelligent Recipe Suggestions" tool.
