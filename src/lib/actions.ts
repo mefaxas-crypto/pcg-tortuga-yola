@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import {
@@ -23,6 +24,7 @@ import type {
   AddAllergenData,
   AddIngredientCategoryData,
   AddMenuData,
+  AddPurchaseOrderData,
   AddRecipeData,
   AddSaleData,
   ButcheringData,
@@ -999,5 +1001,27 @@ export async function deleteButcheryTemplate(id: string) {
     } catch (e) {
         console.error('Error deleting butchery template: ', e);
         throw new Error('Failed to delete butchery template');
+    }
+}
+
+
+// Purchase Order Actions
+export async function addPurchaseOrder(poData: AddPurchaseOrderData) {
+    try {
+        await runTransaction(db, async (transaction) => {
+            // In a real app, you'd have a counter document to get a sequential PO number
+            const poNumber = `PO-${Date.now()}`;
+            const poRef = doc(collection(db, 'purchaseOrders'));
+            transaction.set(poRef, {
+                ...poData,
+                poNumber,
+                createdAt: serverTimestamp(),
+            });
+        });
+        revalidatePath('/purchasing');
+        return { success: true };
+    } catch (e) {
+        console.error('Error adding purchase order: ', e);
+        throw new Error('Failed to add purchase order');
     }
 }

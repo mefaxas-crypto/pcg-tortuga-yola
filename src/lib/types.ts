@@ -213,3 +213,31 @@ export type ButcheringLog = {
         unit: Unit;
     }[];
 }
+
+export type PurchaseOrderItem = {
+    itemId: string;
+    name: string;
+    orderQuantity: number;
+    purchaseUnit: Unit;
+};
+
+export type PurchaseOrder = {
+    id: string;
+    poNumber: string; // e.g., PO-2024-001
+    supplierId: string;
+    supplierName: string;
+    items: PurchaseOrderItem[];
+    status: 'Pending' | 'Partially Received' | 'Received' | 'Cancelled';
+    createdAt: Date;
+    receivedAt?: Date;
+};
+
+export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt'> & {
+    createdAt?: Date; // Optional because server will set it
+    items: {
+        itemId: string;
+        name: string;
+        orderQuantity: number;
+        purchaseUnit: string;
+    }[];
+};
