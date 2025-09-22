@@ -44,6 +44,11 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
     *   [ ] Update PO status (e.g., Pending, Partially Received, Received).
 
+*   **2.4 Multi-Outlet & Central Kitchen Support:**
+    *   [ ] Create "Outlets" data model and management UI.
+    *   [ ] Implement inventory transfers between outlets.
+    *   [ ] Scope all data (sales, inventory, purchasing) to a specific outlet.
+
 ## PHASE 3: PROFESSIONAL & ENTERPRISE FEATURES
 
 *   **3.1 Advanced Reporting & Analytics:**
@@ -52,12 +57,7 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement historical variance analysis to identify trends.
     *   [ ] Add Profit & Loss reporting by menu item and category.
 
-*   **3.2 Multi-Outlet & Central Kitchen Support:**
-    *   [ ] Create "Outlets" data model and management UI.
-    *   [ ] Implement inventory transfers between outlets.
-    *   [ ] Scope all data (sales, inventory, purchasing) to a specific outlet.
-
-*   **3.3 User Roles & Permissions:**
+*   **3.2 User Roles & Permissions:**
     *   [ ] Implement a user authentication system.
     *   [ ] Define roles (Admin, Chef, Purchasing Manager).
     *   [ ] Restrict access to pages and actions based on user role.
