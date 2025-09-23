@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -425,36 +426,41 @@ export async function deleteIngredientCategory(categoryId: string) {
 // Recipe Actions
 export async function addRecipe(recipeData: AddRecipeData) {
   try {
-    if (recipeData.isSubRecipe) {
-      // For sub-recipes, we use the internalCode as the document ID in the inventory
-      const inventoryRef = doc(db, 'inventory', recipeData.internalCode);
-      const unitCost = recipeData.totalCost / (recipeData.yield || 1);
-      
-      await setDoc(inventoryRef, {
-        materialCode: recipeData.internalCode,
-        name: recipeData.name,
-        category: 'Sub-recipe',
-        quantity: 0, // Initial quantity is 0 until produced
-        unit: recipeData.yieldUnit || 'un.',
-        purchaseUnit: recipeData.yieldUnit || 'un.',
-        purchaseQuantity: recipeData.yield || 1,
-        minStock: 0, // Sub-recipes are produced, not ordered
-        maxStock: 0,
-        supplier: 'In-house',
-        supplierId: '',
-        purchasePrice: isFinite(unitCost) ? unitCost : 0, // Price for one "batch"
-        unitCost: isFinite(unitCost) ? unitCost : 0, // Cost per base unit (ml, g, etc.)
-        allergens: [],
-        status: 'Out of Stock',
-        recipeUnit: recipeData.yieldUnit || 'un.',
-        recipeUnitConversion: 1,
-      });
-    }
+    await runTransaction(db, async (transaction) => {
+      // 1. Create the recipe document itself
+      const recipeRef = doc(collection(db, 'recipes'));
+      transaction.set(recipeRef, recipeData);
 
-    const docRef = await addDoc(collection(db, 'recipes'), recipeData);
+      // 2. If it's a sub-recipe, create its master inventory item spec (but NO stock records)
+      if (recipeData.isSubRecipe) {
+        const inventoryRef = doc(db, 'inventory', recipeData.internalCode);
+        const unitCost = recipeData.totalCost / (recipeData.yield || 1);
+        
+        const inventorySpec = {
+          materialCode: recipeData.internalCode,
+          name: recipeData.name,
+          category: 'Sub-recipe',
+          // NO quantity or status here, these belong in inventoryStock
+          unit: recipeData.yieldUnit || 'un.',
+          purchaseUnit: recipeData.yieldUnit || 'un.',
+          purchaseQuantity: recipeData.yield || 1,
+          minStock: 0,
+          maxStock: 0,
+          supplier: 'In-house',
+          supplierId: '',
+          purchasePrice: isFinite(unitCost) ? unitCost : 0,
+          unitCost: isFinite(unitCost) ? unitCost : 0,
+          allergens: [],
+          recipeUnit: recipeData.yieldUnit || 'un.',
+          recipeUnitConversion: 1,
+        };
+        transaction.set(inventoryRef, inventorySpec);
+      }
+    });
+
     revalidatePath('/recipes');
     revalidatePath('/inventory');
-    return {success: true, id: docRef.id};
+    return {success: true};
   } catch (e) {
     console.error('Error adding recipe: ', e);
     throw new Error('Failed to add recipe');
@@ -916,7 +922,7 @@ export async function logButchering(data: ButcheringData) {
               transaction.update(yieldedItemSnap.ref, {
                   quantity: newQuantity,
                   status: getStatus(newQuantity, yieldedItem.minStock),
-                  purchasePrice: isFinite(newPurchasePrice) ? newPurchasePrice : yieldedItem.purchasePrice,
+                  purchasePrice: isFinite(newPurchasePrice) ? yieldedItem.purchasePrice : yieldedItem.purchasePrice,
               });
 
               yieldedItemsForLog.push({
