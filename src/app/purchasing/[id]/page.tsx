@@ -25,19 +25,16 @@ import type { PurchaseOrder } from '@/lib/types';
 import { doc, getDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Printer, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-export default function PurchaseOrderPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function PurchaseOrderPage() {
   const router = useRouter();
+  const params = useParams();
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const { selectedOutlet } = useOutletContext();
-  const { id } = params;
+  const id = params.id as string;
 
   useEffect(() => {
     if (!id) return;
