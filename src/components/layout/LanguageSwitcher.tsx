@@ -20,11 +20,11 @@ export function LanguageSwitcher() {
   const [isPending, startTransition] = useTransition();
 
   const handleLocaleChange = (nextLocale: string) => {
-    // pathname here will include the current locale, so we need to remove it.
-    const newPath = pathname.startsWith(`/${locale}`) ? pathname.substring(`/${locale}`.length) : pathname;
+    // This removes the current locale from the pathname
+    const newPathname = pathname.startsWith(`/${locale}`) ? pathname.substring(`/${locale}`.length) || '/' : pathname;
     
     startTransition(() => {
-      router.replace(`/${nextLocale}${newPath || '/'}`);
+      router.replace(`/${nextLocale}${newPathname}`);
     });
   };
 
