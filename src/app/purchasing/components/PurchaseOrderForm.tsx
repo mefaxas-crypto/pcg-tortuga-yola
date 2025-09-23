@@ -104,32 +104,30 @@ export function PurchaseOrderForm() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const inv: InventoryItem[] = [];
       snapshot.forEach((doc) => inv.push({ id: doc.id, ...doc.data() } as InventoryItem));
-      setInventoryItems(inv.sort((a,b) => a.name.localeCompare(b.name)));
+      const sortedInv = inv.sort((a,b) => a.name.localeCompare(b.name));
+      setInventoryItems(sortedInv);
+
+      const poItems = sortedInv.map(item => {
+        const suggestedQuantity = item.quantity <= item.minStock
+          ? Math.ceil(item.maxStock - item.quantity)
+          : 0;
+          
+        return {
+          itemId: item.id,
+          name: item.name,
+          purchaseUnit: item.purchaseUnit,
+          purchasePrice: item.purchasePrice,
+          onHand: item.quantity,
+          minStock: item.minStock,
+          maxStock: item.maxStock,
+          orderQuantity: Math.max(0, suggestedQuantity),
+        };
+      });
+      replace(poItems);
     });
     return () => unsubscribe();
   }, [supplierId, replace]);
 
-  useEffect(() => {
-    const poItems = inventoryItems.map(item => {
-      // Logic: suggest ordering up to maxStock if current quantity is below minStock.
-      // Ensure suggested quantity is never negative.
-      const suggestedQuantity = item.quantity <= item.minStock
-        ? Math.ceil(item.maxStock - item.quantity)
-        : 0;
-        
-      return {
-        itemId: item.id,
-        name: item.name,
-        purchaseUnit: item.purchaseUnit,
-        purchasePrice: item.purchasePrice,
-        onHand: item.quantity,
-        minStock: item.minStock,
-        maxStock: item.maxStock,
-        orderQuantity: Math.max(0, suggestedQuantity), // Ensure order quantity is not negative
-      };
-    });
-    replace(poItems);
-  }, [inventoryItems, replace]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -248,7 +246,7 @@ export function PurchaseOrderForm() {
             )}
             
             <div className="flex justify-end">
-                <Button type="submit" disabled={loading || !supplierId}>
+                <Button type="submit" disabled={loading || !supplierId || fields.length === 0}>
                     {loading ? 'Saving...' : 'Create Purchase Order'}
                     <Save className="ml-2 h-4 w-4" />
                 </Button>
