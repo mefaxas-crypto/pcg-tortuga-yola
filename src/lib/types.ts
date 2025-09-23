@@ -1,11 +1,4 @@
 
-
-
-
-
-
-
-
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -13,9 +6,6 @@ export type InventoryItem = {
   materialCode: string;
   name: string;
   category: string;
-  // Stock level fields are now in InventoryStockItem
-  quantity: number;
-  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
   
   // Fields moved from the old model but still part of the master spec
   unit: Unit; // The unit for inventory tracking (e.g., 'un.' for bottles, 'kg' for bulk flour), same as purchaseUnit
@@ -37,6 +27,10 @@ export type InventoryItem = {
   
   // Legacy field for migration
   parLevel?: number;
+
+  // UI-only fields, not in DB
+  quantity?: number;
+  status?: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
 
 // New type for outlet-specific stock

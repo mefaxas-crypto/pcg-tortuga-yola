@@ -26,24 +26,28 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { InventoryItem } from '@/lib/types';
+import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
 import { allUnits } from '@/lib/conversions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useOutletContext } from '@/context/OutletContext';
 
 type InventoryTableProps = {
   onEdit: (item: InventoryItem) => void;
 };
 
 export function InventoryTable({ onEdit }: InventoryTableProps) {
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[] | null>(null);
+  const { selectedOutlet } = useOutletContext();
+  const [inventorySpecs, setInventorySpecs] = useState<InventoryItem[] | null>(null);
+  const [stockLevels, setStockLevels] = useState<InventoryStockItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  // Effect to fetch master inventory specifications
   useEffect(() => {
     const q = query(collection(db, 'inventory'));
     const unsubscribe = onSnapshot(
@@ -53,29 +57,70 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
         querySnapshot.forEach((doc) => {
           items.push({ id: doc.id, ...doc.data() } as InventoryItem);
         });
-        setInventoryItems(items.sort((a, b) => a.name.localeCompare(b.name)));
+        setInventorySpecs(items.sort((a, b) => a.name.localeCompare(b.name)));
+      },
+      (error) => {
+        console.error('Error fetching inventory specs:', error);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Effect to fetch stock levels for the selected outlet
+  useEffect(() => {
+    if (!selectedOutlet) {
+      setStockLevels([]);
+      setLoading(false);
+      return;
+    };
+    setLoading(true);
+
+    const q = query(collection(db, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const stock: InventoryStockItem[] = [];
+        querySnapshot.forEach((doc) => {
+          stock.push({ id: doc.id, ...doc.data() } as InventoryStockItem);
+        });
+        setStockLevels(stock);
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching inventory:', error);
+        console.error(`Error fetching stock for outlet ${selectedOutlet.id}:`, error);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
+
+  // Memoized combination of specs and stock levels
+  const combinedInventory = useMemo(() => {
+    if (!inventorySpecs || !stockLevels) return null;
+    
+    return inventorySpecs.map(spec => {
+      const stock = stockLevels.find(s => s.inventoryId === spec.id);
+      return {
+        ...spec,
+        quantity: stock?.quantity ?? 0,
+        status: stock?.status ?? 'Out of Stock',
+      };
+    }).sort((a,b) => a.name.localeCompare(b.name));
+  }, [inventorySpecs, stockLevels]);
+  
 
   const categories = useMemo(() => {
-    if (!inventoryItems) return [];
-    const uniqueCategories = new Set(inventoryItems.map(item => item.category));
+    if (!combinedInventory) return [];
+    const uniqueCategories = new Set(combinedInventory.map(item => item.category));
     return ['all', ...Array.from(uniqueCategories).sort()];
-  }, [inventoryItems]);
+  }, [combinedInventory]);
 
   const filteredItems = useMemo(() => {
-    if (!inventoryItems) return [];
-    if (categoryFilter === 'all') return inventoryItems;
-    return inventoryItems.filter(item => item.category === categoryFilter);
-  }, [inventoryItems, categoryFilter]);
+    if (!combinedInventory) return [];
+    if (categoryFilter === 'all') return combinedInventory;
+    return combinedInventory.filter(item => item.category === categoryFilter);
+  }, [combinedInventory, categoryFilter]);
   
   const getStatusBadge = (status: InventoryItem['status']) => {
     switch (status) {
@@ -174,7 +219,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {item.quantity.toFixed(2)} {getUnitLabel(item.purchaseUnit)}
+                    {(item.quantity ?? 0).toFixed(2)} {getUnitLabel(item.purchaseUnit)}
                   </TableCell>
                    <TableCell>{item.purchaseQuantity} {getUnitLabel(item.purchaseUnit)}</TableCell>
                    <TableCell>

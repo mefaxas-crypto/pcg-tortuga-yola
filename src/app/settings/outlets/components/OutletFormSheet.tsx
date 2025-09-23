@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addOutlet, editOutlet } from '@/lib/actions';
 import { useEffect, useState } from 'react';
 import type { Outlet } from '@/lib/types';
+import { useOutletContext } from '@/context/OutletContext';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Outlet name must be at least 2 characters.'),
@@ -47,6 +48,7 @@ export function OutletFormSheet({
 }: OutletFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { setSelectedOutlet } = useOutletContext();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -73,6 +75,7 @@ export function OutletFormSheet({
     try {
         if (mode === 'edit' && outlet) {
             await editOutlet(outlet.id, values);
+            setSelectedOutlet({ ...outlet, ...values });
             toast({
                 title: 'Outlet Updated',
                 description: `"${values.name}" has been updated.`,

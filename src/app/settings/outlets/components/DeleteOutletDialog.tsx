@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { deleteOutlet } from '@/lib/actions';
 import { type ReactNode, useState } from 'react';
+import { useOutletContext } from '@/context/OutletContext';
 
 type DeleteOutletDialogProps = {
   outletId: string;
@@ -29,11 +30,20 @@ export function DeleteOutletDialog({
 }: DeleteOutletDialogProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { selectedOutlet, setSelectedOutlet, outlets } = useOutletContext();
+
 
   async function handleDelete() {
     setLoading(true);
     try {
       await deleteOutlet(outletId);
+
+      // If the deleted outlet was the selected one, switch to another one
+      if (selectedOutlet?.id === outletId) {
+        const nextOutlet = outlets.find(o => o.id !== outletId);
+        setSelectedOutlet(nextOutlet || null);
+      }
+
       toast({
         title: 'Outlet Deleted',
         description: `"${outletName}" has been successfully deleted.`,

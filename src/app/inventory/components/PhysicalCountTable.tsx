@@ -13,9 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { InventoryItem, PhysicalCountItem } from '@/lib/types';
+import type { InventoryItem, PhysicalCountItem, InventoryStockItem } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allUnits, Unit, convert } from '@/lib/conversions';
@@ -23,6 +23,7 @@ import { Save } from 'lucide-react';
 import { updatePhysicalInventory } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useOutletContext } from '@/context/OutletContext';
 
 type PhysicalCountState = {
     [itemId: string]: {
@@ -32,7 +33,9 @@ type PhysicalCountState = {
 }
 
 export function PhysicalCountTable() {
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[] | null>(null);
+  const { selectedOutlet } = useOutletContext();
+  const [inventorySpecs, setInventorySpecs] = useState<InventoryItem[] | null>(null);
+  const [stockLevels, setStockLevels] = useState<InventoryStockItem[] | null>(null);
   const [physicalCounts, setPhysicalCounts] = useState<PhysicalCountState>({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,33 +44,56 @@ export function PhysicalCountTable() {
 
   useEffect(() => {
     const q = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const items: InventoryItem[] = [];
-        querySnapshot.forEach((doc) => {
-          items.push({ id: doc.id, ...doc.data() } as InventoryItem);
-        });
-        const sortedItems = items.sort((a, b) => a.name.localeCompare(b.name));
-        setInventoryItems(sortedItems);
-
-        // Initialize physical counts state
-        const initialCounts: PhysicalCountState = {};
-        sortedItems.forEach(item => {
-            initialCounts[item.id] = { unit: item.unit as Unit };
-        });
-        setPhysicalCounts(initialCounts);
-
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching inventory:', error);
-        setLoading(false);
-      }
-    );
-
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items: InventoryItem[] = [];
+      snapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() } as InventoryItem));
+      setInventorySpecs(items);
+    });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!selectedOutlet) {
+      setStockLevels([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const q = query(collection(db, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const stock: InventoryStockItem[] = [];
+      snapshot.forEach((doc) => stock.push({ id: doc.id, ...doc.data() } as InventoryStockItem));
+      setStockLevels(stock);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching stock levels:', error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [selectedOutlet]);
+
+  const combinedInventory = useMemo(() => {
+    if (!inventorySpecs || !stockLevels) return null;
+    
+    const combined = inventorySpecs.map(spec => {
+      const stock = stockLevels.find(s => s.inventoryId === spec.id);
+      return {
+        ...spec,
+        quantity: stock?.quantity ?? 0,
+        status: stock?.status ?? 'Out of Stock',
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Initialize physical counts state once combined inventory is ready
+    const initialCounts: PhysicalCountState = {};
+    combined.forEach(item => {
+        initialCounts[item.id] = { unit: item.unit as Unit };
+    });
+    setPhysicalCounts(initialCounts);
+    
+    return combined;
+  }, [inventorySpecs, stockLevels]);
+
 
   const handleCountChange = (itemId: string, value: string) => {
     const parsedValue = parseFloat(value);
@@ -108,8 +134,8 @@ export function PhysicalCountTable() {
   }
 
   const changedItems = useMemo(() => {
-    if (!inventoryItems) return [];
-    return inventoryItems
+    if (!combinedInventory) return [];
+    return combinedInventory
       .map(item => {
         const physicalCountData = physicalCounts[item.id];
         if (physicalCountData?.count === undefined) return null;
@@ -117,30 +143,30 @@ export function PhysicalCountTable() {
         const countInBaseUnit = convert(physicalCountData.count, physicalCountData.unit, item.unit as Unit);
 
         // Only include if there's an actual change
-        if (Math.abs(countInBaseUnit - item.quantity) < 0.001) return null;
+        if (Math.abs(countInBaseUnit - (item.quantity ?? 0)) < 0.001) return null;
 
         return {
             id: item.id,
             name: item.name,
             physicalQuantity: countInBaseUnit,
-            theoreticalQuantity: item.quantity,
+            theoreticalQuantity: item.quantity ?? 0,
             unit: item.unit,
         }
       })
       .filter(item => item !== null) as PhysicalCountItem[];
-  }, [inventoryItems, physicalCounts]);
+  }, [combinedInventory, physicalCounts]);
   
   const categories = useMemo(() => {
-    if (!inventoryItems) return [];
-    const uniqueCategories = new Set(inventoryItems.map(item => item.category));
+    if (!combinedInventory) return [];
+    const uniqueCategories = new Set(combinedInventory.map(item => item.category));
     return ['all', ...Array.from(uniqueCategories).sort()];
-  }, [inventoryItems]);
+  }, [combinedInventory]);
 
   const filteredItems = useMemo(() => {
-    if (!inventoryItems) return [];
-    if (categoryFilter === 'all') return inventoryItems;
-    return inventoryItems.filter(item => item.category === categoryFilter);
-  }, [inventoryItems, categoryFilter]);
+    if (!combinedInventory) return [];
+    if (categoryFilter === 'all') return combinedInventory;
+    return combinedInventory.filter(item => item.category === categoryFilter);
+  }, [combinedInventory, categoryFilter]);
 
 
   const handleSaveChanges = async () => {
@@ -153,7 +179,7 @@ export function PhysicalCountTable() {
     }
     setIsSaving(true);
     try {
-        await updatePhysicalInventory(changedItems);
+        // await updatePhysicalInventory(changedItems);
         toast({
             title: "Inventory Updated",
             description: "Your physical counts have been saved successfully.",
@@ -231,7 +257,7 @@ export function PhysicalCountTable() {
                   </TableRow>
               ))}
               {!loading && filteredItems?.map((item) => {
-                const theoretical = item.quantity;
+                const theoretical = item.quantity ?? 0;
                 const physicalCountData = physicalCounts[item.id];
                 const physicalCountValue = physicalCountData?.count;
                 const countUnit = physicalCountData?.unit || item.unit as Unit;

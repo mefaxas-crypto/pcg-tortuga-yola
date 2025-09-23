@@ -191,7 +191,6 @@ export async function addInventoryItem(formData: InventoryFormData) {
 
       // 3. For each outlet, create a new stock record with quantity 0
       outletsSnapshot.forEach(outletDoc => {
-        const outletData = outletDoc.data() as Outlet;
         const stockRef = doc(collection(db, 'inventoryStock'));
         transaction.set(stockRef, {
           inventoryId: docRef.id,
@@ -206,9 +205,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
 
     const newItem: InventoryItem = {
       id: newDocRef.id,
-      ...(itemSpecData as Omit<InventoryItem, 'id' | 'quantity' | 'status'>),
-      quantity: 0, // This is now stored in inventoryStock
-      status: 'Out of Stock', // This is now stored in inventoryStock
+      ...(itemSpecData as Omit<InventoryItem, 'id'>),
     };
 
     revalidatePath('/inventory');
@@ -433,14 +430,13 @@ export async function addRecipe(recipeData: AddRecipeData) {
 
       // 2. If it's a sub-recipe, create its master inventory item spec (but NO stock records)
       if (recipeData.isSubRecipe) {
-        const inventoryRef = doc(db, 'inventory', recipeData.internalCode);
+        const inventoryRef = doc(db, 'inventory');
         const unitCost = recipeData.totalCost / (recipeData.yield || 1);
         
         const inventorySpec = {
           materialCode: recipeData.internalCode,
           name: recipeData.name,
           category: 'Sub-recipe',
-          // NO quantity or status here, these belong in inventoryStock
           unit: recipeData.yieldUnit || 'un.',
           purchaseUnit: recipeData.yieldUnit || 'un.',
           purchaseQuantity: recipeData.yield || 1,
@@ -615,7 +611,7 @@ export async function logSale(saleData: AddSaleData) {
             quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
         }
 
-        const newQuantity = invItem.quantity - quantityToDeplete;
+        const newQuantity = (invItem.quantity ?? 0) - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.minStock);
         
         transaction.update(invItemRef, { 
@@ -693,7 +689,7 @@ export async function logProduction(data: LogProductionData) {
               quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
           }
 
-          const newQuantity = invItem.quantity - quantityToDeplete;
+          const newQuantity = (invItem.quantity ?? 0) - quantityToDeplete;
           transaction.update(invItemSnap.ref, {
             quantity: newQuantity,
             status: getStatus(newQuantity, invItem.minStock),
@@ -707,7 +703,7 @@ export async function logProduction(data: LogProductionData) {
         
         const producedItem = producedItemInvSnap.data() as InventoryItem;
         const totalYieldQuantity = itemToProduce.quantityProduced * (subRecipe.yield || 1);
-        const newQuantity = producedItem.quantity + totalYieldQuantity;
+        const newQuantity = (producedItem.quantity ?? 0) + totalYieldQuantity;
         
         transaction.update(producedItemInvSnap.ref, {
           quantity: newQuantity,
@@ -819,7 +815,7 @@ export async function undoProductionLog(logId: string) {
           }
 
 
-          const newQuantity = invItem.quantity + quantityToRestore;
+          const newQuantity = (invItem.quantity ?? 0) + quantityToRestore;
           transaction.update(invItemSnap.ref, {
             quantity: newQuantity,
             status: getStatus(newQuantity, invItem.minStock),
@@ -831,7 +827,7 @@ export async function undoProductionLog(logId: string) {
         if (producedInvItemSnap && producedInvItemSnap.exists()) {
             const producedInvItem = producedInvItemSnap.data() as InventoryItem;
             const totalYieldQuantity = producedItem.quantityProduced * (recipe.yield || 1);
-            const newQuantity = producedInvItem.quantity - totalYieldQuantity;
+            const newQuantity = (producedInvItem.quantity ?? 0) - totalYieldQuantity;
             transaction.update(producedInvItemSnap.ref, {
                 quantity: newQuantity,
                 status: getStatus(newQuantity, producedInvItem.minStock),
@@ -877,8 +873,8 @@ export async function logButchering(data: ButcheringData) {
           // Convert the quantity of the primary item used to its base inventory unit (purchaseUnit)
           const quantityUsedInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItem.purchaseUnit as Unit);
 
-          if (quantityUsedInPurchaseUnit > primaryItem.quantity) {
-              throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${primaryItem.quantity.toFixed(2)} ${primaryItem.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit.toFixed(2)} ${primaryItem.purchaseUnit}`);
+          if (quantityUsedInPurchaseUnit > (primaryItem.quantity ?? 0)) {
+              throw new Error(`Not enough stock for ${primaryItem.name}. Available: ${(primaryItem.quantity ?? 0).toFixed(2)} ${primaryItem.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit.toFixed(2)} ${primaryItem.purchaseUnit}`);
           }
           
           // Calculate the monetary cost of the portion of the primary item that was used
@@ -886,7 +882,7 @@ export async function logButchering(data: ButcheringData) {
 
           // --- 3. WRITE PHASE ---
           // Deplete the primary item's stock
-          const newPrimaryQuantity = primaryItem.quantity - quantityUsedInPurchaseUnit;
+          const newPrimaryQuantity = (primaryItem.quantity ?? 0) - quantityUsedInPurchaseUnit;
           transaction.update(primaryItemRef, {
               quantity: newPrimaryQuantity,
               status: getStatus(newPrimaryQuantity, primaryItem.minStock),
@@ -909,10 +905,10 @@ export async function logButchering(data: ButcheringData) {
               // The quantity to add is the weight entered in the form. The unit is already the yielded item's purchase unit.
               const quantityToAddInPurchaseUnit = yieldedItemData.weight;
               
-              const newQuantity = yieldedItem.quantity + quantityToAddInPurchaseUnit;
+              const newQuantity = (yieldedItem.quantity ?? 0) + quantityToAddInPurchaseUnit;
               
               // Calculate the new total value of the stock for this yielded item
-              const currentTotalValue = yieldedItem.purchasePrice * (yieldedItem.quantity / yieldedItem.purchaseQuantity);
+              const currentTotalValue = (yieldedItem.quantity ?? 0) * (yieldedItem.purchasePrice / yieldedItem.purchaseQuantity);
               const newTotalValue = currentTotalValue + costOfThisYield;
               
               // Calculate the new average purchase price per purchase quantity
@@ -978,7 +974,7 @@ export async function undoButcheringLog(logId: string) {
             const primaryItemSnap = await transaction.get(primaryItemRef);
             if (primaryItemSnap.exists()) {
                 const primaryItem = primaryItemSnap.data() as InventoryItem;
-                const newQuantity = primaryItem.quantity + logData.primaryItem.quantityUsed;
+                const newQuantity = (primaryItem.quantity ?? 0) + logData.primaryItem.quantityUsed;
                 transaction.update(primaryItemRef, {
                     quantity: newQuantity,
                     status: getStatus(newQuantity, primaryItem.minStock),
@@ -993,7 +989,7 @@ export async function undoButcheringLog(logId: string) {
                 const yieldedItemSnap = await transaction.get(yieldedItemRef);
                 if (yieldedItemSnap.exists()) {
                     const item = yieldedItemSnap.data() as InventoryItem;
-                    const newQuantity = item.quantity - yieldedItem.quantityYielded;
+                    const newQuantity = (item.quantity ?? 0) - yieldedItem.quantityYielded;
                     transaction.update(yieldedItemRef, {
                         quantity: newQuantity,
                         status: getStatus(newQuantity, item.minStock),
@@ -1128,7 +1124,7 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         const invItemRef = itemSnap.ref;
         
         // This quantity is in `purchaseUnit`
-        const newQuantity = invItem.quantity + receivedItem.received;
+        const newQuantity = (invItem.quantity ?? 0) + receivedItem.received;
         const newStatus = getStatus(newQuantity, invItem.minStock);
 
         const updateData: Partial<InventoryItem> = {
@@ -1140,7 +1136,7 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         
         if (hasNewPrice) {
           // Weighted-Average Cost Calculation
-          const currentPurchaseUnits = invItem.quantity;
+          const currentPurchaseUnits = invItem.quantity ?? 0;
           const currentTotalValue = (currentPurchaseUnits / invItem.purchaseQuantity) * invItem.purchasePrice;
 
           const receivedPurchaseUnits = receivedItem.received;
@@ -1192,9 +1188,30 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
 // Outlet Actions
 export async function addOutlet(data: AddOutletData) {
   try {
-    const docRef = await addDoc(collection(db, 'outlets'), data);
+    await runTransaction(db, async (transaction) => {
+      // 1. Create the new outlet document.
+      const outletRef = doc(collection(db, 'outlets'));
+      transaction.set(outletRef, data);
+      
+      // 2. Fetch all existing inventory item specifications.
+      const inventoryQuery = query(collection(db, 'inventory'));
+      const inventorySnapshot = await getDocs(inventoryQuery);
+
+      // 3. For each inventory item, create a new stock record for the new outlet with 0 quantity.
+      inventorySnapshot.forEach(itemDoc => {
+        const itemSpec = itemDoc.data() as InventoryItem;
+        const stockRef = doc(collection(db, 'inventoryStock'));
+        transaction.set(stockRef, {
+          inventoryId: itemDoc.id,
+          outletId: outletRef.id,
+          quantity: 0,
+          status: getStatus(0, itemSpec.minStock),
+        });
+      });
+    });
+
     revalidatePath('/settings/outlets');
-    return { success: true, id: docRef.id };
+    return { success: true };
   } catch (error) {
     console.error("Error adding outlet:", error);
     throw new Error("Failed to add outlet.");
@@ -1214,9 +1231,19 @@ export async function editOutlet(id: string, data: Partial<Outlet>) {
 
 export async function deleteOutlet(id: string) {
   try {
-    // In a real app, you would also need to handle cleanup of associated
-    // inventory stock records for this outlet.
-    await deleteDoc(doc(db, 'outlets', id));
+    await runTransaction(db, async (transaction) => {
+      // 1. Delete the outlet document itself.
+      const outletRef = doc(db, 'outlets', id);
+      transaction.delete(outletRef);
+
+      // 2. Find and delete all inventory stock records associated with this outlet.
+      const stockQuery = query(collection(db, 'inventoryStock'), where('outletId', '==', id));
+      const stockSnapshot = await getDocs(stockQuery);
+      stockSnapshot.forEach(stockDoc => {
+        transaction.delete(stockDoc.ref);
+      });
+    });
+
     revalidatePath('/settings/outlets');
     return { success: true };
   } catch (error) {
