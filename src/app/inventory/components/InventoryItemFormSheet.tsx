@@ -52,7 +52,8 @@ const formSchema = z.object({
   purchaseQuantity: z.coerce.number().min(0.0001, 'Purchase quantity must be positive.'),
   purchaseUnit: z.string().min(1, 'Purchase unit is required.'),
   purchasePrice: z.coerce.number().min(0, 'Cost must be a positive number.'),
-  parLevel: z.coerce.number().min(0, 'Par level cannot be negative.'),
+  minStock: z.coerce.number().min(0, 'Min stock cannot be negative.'),
+  maxStock: z.coerce.number().min(0, 'Max stock cannot be negative.'),
   supplierId: z.string().optional(),
   allergens: z.array(z.string()).optional(),
   // Internal fields, not shown on form but required for submission
@@ -104,7 +105,8 @@ export function InventoryItemFormSheet({
       purchaseQuantity: 1,
       purchaseUnit: '',
       purchasePrice: 0,
-      parLevel: 0,
+      minStock: 0,
+      maxStock: 0,
       supplierId: '',
       allergens: [],
       quantity: 0,
@@ -118,7 +120,8 @@ export function InventoryItemFormSheet({
       purchaseQuantity: 1,
       purchaseUnit: '',
       purchasePrice: 0,
-      parLevel: 0,
+      minStock: 0,
+      maxStock: 0,
       supplierId: '',
       allergens: [],
       quantity: 0,
@@ -129,9 +132,13 @@ export function InventoryItemFormSheet({
   useEffect(() => {
     if (open) {
       if (mode === 'edit' && item) {
+        const defaultMin = item.minStock ?? item.parLevel ?? 0;
+        const defaultMax = item.maxStock ?? item.parLevel ?? 0;
         form.reset({
           ...commonReset(),
           ...item,
+          minStock: defaultMin,
+          maxStock: defaultMax,
           purchaseQuantity: item.purchaseQuantity,
           supplierId: item.supplierId || '',
           allergens: item.allergens || [],
@@ -412,18 +419,32 @@ export function InventoryItemFormSheet({
                     )}
                     <FormField
                         control={form.control}
-                        name="parLevel"
+                        name="minStock"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Par Stock</FormLabel>
+                            <FormLabel>Min Stock</FormLabel>
                             <FormControl>
                                 <Input type="number" {...field} value={field.value || ''} />
                             </FormControl>
-                             <FormDescription className='text-xs'>Re-order point in purchase units (e.g. # of {purchaseUnit})</FormDescription>
+                             <FormDescription className='text-xs'>Re-order point in {purchaseUnit ? `${purchaseUnit}s` : 'purchase units'}</FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}
-                        />
+                    />
+                    <FormField
+                        control={form.control}
+                        name="maxStock"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Max Stock</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} value={field.value || ''} />
+                            </FormControl>
+                             <FormDescription className='text-xs'>Target level in {purchaseUnit ? `${purchaseUnit}s` : 'purchase units'}</FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </div>
                  
                  <Separator />

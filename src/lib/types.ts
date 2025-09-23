@@ -3,6 +3,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -26,6 +27,8 @@ export type InventoryItem = {
   // Meta fields
   allergens?: string[];
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  // Legacy field for migration
+  parLevel?: number;
 };
 
 
