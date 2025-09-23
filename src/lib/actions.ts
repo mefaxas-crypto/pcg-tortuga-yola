@@ -1,11 +1,4 @@
 
-
-
-
-
-
-
-
 'use server';
 
 import {
@@ -128,7 +121,7 @@ function getStatus(
 
 export async function addInventoryItem(formData: InventoryFormData) {
   try {
-    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
+    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, minStock, maxStock, ...restOfForm } = formData;
     
     const inventoryUnit = purchaseUnit;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
@@ -149,7 +142,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
     }
     
     const quantity = formData.quantity || 0;
-    const status = getStatus(quantity, formData.minStock);
+    const status = getStatus(quantity, minStock);
     const supplierName = await getSupplierName(formData.supplierId);
 
     const fullItemData = {
@@ -161,6 +154,8 @@ export async function addInventoryItem(formData: InventoryFormData) {
       purchaseQuantity: purchaseQuantity,
       purchaseUnit: purchaseUnit,
       purchasePrice,
+      minStock,
+      maxStock,
       unit: inventoryUnit,
       unitCost: isFinite(unitCost) ? unitCost : 0,
       recipeUnit: finalRecipeUnit,
@@ -208,7 +203,7 @@ export async function editInventoryItem(
     if (!itemSnap.exists()) throw new Error("Item not found");
     const currentItem = itemSnap.data() as InventoryItem;
 
-    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, ...restOfForm } = formData;
+    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, minStock, maxStock, ...restOfForm } = formData;
     
     const inventoryUnit = purchaseUnit;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
@@ -229,7 +224,7 @@ export async function editInventoryItem(
     }
 
     const quantity = currentItem.quantity;
-    const status = getStatus(quantity, formData.minStock);
+    const status = getStatus(quantity, minStock);
     const supplierName = await getSupplierName(formData.supplierId);
 
     const dataToUpdate = {
@@ -241,6 +236,8 @@ export async function editInventoryItem(
       purchaseQuantity,
       purchaseUnit,
       purchasePrice,
+      minStock,
+      maxStock,
       unit: inventoryUnit,
       unitCost: isFinite(unitCost) ? unitCost : 0,
       recipeUnit: finalRecipeUnit,
@@ -1051,7 +1048,6 @@ export async function cancelPurchaseOrder(poId: string) {
 export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
   try {
     await runTransaction(db, async (transaction) => {
-      let isPartiallyReceived = false;
       const receivedItems = data.items.filter((item) => item.received > 0);
 
       // 1. Fetch all inventory items at once
@@ -1076,7 +1072,8 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
 
         const invItem = itemSnap.data() as InventoryItem;
         const invItemRef = itemSnap.ref;
-
+        
+        // This quantity is in `purchaseUnit`
         const newQuantity = invItem.quantity + receivedItem.received;
         const newStatus = getStatus(newQuantity, invItem.minStock);
 
@@ -1086,13 +1083,13 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         };
 
         const hasNewPrice = receivedItem.purchasePrice !== invItem.purchasePrice;
-
+        
         if (hasNewPrice) {
           // Weighted-Average Cost Calculation
-          const currentPurchaseUnits = invItem.quantity / invItem.purchaseQuantity;
+          const currentPurchaseUnits = invItem.quantity;
           const currentTotalValue = currentPurchaseUnits * invItem.purchasePrice;
 
-          const receivedPurchaseUnits = receivedItem.received / invItem.purchaseQuantity;
+          const receivedPurchaseUnits = receivedItem.received;
           const receivedValue = receivedPurchaseUnits * receivedItem.purchasePrice;
           
           const newTotalPurchaseUnits = currentPurchaseUnits + receivedPurchaseUnits;
@@ -1113,22 +1110,13 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         }
         
         transaction.update(invItemRef, updateData);
-
-        if (receivedItem.received < receivedItem.ordered) {
-          isPartiallyReceived = true;
-        }
       }
 
       // 3. Update Purchase Order status
       const poRef = doc(db, 'purchaseOrders', data.poId);
-      const allItemsReceived = data.items.every(
-        (item) => item.received >= item.ordered
-      );
+      const isPartiallyReceived = data.items.some(item => item.received < item.ordered);
 
-      let newStatus: PurchaseOrder['status'] = 'Received';
-      if (!allItemsReceived || isPartiallyReceived) {
-        newStatus = 'Partially Received';
-      }
+      const newStatus: PurchaseOrder['status'] = isPartiallyReceived ? 'Partially Received' : 'Received';
 
       transaction.update(poRef, {
         status: newStatus,
