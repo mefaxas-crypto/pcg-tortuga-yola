@@ -19,7 +19,7 @@ import { db } from '@/lib/firebase';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Package } from 'lucide-react';
-import { Link } from 'next-intl';
+import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from '@/context/OutletContext';
 import { Skeleton } from '@/components/ui/skeleton';
