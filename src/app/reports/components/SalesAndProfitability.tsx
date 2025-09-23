@@ -10,7 +10,7 @@ import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'fireba
 import { useEffect, useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { addDays, format } from 'date-fns';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -19,7 +19,7 @@ import {
 import { db } from '@/lib/firebase';
 import type { Sale } from '@/lib/types';
 import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
-import { BarChart3, Bot, Package, ArrowUpRight } from 'lucide-react';
+import { BarChart3, Bot, ArrowUpRight } from 'lucide-react';
 import { Link } from 'next-intl';
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from '@/context/OutletContext';

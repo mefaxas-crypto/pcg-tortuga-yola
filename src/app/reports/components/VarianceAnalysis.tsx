@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useOutletContext } from '@/context/OutletContext';
 import { db } from '@/lib/firebase';
-import type { Sale, PurchaseOrder, VarianceLog } from '@/lib/types';
+import type { Sale, VarianceLog } from '@/lib/types';
 import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useEffect, useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
@@ -80,8 +80,8 @@ export function VarianceAnalysis() {
 
   }, [selectedOutlet, date]);
 
-  const { theoreticalCost, actualCost, varianceAmount, variancePercentage, totalVarianceValue } = useMemo(() => {
-    if (!sales || !varianceLogs) return { theoreticalCost: 0, actualCost: 0, varianceAmount: 0, variancePercentage: 0, totalVarianceValue: 0 };
+  const { theoreticalCost, actualCost, varianceAmount, variancePercentage } = useMemo(() => {
+    if (!sales || !varianceLogs) return { theoreticalCost: 0, actualCost: 0, varianceAmount: 0, variancePercentage: 0 };
 
     const theoreticalCost = sales.reduce((acc, sale) => acc + sale.totalCost, 0);
     const totalVarianceValue = varianceLogs.reduce((sum, log) => sum + (log.totalVarianceValue || 0), 0);
@@ -90,7 +90,7 @@ export function VarianceAnalysis() {
     const varianceAmount = actualCost - theoreticalCost;
     const variancePercentage = theoreticalCost > 0 ? (varianceAmount / theoreticalCost) * 100 : 0;
     
-    return { theoreticalCost, actualCost, varianceAmount, variancePercentage, totalVarianceValue };
+    return { theoreticalCost, actualCost, varianceAmount, variancePercentage };
   }, [sales, varianceLogs]);
 
 

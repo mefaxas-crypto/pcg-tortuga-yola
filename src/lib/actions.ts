@@ -1,11 +1,4 @@
 
-
-
-
-
-
-
-
 'use server';
 
 import {
@@ -22,7 +15,6 @@ import {
   where,
   writeBatch,
   DocumentReference,
-  setDoc,
 } from 'firebase/firestore';
 import {db} from './firebase';
 import type {
@@ -1005,7 +997,7 @@ export async function logButchering(data: ButcheringData, outletId: string) {
           for (const readData of yieldedItemReads) {
               if (!readData.specSnap.exists()) throw new Error(`Yielded item "${readData.itemData.name}" could not be found.`);
               const yieldedItemSpec = readData.specSnap.data() as InventoryItem;
-              const costOfThisYield = costOfButcheredPortion * ((readData.itemData.finalCostDistribution || 0) / 100);
+              // const costOfThisYield = costOfButcheredPortion * ((readData.itemData.finalCostDistribution || 0) / 100);
               const quantityToAddInPurchaseUnit = readData.itemData.weight;
               
               if (readData.stockSnap && readData.stockSnap.exists() && readData.stockRef) { // Existing stock

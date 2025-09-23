@@ -2,7 +2,6 @@
 'use client';
 
 import PageHeader from '@/components/PageHeader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesAndProfitability } from './components/SalesAndProfitability';
 import { VarianceAnalysis } from './components/VarianceAnalysis';

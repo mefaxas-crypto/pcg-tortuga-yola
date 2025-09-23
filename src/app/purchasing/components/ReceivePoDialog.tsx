@@ -111,7 +111,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
     }
   }
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit() {
     setConfirmOpen(true);
   }
 

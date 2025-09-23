@@ -11,10 +11,8 @@ import {
 import PageHeader from '@/components/PageHeader';
 import { LowStockItems } from '../dashboard/components/LowStockItems';
 import { Suspense } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardStats } from '../dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
-import { Link } from 'next-intl';
 
 
 export default function Home() {
