@@ -20,10 +20,12 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Inbox } from 'lucide-react';
+import { ReceivePoDialog } from './ReceivePoDialog';
 
 export function PurchaseOrdersTable() {
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[] | null>(null);
     const [loading, setLoading] = useState(true);
+    const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
 
     useEffect(() => {
         const q = query(collection(db, 'purchaseOrders'), orderBy('createdAt', 'desc'));
@@ -61,8 +63,17 @@ export function PurchaseOrdersTable() {
             return 'bg-secondary';
         }
     };
+    
+    const handleReceiveClick = (po: PurchaseOrder) => {
+        setSelectedPo(po);
+    };
+
+    const handleDialogClose = () => {
+        setSelectedPo(null);
+    }
 
     return (
+        <>
         <Card>
             <CardHeader>
                 <CardTitle>Existing Purchase Orders</CardTitle>
@@ -106,12 +117,12 @@ export function PurchaseOrdersTable() {
                                     </TableCell>
                                     <TableCell className="text-right">{po.items.length}</TableCell>
                                     <TableCell className="text-right">
-                                        {po.status === 'Pending' && (
-                                            <Button variant="outline" size="sm">
+                                        {po.status === 'Pending' || po.status === 'Partially Received' ? (
+                                            <Button variant="outline" size="sm" onClick={() => handleReceiveClick(po)}>
                                                 <Inbox className="mr-2 h-3.5 w-3.5" />
                                                 Receive
                                             </Button>
-                                        )}
+                                        ) : null}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -127,5 +138,14 @@ export function PurchaseOrdersTable() {
                  </div>
             </CardContent>
         </Card>
+        
+        {selectedPo && (
+            <ReceivePoDialog 
+                po={selectedPo}
+                open={!!selectedPo}
+                onClose={handleDialogClose}
+            />
+        )}
+        </>
     );
 }
