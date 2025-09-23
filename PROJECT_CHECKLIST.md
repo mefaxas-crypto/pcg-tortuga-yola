@@ -40,8 +40,9 @@ This file tracks our development progress to ensure we build the app logically, 
 *   **2.3 Purchasing & Receiving (The Closed Loop):**
     *   [x] Implement a "Purchasing" page to create purchase orders for suppliers.
     *   [x] Automatically suggest items to reorder based on "Low Stock" levels.
-    *   [ ] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
-    *   [ ] Update PO status (e.g., Pending, Partially Received, Received).
+    *   [x] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
+    *   [x] Update PO status (e.g., Pending, Partially Received, Received).
+    *   [ ] **Enhancement:** Add the ability to attach scanned documents (PDFs, images) to a received PO.
 
 *   **2.4 Multi-Outlet & Central Kitchen Support:**
     *   [ ] Create "Outlets" data model and management UI (e.g., "Hotel", "Restaurant").
@@ -59,8 +60,10 @@ This file tracks our development progress to ensure we build the app logically, 
 
 *   **3.2 User Roles & Permissions:**
     *   [ ] Implement a user authentication system.
-    *   [ ] Define roles (Admin, Chef, Purchasing Manager).
+    *   [ ] Define roles (Admin, Chef, Purchasing Manager, Supervisor).
     *   [ ] Restrict access to pages and actions based on user role.
+    *   [ ] Track which user performs critical actions (e.g., receiving POs, logging sales, updating inventory).
+    *   [ ] **Approval Workflow:** Implement a two-step approval process. Critical actions (like PO receiving) by a Supervisor will enter a "Pending Approval" state until confirmed by a Manager or Admin.
 
 ## PHASE 4: WORLD-CLASS AI INTEGRATION
 
