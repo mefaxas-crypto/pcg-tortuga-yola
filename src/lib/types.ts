@@ -1,6 +1,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -13,7 +14,8 @@ export type InventoryItem = {
   purchaseQuantity: number; // e.g., 1 for a case, 10 for a kg bag
   purchaseUnit: Unit; // The unit of the purchase (e.g., 'un.' for case, 'kg' for bag)
   purchasePrice: number; // Price for one purchaseQuantity
-  parLevel: number; // Re-order point in the `purchaseUnit`
+  minStock: number; // Re-order point in `purchaseUnit`
+  maxStock: number; // Target quantity after re-ordering in `purchaseUnit`
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
   // Costing fields
@@ -34,7 +36,8 @@ export type InventoryFormData = {
   purchaseQuantity: number;
   purchaseUnit: Unit;
   purchasePrice: number;
-  parLevel: number;
+  minStock: number;
+  maxStock: number;
   supplierId?: string;
   allergens?: string[];
   quantity?: number; // Optional initial stock
@@ -240,4 +243,17 @@ export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'crea
         orderQuantity: number;
         purchaseUnit: string;
     }[];
+};
+
+export type ReceivingItem = {
+  itemId: string;
+  name: string;
+  ordered: number;
+  purchaseUnit: string;
+  received: number;
+};
+
+export type ReceivePurchaseOrderData = {
+  poId: string;
+  items: ReceivingItem[];
 };

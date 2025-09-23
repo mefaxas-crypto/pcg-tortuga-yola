@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -32,6 +31,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { receivePurchaseOrder } from '@/lib/actions';
 
 const receivingItemSchema = z.object({
   itemId: z.string(),
@@ -72,17 +72,25 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    // TODO: Implement the actual server action to update inventory and PO status
-    console.log('Submitting received items:', values);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-    
-    toast({
-        title: "Inventory Updated (Simulated)",
-        description: "The received items have been added to your inventory.",
-    });
-
-    setLoading(false);
-    onClose();
+    try {
+      await receivePurchaseOrder(values);
+      toast({
+        title: 'Inventory Updated',
+        description: 'The received items have been added to your inventory.',
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error receiving PO:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unknown error occurred.';
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

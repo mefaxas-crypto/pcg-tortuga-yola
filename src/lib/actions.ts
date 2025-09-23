@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -36,7 +37,9 @@ import type {
   Menu,
   PhysicalCountItem,
   ProductionLog,
+  PurchaseOrder,
   Recipe,
+  ReceivePurchaseOrderData,
   Supplier,
 } from './types';
 import {revalidatePath} from 'next/cache';
@@ -108,11 +111,11 @@ export async function deleteSupplier(supplierId: string) {
 
 function getStatus(
   quantity: number,
-  parLevel: number
+  minStock: number,
 ): 'In Stock' | 'Low Stock' | 'Out of Stock' {
   if (quantity <= 0) {
     return 'Out of Stock';
-  } else if (quantity < parLevel) {
+  } else if (quantity <= minStock) {
     return 'Low Stock';
   } else {
     return 'In Stock';
@@ -142,7 +145,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
     }
     
     const quantity = formData.quantity || 0;
-    const status = getStatus(quantity, formData.parLevel);
+    const status = getStatus(quantity, formData.minStock);
     const supplierName = await getSupplierName(formData.supplierId);
 
     const fullItemData = {
@@ -222,7 +225,7 @@ export async function editInventoryItem(
     }
 
     const quantity = currentItem.quantity;
-    const status = getStatus(quantity, formData.parLevel);
+    const status = getStatus(quantity, formData.minStock);
     const supplierName = await getSupplierName(formData.supplierId);
 
     const dataToUpdate = {
@@ -285,7 +288,7 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[]) {
 
                 // The physicalQuantity is already converted to the base unit in the frontend
                 const newQuantity = item.physicalQuantity;
-                const newStatus = getStatus(newQuantity, invItem.parLevel);
+                const newStatus = getStatus(newQuantity, invItem.minStock);
 
                 transaction.update(itemSnap.ref, {
                     quantity: newQuantity,
@@ -386,7 +389,8 @@ export async function addRecipe(recipeData: AddRecipeData) {
         unit: recipeData.yieldUnit || 'un.',
         purchaseUnit: recipeData.yieldUnit || 'un.',
         purchaseQuantity: recipeData.yield || 1,
-        parLevel: 0, // Should be set manually if needed
+        minStock: 0, // Sub-recipes are produced, not ordered
+        maxStock: 0,
         supplier: 'In-house',
         supplierId: '',
         purchasePrice: isFinite(unitCost) ? unitCost : 0, // Price for one "batch"
@@ -557,7 +561,7 @@ export async function logSale(saleData: AddSaleData) {
         }
 
         const newQuantity = invItem.quantity - quantityToDeplete;
-        const newStatus = getStatus(newQuantity, invItem.parLevel);
+        const newStatus = getStatus(newQuantity, invItem.minStock);
         
         transaction.update(invItemRef, { 
             quantity: newQuantity,
@@ -637,7 +641,7 @@ export async function logProduction(data: LogProductionData) {
           const newQuantity = invItem.quantity - quantityToDeplete;
           transaction.update(invItemSnap.ref, {
             quantity: newQuantity,
-            status: getStatus(newQuantity, invItem.parLevel),
+            status: getStatus(newQuantity, invItem.minStock),
           });
         }
 
@@ -652,7 +656,7 @@ export async function logProduction(data: LogProductionData) {
         
         transaction.update(producedItemInvSnap.ref, {
           quantity: newQuantity,
-          status: getStatus(newQuantity, producedItem.parLevel),
+          status: getStatus(newQuantity, producedItem.minStock),
         });
       }
       
@@ -763,7 +767,7 @@ export async function undoProductionLog(logId: string) {
           const newQuantity = invItem.quantity + quantityToRestore;
           transaction.update(invItemSnap.ref, {
             quantity: newQuantity,
-            status: getStatus(newQuantity, invItem.parLevel),
+            status: getStatus(newQuantity, invItem.minStock),
           });
         }
         
@@ -775,7 +779,7 @@ export async function undoProductionLog(logId: string) {
             const newQuantity = producedInvItem.quantity - totalYieldQuantity;
             transaction.update(producedInvItemSnap.ref, {
                 quantity: newQuantity,
-                status: getStatus(newQuantity, producedInvItem.parLevel),
+                status: getStatus(newQuantity, producedInvItem.minStock),
             });
         }
       }
@@ -830,7 +834,7 @@ export async function logButchering(data: ButcheringData) {
           const newPrimaryQuantity = primaryItem.quantity - quantityUsedInPurchaseUnit;
           transaction.update(primaryItemRef, {
               quantity: newPrimaryQuantity,
-              status: getStatus(newPrimaryQuantity, primaryItem.parLevel),
+              status: getStatus(newPrimaryQuantity, primaryItem.minStock),
           });
 
           const yieldedItemsForLog: ButcheringLog['yieldedItems'] = [];
@@ -862,7 +866,7 @@ export async function logButchering(data: ButcheringData) {
 
               transaction.update(yieldedItemSnap.ref, {
                   quantity: newQuantity,
-                  status: getStatus(newQuantity, yieldedItem.parLevel),
+                  status: getStatus(newQuantity, yieldedItem.minStock),
                   purchasePrice: isFinite(newPurchasePrice) ? newPurchasePrice : yieldedItem.purchasePrice,
               });
 
@@ -922,7 +926,7 @@ export async function undoButcheringLog(logId: string) {
                 const newQuantity = primaryItem.quantity + logData.primaryItem.quantityUsed;
                 transaction.update(primaryItemRef, {
                     quantity: newQuantity,
-                    status: getStatus(newQuantity, primaryItem.parLevel),
+                    status: getStatus(newQuantity, primaryItem.minStock),
                 });
             } else {
                  console.warn(`Primary item with ID ${logData.primaryItem.itemId} not found during undo. Stock cannot be restored.`);
@@ -937,7 +941,7 @@ export async function undoButcheringLog(logId: string) {
                     const newQuantity = item.quantity - yieldedItem.quantityYielded;
                     transaction.update(yieldedItemRef, {
                         quantity: newQuantity,
-                        status: getStatus(newQuantity, item.parLevel),
+                        status: getStatus(newQuantity, item.minStock),
                     });
                 } else {
                      console.warn(`Yielded item with ID ${yieldedItem.itemId} not found during undo. Stock cannot be depleted.`);
@@ -1024,4 +1028,71 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData) {
         console.error('Error adding purchase order: ', e);
         throw new Error('Failed to add purchase order');
     }
+}
+
+export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
+  try {
+    await runTransaction(db, async (transaction) => {
+      let isPartiallyReceived = false;
+      const receivedItems = data.items.filter((item) => item.received > 0);
+
+      // 1. Fetch all inventory items at once
+      const itemRefs = receivedItems.map((item) =>
+        doc(db, 'inventory', item.itemId)
+      );
+      const itemSnaps = await Promise.all(
+        itemRefs.map((ref) => transaction.get(ref))
+      );
+
+      // 2. Update inventory for each received item
+      for (let i = 0; i < receivedItems.length; i++) {
+        const receivedItem = receivedItems[i];
+        const itemSnap = itemSnaps[i];
+
+        if (!itemSnap.exists()) {
+          console.warn(
+            `Inventory item "${receivedItem.name}" not found. Cannot update stock.`
+          );
+          continue;
+        }
+
+        const invItem = itemSnap.data() as InventoryItem;
+        const newQuantity = invItem.quantity + receivedItem.received;
+        const newStatus = getStatus(newQuantity, invItem.minStock);
+
+        transaction.update(itemSnap.ref, {
+          quantity: newQuantity,
+          status: newStatus,
+        });
+
+        if (receivedItem.received < receivedItem.ordered) {
+          isPartiallyReceived = true;
+        }
+      }
+
+      // 3. Update Purchase Order status
+      const poRef = doc(db, 'purchaseOrders', data.poId);
+      const allItemsReceived = data.items.every(
+        (item) => item.received >= item.ordered
+      );
+
+      let newStatus: PurchaseOrder['status'] = 'Received';
+      if (!allItemsReceived || isPartiallyReceived) {
+        newStatus = 'Partially Received';
+      }
+
+      transaction.update(poRef, {
+        status: newStatus,
+        receivedAt: serverTimestamp(),
+      });
+    });
+
+    revalidatePath('/purchasing');
+    revalidatePath('/inventory');
+    revalidatePath('/');
+  } catch (error) {
+    console.error('Error receiving purchase order:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to receive purchase order: ${errorMessage}`);
+  }
 }
