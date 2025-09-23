@@ -24,23 +24,21 @@ import {
   PackagePlus,
   ClipboardList,
 } from 'lucide-react';
-import { Link } from 'next-intl';
-import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const t = useTranslations('SidebarNav');
 
   const menuItems = [
-    { href: '/', label: t('Dashboard'), icon: LayoutDashboard },
-    { href: '/inventory', label: t('Inventory'), icon: Warehouse },
-    { href: '/suppliers', label: t('Suppliers'), icon: Truck },
-    { href: '/recipes', label: t('Recipes'), icon: BookOpen },
-    { href: '/menus', label: t('Menus'), icon: ClipboardList },
-    { href: '/purchasing', label: t('Purchasing'), icon: PackagePlus },
-    { href: '/sales', label: t('Sales'), icon: ShoppingCart },
-    { href: '/reports', label: t('Reports'), icon: BarChart3 },
-    { href: '/ai-tools', label: t('AITools'), icon: Bot },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/inventory', label: 'Inventory', icon: Warehouse },
+    { href: '/suppliers', label: 'Suppliers', icon: Truck },
+    { href: '/recipes', label: 'Recipes', icon: BookOpen },
+    { href: '/menus', label: 'Menus', icon: ClipboardList },
+    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus },
+    { href: '/sales', label: 'Sales', icon: ShoppingCart },
+    { href: '/reports', label: 'Reports', icon: BarChart3 },
+    { href: '/ai-tools', label: 'AI Tools', icon: Bot },
   ];
 
   return (
@@ -61,7 +59,7 @@ export function SidebarNav() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname.length <= 3 : true) && !pathname.startsWith('/settings')}
+                isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
                 icon={<item.icon />}
                 tooltip={item.label}
               >
@@ -81,10 +79,10 @@ export function SidebarNav() {
                 asChild
                 isActive={pathname.startsWith('/settings')}
                 icon={<Settings />}
-                tooltip={t('Settings')}
+                tooltip={'Settings'}
               >
                 <Link href="/settings">
-                  {t('Settings')}
+                  {'Settings'}
                 </Link>
               </SidebarMenuButton>
           </SidebarMenuItem>

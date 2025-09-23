@@ -24,7 +24,7 @@ import { useEffect, useState } from 'react';
 import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
-import { useRouter } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 export function MenusTable() {
   const router = useRouter();
