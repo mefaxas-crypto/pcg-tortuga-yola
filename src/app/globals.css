@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root, .theme-layola {
     --background: 45 33% 96%; /* Sand White */
     --foreground: 210 100% 20%; /* Pioneer Blue */
 
@@ -51,7 +51,18 @@
     --chart-5: 28 75% 31%;   /* Nautical Wood Brown */
   }
 
-  .dark {
+  .theme-bamboo {
+    --sidebar-background: 90 40% 30%; /* Bamboo Green */
+    --sidebar-foreground: 90 20% 95%; /* Light Green/White */
+    --sidebar-primary: 45 100% 59%; /* Villa Yellow */
+    --sidebar-primary-foreground: 90 50% 15%; /* Dark Green */
+    --sidebar-accent: 90 40% 35%; /* Slightly Lighter Green */
+    --sidebar-accent-foreground: 90 20% 95%; /* Light Green/White */
+    --sidebar-border: 90 40% 35%; /* Lighter Green for borders */
+    --sidebar-ring: 45 100% 59%; /* Villa Yellow */
+  }
+
+  .dark, .dark.theme-layola {
     --background: 210 50% 8%; /* Near-black with a hint of blue */
     --foreground: 45 33% 96%; /* #F8F7F2 - Sand White */
 
@@ -88,6 +99,17 @@
     --sidebar-accent: 210 100% 15%;
     --sidebar-accent-foreground: 45 33% 96%;
     --sidebar-border: 210 100% 15%;
+    --sidebar-ring: 45 100% 59%;
+  }
+
+  .dark.theme-bamboo {
+    --sidebar-background: 90 40% 15%; /* Dark Bamboo Green */
+    --sidebar-foreground: 90 20% 95%;
+    --sidebar-primary: 45 100% 59%;
+    --sidebar-primary-foreground: 90 50% 15%;
+    --sidebar-accent: 90 40% 20%;
+    --sidebar-accent-foreground: 90 20% 95%;
+    --sidebar-border: 90 40% 20%;
     --sidebar-ring: 45 100% 59%;
   }
 }
