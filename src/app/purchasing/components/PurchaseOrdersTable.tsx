@@ -19,11 +19,12 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Inbox, MoreVertical, XCircle } from 'lucide-react';
+import { Eye, Inbox, MoreVertical, XCircle } from 'lucide-react';
 import { ReceivePoDialog } from './ReceivePoDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CancelPoDialog } from './CancelPoDialog';
 import { useOutletContext } from '@/context/OutletContext';
+import { useRouter } from 'next/navigation';
 
 type PurchaseOrdersTableProps = {
     status: 'active' | 'history';
@@ -33,6 +34,7 @@ const activeStatuses: PurchaseOrder['status'][] = ['Pending', 'Partially Receive
 const historyStatuses: PurchaseOrder['status'][] = ['Received', 'Cancelled'];
 
 export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
+    const router = useRouter();
     const { selectedOutlet } = useOutletContext();
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[] | null>(null);
     const [loading, setLoading] = useState(true);
@@ -96,6 +98,10 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     const handleDialogClose = () => {
         setSelectedPo(null);
     }
+    
+    const handleViewClick = (poId: string) => {
+        router.push(`/purchasing/${poId}`);
+    }
 
     return (
         <>
@@ -110,7 +116,7 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Total Items</TableHead>
-                                <TableHead className='w-[150px] text-right'><span className='sr-only'>Actions</span></TableHead>
+                                <TableHead className='w-[100px] text-right'><span className='sr-only'>Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
                          <TableBody>
@@ -136,30 +142,36 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
                                     </TableCell>
                                     <TableCell className="text-right">{po.items.length}</TableCell>
                                     <TableCell className="text-right">
-                                        {status === 'active' && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                        <span className='sr-only'>Actions</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleReceiveClick(po)}>
-                                                        <Inbox className="mr-2 h-4 w-4" />
-                                                        Receive
-                                                    </DropdownMenuItem>
-                                                    {po.status === 'Pending' && (
-                                                        <CancelPoDialog poId={po.id} poNumber={po.poNumber}>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                                                <XCircle className="mr-2 h-4 w-4" />
-                                                                Cancel
-                                                            </DropdownMenuItem>
-                                                        </CancelPoDialog>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                    <span className='sr-only'>Actions</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => handleViewClick(po.id)}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    View
+                                                </DropdownMenuItem>
+                                                {status === 'active' && (
+                                                    <>
+                                                        <DropdownMenuItem onClick={() => handleReceiveClick(po)}>
+                                                            <Inbox className="mr-2 h-4 w-4" />
+                                                            Receive
+                                                        </DropdownMenuItem>
+                                                        {po.status === 'Pending' && (
+                                                            <CancelPoDialog poId={po.id} poNumber={po.poNumber}>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                                    <XCircle className="mr-2 h-4 w-4" />
+                                                                    Cancel
+                                                                </DropdownMenuItem>
+                                                            </CancelPoDialog>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             ))}
