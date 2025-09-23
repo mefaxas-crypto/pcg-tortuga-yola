@@ -17,7 +17,7 @@ export default function SettingsPage() {
               Outlet Management
             </CardTitle>
             <CardDescription>
-              Define and manage your kitchen locations, like "Tortuga Bay" or "La Yola".
+              Define and manage your kitchen locations, like &quot;Tortuga Bay&quot; or &quot;La Yola&quot;.
             </CardDescription>
           </CardHeader>
           <CardContent>
