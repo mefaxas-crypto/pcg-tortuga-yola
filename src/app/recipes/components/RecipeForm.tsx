@@ -646,14 +646,14 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
 
           {/* Ingredients Card */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col md:flex-row md:items-center justify-between">
               <div>
                 <CardTitle>Ingredients</CardTitle>
                 <CardDescription>
                   Add ingredients from your inventory or other sub-recipes.
                 </CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => setNewIngredientSheetOpen(true)}>
+              <Button type="button" variant="outline" size="sm" onClick={() => setNewIngredientSheetOpen(true)} className='mt-4 md:mt-0'>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 New Ingredient
               </Button>
@@ -662,11 +662,11 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
+                    <TableHead className='hidden sm:table-cell'>Code</TableHead>
                     <TableHead>Ingredient</TableHead>
                     <TableHead className="w-[120px]">Quantity</TableHead>
                     <TableHead className="w-[150px]">Unit</TableHead>
-                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead className="text-right hidden md:table-cell">Unit Cost</TableHead>
                     <TableHead className="text-right">Total Cost</TableHead>
                     <TableHead className="w-[50px]">
                       <span className="sr-only">Actions</span>
@@ -678,10 +678,13 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                     const unitCost = getUnitCost(field.itemId, field.unit);
                     return (
                     <TableRow key={field.id}>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground hidden sm:table-cell">
                         {field.itemCode}
                       </TableCell>
-                      <TableCell>{field.name}</TableCell>
+                      <TableCell>
+                        <div>{field.name}</div>
+                        <div className='text-xs text-muted-foreground sm:hidden'>{field.itemCode}</div>
+                      </TableCell>
                       <TableCell>
                         <Input
                           type="number"
@@ -728,7 +731,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground hidden md:table-cell">
                         {formatCurrency(unitCost)}
                       </TableCell>
                       <TableCell className="text-right">

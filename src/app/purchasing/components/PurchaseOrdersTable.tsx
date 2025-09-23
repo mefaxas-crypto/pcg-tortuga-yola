@@ -111,11 +111,10 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>PO Number</TableHead>
-                                <TableHead>Supplier</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Total Items</TableHead>
+                                <TableHead>Details</TableHead>
+                                <TableHead className='hidden sm:table-cell'>Supplier</TableHead>
+                                <TableHead className='hidden md:table-cell'>Status</TableHead>
+                                <TableHead className="text-right">Items</TableHead>
                                 <TableHead className='w-[100px] text-right'><span className='sr-only'>Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -123,19 +122,21 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
                             {loading && Array.from({ length: 3 }).map((_, i) => (
                                 <TableRow key={i}>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                    <TableCell className='hidden sm:table-cell'><Skeleton className="h-5 w-32" /></TableCell>
+                                    <TableCell className='hidden md:table-cell'><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                                     <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                                 </TableRow>
                             ))}
                             {!loading && purchaseOrders?.map((po) => (
                                 <TableRow key={po.id}>
-                                    <TableCell className="font-medium">{po.poNumber}</TableCell>
-                                    <TableCell>{po.supplierName}</TableCell>
-                                    <TableCell>{po.createdAt ? format(po.createdAt, 'P') : 'N/A'}</TableCell>
                                     <TableCell>
+                                        <div className='font-medium'>{po.poNumber}</div>
+                                        <div className='text-xs text-muted-foreground sm:hidden'>{po.supplierName}</div>
+                                        <div className='text-xs text-muted-foreground'>{po.createdAt ? format(po.createdAt, 'P') : 'N/A'}</div>
+                                    </TableCell>
+                                    <TableCell className='hidden sm:table-cell'>{po.supplierName}</TableCell>
+                                    <TableCell className='hidden md:table-cell'>
                                         <Badge variant="outline" className={cn('capitalize', getStatusBadge(po.status))}>
                                             {po.status}
                                         </Badge>

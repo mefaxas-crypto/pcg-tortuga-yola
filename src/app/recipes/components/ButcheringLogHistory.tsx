@@ -90,8 +90,7 @@ export function ButcheringLogHistory() {
           <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>User</TableHead>
+                <TableHead className='hidden md:table-cell'>Date</TableHead>
                 <TableHead>Primary Item Used</TableHead>
                 <TableHead>Yielded Items</TableHead>
                 <TableHead className="w-[100px] text-right">Actions</TableHead>
@@ -101,10 +100,7 @@ export function ButcheringLogHistory() {
               {loading &&
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-5 w-24" />
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden md:table-cell'>
                       <Skeleton className="h-5 w-24" />
                     </TableCell>
                     <TableCell>
@@ -121,14 +117,14 @@ export function ButcheringLogHistory() {
               {!loading &&
                 logs?.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="align-top text-muted-foreground pt-3.5">
+                    <TableCell className="align-top text-muted-foreground pt-3.5 hidden md:table-cell">
                       {log.logDate ? format(log.logDate, 'P p') : 'Processing...'}
                     </TableCell>
-                    <TableCell className="align-top text-muted-foreground pt-3.5">
-                      {log.user}
-                    </TableCell>
                      <TableCell className="align-top font-medium pt-3.5">
-                      {log.primaryItem.quantityUsed.toFixed(2)} {log.primaryItem.unit} of {log.primaryItem.itemName}
+                      <div>{log.primaryItem.quantityUsed.toFixed(2)} {log.primaryItem.unit} of {log.primaryItem.itemName}</div>
+                       <div className="text-xs text-muted-foreground md:hidden pt-1">
+                        {log.logDate ? format(log.logDate, 'P p') : 'Processing...'} by {log.user}
+                      </div>
                     </TableCell>
                     <TableCell colSpan={1} className='p-0 align-top'>
                       <div className='divide-y'>

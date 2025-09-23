@@ -223,20 +223,23 @@ export function PurchaseOrderForm() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Item</TableHead>
-                      <TableHead className='text-right'>On Hand</TableHead>
-                      <TableHead className='text-right'>Min Stock</TableHead>
-                       <TableHead className='text-right'>Max Stock</TableHead>
-                      <TableHead className="w-[150px]">Order Quantity</TableHead>
+                      <TableHead className='text-right hidden sm:table-cell'>On Hand</TableHead>
+                      <TableHead className='text-right hidden md:table-cell'>Min</TableHead>
+                       <TableHead className='text-right hidden md:table-cell'>Max</TableHead>
+                      <TableHead className="w-[150px]">Order Qty</TableHead>
                       <TableHead className="w-[50px]"><span className="sr-only">Remove</span></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {fields.map((item, index) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className='text-right'>{item.onHand.toFixed(2)} {item.purchaseUnit}</TableCell>
-                        <TableCell className='text-right'>{item.minStock} {item.purchaseUnit}</TableCell>
-                        <TableCell className='text-right'>{item.maxStock} {item.purchaseUnit}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">{item.name}</div>
+                          <div className='text-xs text-muted-foreground sm:hidden'>On Hand: {item.onHand.toFixed(2)} {item.purchaseUnit}</div>
+                        </TableCell>
+                        <TableCell className='text-right hidden sm:table-cell'>{item.onHand.toFixed(2)} {item.purchaseUnit}</TableCell>
+                        <TableCell className='text-right hidden md:table-cell'>{item.minStock} {item.purchaseUnit}</TableCell>
+                        <TableCell className='text-right hidden md:table-cell'>{item.maxStock} {item.purchaseUnit}</TableCell>
                         <TableCell>
                            <FormField
                                 control={form.control}

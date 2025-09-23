@@ -91,9 +91,8 @@ export function ProductionLogHistory() {
           <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Item Produced</TableHead>
+                <TableHead className='hidden md:table-cell'>Date</TableHead>
+                <TableHead>Item(s) Produced</TableHead>
                 <TableHead className="text-right">Total Produced</TableHead>
                 <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
@@ -102,10 +101,7 @@ export function ProductionLogHistory() {
               {loading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-5 w-24" />
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden md:table-cell'>
                       <Skeleton className="h-5 w-24" />
                     </TableCell>
                     <TableCell>
@@ -122,11 +118,8 @@ export function ProductionLogHistory() {
               {!loading &&
                 logs?.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="align-top text-muted-foreground pt-3.5">
+                    <TableCell className="align-top text-muted-foreground pt-3.5 hidden md:table-cell">
                       {log.logDate ? format(log.logDate, 'P p') : 'Processing...'}
-                    </TableCell>
-                    <TableCell className="align-top text-muted-foreground pt-3.5">
-                      {log.user}
                     </TableCell>
                     <TableCell colSpan={1} className='p-0 align-top'>
                       <div className='divide-y'>
@@ -136,6 +129,9 @@ export function ProductionLogHistory() {
                            <span className="text-xs text-muted-foreground">
                             {item.quantityProduced} x {item.yieldPerBatch} {item.yieldUnit}
                           </span>
+                           <div className="text-xs text-muted-foreground md:hidden pt-1">
+                             {log.logDate ? format(log.logDate, 'P p') : 'Processing...'} by {log.user}
+                          </div>
                         </div>
                       ))}
                       </div>
@@ -143,7 +139,7 @@ export function ProductionLogHistory() {
                      <TableCell className='p-0 align-top'>
                         <div className='divide-y'>
                              {log.producedItems.map((item, index) => (
-                                <div key={index} className='flex justify-end items-center py-2 px-4 h-[61px]'>
+                                <div key={index} className='flex justify-end items-center py-2 px-4 h-[77px] md:h-[61px]'>
                                     <span className="text-right font-medium">
                                         {(item.quantityProduced * item.yieldPerBatch).toFixed(2)} {item.yieldUnit}
                                     </span>

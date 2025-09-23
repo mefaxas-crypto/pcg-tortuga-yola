@@ -132,7 +132,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
                   <TableHeader className="sticky top-0 bg-background">
                     <TableRow>
                       <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Ordered</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">Ordered</TableHead>
                       <TableHead className="w-[150px] text-right">
                         Received Qty
                       </TableHead>
@@ -144,8 +144,11 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
                   <TableBody>
                     {form.getValues('items').map((item, index) => (
                       <TableRow key={item.itemId}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">
+                        <TableCell>
+                          <div className="font-medium">{item.name}</div>
+                          <div className="text-xs text-muted-foreground sm:hidden">Ordered: {item.ordered} {item.purchaseUnit}</div>
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
                           {item.ordered} {item.purchaseUnit}
                         </TableCell>
                         <TableCell>
