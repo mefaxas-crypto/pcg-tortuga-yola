@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -8,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Form,
   FormControl,
@@ -32,18 +43,21 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { receivePurchaseOrder } from '@/lib/actions';
+import { Textarea } from '@/components/ui/textarea';
 
 const receivingItemSchema = z.object({
   itemId: z.string(),
   name: z.string(),
   ordered: z.number(),
   purchaseUnit: z.string(),
+  purchasePrice: z.coerce.number().min(0),
   received: z.coerce.number().min(0, 'Cannot be negative.'),
 });
 
 const formSchema = z.object({
   poId: z.string(),
   items: z.array(receivingItemSchema),
+  notes: z.string().optional(),
 });
 
 type ReceivePoDialogProps = {
@@ -54,6 +68,7 @@ type ReceivePoDialogProps = {
 
 export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [isConfirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -65,15 +80,17 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
         name: item.name,
         ordered: item.orderQuantity,
         purchaseUnit: item.purchaseUnit,
+        purchasePrice: item.purchasePrice,
         received: item.orderQuantity, // Default to receiving what was ordered
       })),
+      notes: '',
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleConfirmSubmit = async () => {
     setLoading(true);
     try {
-      await receivePurchaseOrder(values);
+      await receivePurchaseOrder(form.getValues());
       toast({
         title: 'Inventory Updated',
         description: 'The received items have been added to your inventory.',
@@ -90,78 +107,127 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
       });
     } finally {
       setLoading(false);
+      setConfirmOpen(false);
     }
   }
 
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    setConfirmOpen(true);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Receive Purchase Order: {po.poNumber}</DialogTitle>
-          <DialogDescription>
-            Confirm the quantities received from {po.supplierName}. Any
-            discrepancies will create a partial order.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="max-h-[60vh] overflow-y-auto rounded-md border">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background">
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Ordered</TableHead>
-                    <TableHead className="w-[150px] text-right">
-                      Received
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {form.getValues('items').map((item, index) => (
-                    <TableRow key={item.itemId}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {item.ordered} {item.purchaseUnit}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.received`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  className="text-right"
-                                  {...field}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </TableCell>
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Receive Purchase Order: {po.poNumber}</DialogTitle>
+            <DialogDescription>
+              Confirm the quantities and prices received from {po.supplierName}. Any discrepancies will create a partial order. Updated prices will be saved to the inventory item.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="max-h-[60vh] overflow-y-auto rounded-md border">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-right">Ordered</TableHead>
+                      <TableHead className="w-[150px] text-right">
+                        Received Qty
+                      </TableHead>
+                      <TableHead className="w-[150px] text-right">
+                        Unit Price
+                      </TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Confirm & Update Inventory'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                  </TableHeader>
+                  <TableBody>
+                    {form.getValues('items').map((item, index) => (
+                      <TableRow key={item.itemId}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {item.ordered} {item.purchaseUnit}
+                        </TableCell>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.received`}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                step="any"
+                                className="text-right"
+                                {...field}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                           <FormField
+                            control={form.control}
+                            name={`items.${index}.purchasePrice`}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="text-right"
+                                {...field}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+               <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Receiving Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="e.g., One case was damaged, credited on invoice #123."
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Saving...' : 'Confirm & Update Inventory'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Please verify that all received counts and prices are correct before submitting. This action will permanently update your inventory levels and item costs.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSubmit}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -48,8 +48,10 @@ const poItemSchema = z.object({
   itemId: z.string(),
   name: z.string(),
   purchaseUnit: z.string(),
-  parLevel: z.number(),
-  quantity: z.number(),
+  purchasePrice: z.number(),
+  onHand: z.number(),
+  minStock: z.number(),
+  maxStock: z.number(),
   orderQuantity: z.coerce.number().min(0),
 });
 
@@ -111,9 +113,11 @@ export function PurchaseOrderForm() {
         itemId: item.id,
         name: item.name,
         purchaseUnit: item.purchaseUnit,
-        parLevel: item.parLevel,
-        quantity: item.quantity,
-        orderQuantity: item.quantity < item.parLevel ? Math.ceil(item.parLevel - item.quantity) : 0,
+        purchasePrice: item.purchasePrice,
+        onHand: item.quantity,
+        minStock: item.minStock,
+        maxStock: item.maxStock,
+        orderQuantity: item.quantity <= item.minStock ? Math.ceil(item.maxStock - item.quantity) : 0,
     }));
     replace(poItems);
   }, [inventoryItems, replace]);
@@ -157,7 +161,7 @@ export function PurchaseOrderForm() {
       <CardHeader>
         <CardTitle>Create Purchase Order</CardTitle>
         <CardDescription>
-          Select a supplier to see their items and create a new purchase order. Quantities are suggested based on your par levels.
+          Select a supplier to see their items and create a new purchase order. Quantities are suggested based on your Min/Max levels.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -195,7 +199,8 @@ export function PurchaseOrderForm() {
                     <TableRow>
                       <TableHead>Item</TableHead>
                       <TableHead className='text-right'>On Hand</TableHead>
-                      <TableHead className='text-right'>Par Level</TableHead>
+                      <TableHead className='text-right'>Min Stock</TableHead>
+                       <TableHead className='text-right'>Max Stock</TableHead>
                       <TableHead className="w-[150px]">Order Quantity</TableHead>
                       <TableHead className="w-[50px]"><span className="sr-only">Remove</span></TableHead>
                     </TableRow>
@@ -204,8 +209,9 @@ export function PurchaseOrderForm() {
                     {fields.map((item, index) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className='text-right'>{item.quantity.toFixed(2)} {item.purchaseUnit}</TableCell>
-                        <TableCell className='text-right'>{item.parLevel} {item.purchaseUnit}</TableCell>
+                        <TableCell className='text-right'>{item.onHand.toFixed(2)} {item.purchaseUnit}</TableCell>
+                        <TableCell className='text-right'>{item.minStock} {item.purchaseUnit}</TableCell>
+                        <TableCell className='text-right'>{item.maxStock} {item.purchaseUnit}</TableCell>
                         <TableCell>
                            <FormField
                                 control={form.control}
@@ -222,7 +228,7 @@ export function PurchaseOrderForm() {
                     ))}
                     {fields.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                            <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
                                 No items found for this supplier.
                             </TableCell>
                         </TableRow>

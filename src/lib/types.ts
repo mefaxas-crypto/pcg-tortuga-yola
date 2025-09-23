@@ -2,6 +2,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -222,6 +223,7 @@ export type PurchaseOrderItem = {
     name: string;
     orderQuantity: number;
     purchaseUnit: Unit;
+    purchasePrice: number;
 };
 
 export type PurchaseOrder = {
@@ -233,6 +235,7 @@ export type PurchaseOrder = {
     status: 'Pending' | 'Partially Received' | 'Received' | 'Cancelled';
     createdAt: Date;
     receivedAt?: Date;
+    notes?: string;
 };
 
 export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt'> & {
@@ -242,6 +245,7 @@ export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'crea
         name: string;
         orderQuantity: number;
         purchaseUnit: string;
+        purchasePrice: number;
     }[];
 };
 
@@ -250,10 +254,12 @@ export type ReceivingItem = {
   name: string;
   ordered: number;
   purchaseUnit: string;
+  purchasePrice: number;
   received: number;
 };
 
 export type ReceivePurchaseOrderData = {
   poId: string;
   items: ReceivingItem[];
+  notes?: string;
 };

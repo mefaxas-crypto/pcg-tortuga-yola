@@ -22,22 +22,33 @@ import { Button } from '@/components/ui/button';
 import { Inbox } from 'lucide-react';
 import { ReceivePoDialog } from './ReceivePoDialog';
 
-export function PurchaseOrdersTable() {
+type PurchaseOrdersTableProps = {
+    status: 'active' | 'history';
+}
+
+const activeStatuses: PurchaseOrder['status'][] = ['Pending', 'Partially Received'];
+const historyStatuses: PurchaseOrder['status'][] = ['Received', 'Cancelled'];
+
+export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
 
     useEffect(() => {
+        const statusesToQuery = status === 'active' ? activeStatuses : historyStatuses;
         const q = query(collection(db, 'purchaseOrders'), orderBy('createdAt', 'desc'));
+        
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const pos: PurchaseOrder[] = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                pos.push({ 
-                    id: doc.id, 
-                    ...data,
-                    createdAt: data.createdAt?.toDate() // convert Firestore Timestamp to JS Date
-                } as PurchaseOrder);
+                 if (statusesToQuery.includes(data.status)) {
+                    pos.push({ 
+                        id: doc.id, 
+                        ...data,
+                        createdAt: data.createdAt?.toDate() // convert Firestore Timestamp to JS Date
+                    } as PurchaseOrder);
+                 }
             });
             setPurchaseOrders(pos);
             setLoading(false);
@@ -47,7 +58,7 @@ export function PurchaseOrdersTable() {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [status]);
 
     const getStatusBadge = (status: PurchaseOrder['status']) => {
         switch (status) {
@@ -75,13 +86,7 @@ export function PurchaseOrdersTable() {
     return (
         <>
         <Card>
-            <CardHeader>
-                <CardTitle>Existing Purchase Orders</CardTitle>
-                <CardDescription>
-                    A list of all your pending and completed purchase orders.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className='pt-6'>
                  <div className="relative w-full overflow-auto">
                     <Table>
                         <TableHeader>
@@ -129,7 +134,7 @@ export function PurchaseOrdersTable() {
                             {!loading && purchaseOrders?.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
-                                        No purchase orders found.
+                                        No purchase orders found in this view.
                                     </TableCell>
                                 </TableRow>
                             )}

@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -1057,13 +1058,34 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         }
 
         const invItem = itemSnap.data() as InventoryItem;
+        const invItemRef = itemSnap.ref;
+
+        // Add received quantity to stock
         const newQuantity = invItem.quantity + receivedItem.received;
         const newStatus = getStatus(newQuantity, invItem.minStock);
 
-        transaction.update(itemSnap.ref, {
+        // Check if price needs updating
+        const hasNewPrice = receivedItem.purchasePrice !== invItem.purchasePrice;
+
+        const updateData: Partial<InventoryItem> = {
           quantity: newQuantity,
           status: newStatus,
-        });
+        };
+
+        if (hasNewPrice) {
+          updateData.purchasePrice = receivedItem.purchasePrice;
+
+          // Recalculate unitCost
+          if (invItem.purchaseUnit === 'un.') {
+            const totalRecipeUnitsInPurchase = invItem.purchaseQuantity * invItem.recipeUnitConversion;
+            updateData.unitCost = totalRecipeUnitsIn-purchase > 0 ? receivedItem.purchasePrice / totalRecipeUnitsInPurchase : 0;
+          } else {
+            const totalBaseUnits = invItem.purchaseQuantity * invItem.recipeUnitConversion;
+            updateData.unitCost = totalBaseUnits > 0 ? receivedItem.purchasePrice / totalBaseUnits : 0;
+          }
+        }
+
+        transaction.update(invItemRef, updateData);
 
         if (receivedItem.received < receivedItem.ordered) {
           isPartiallyReceived = true;
@@ -1084,6 +1106,7 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
       transaction.update(poRef, {
         status: newStatus,
         receivedAt: serverTimestamp(),
+        notes: data.notes || '',
       });
     });
 
