@@ -60,6 +60,12 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
 
         if (stockLevels.length > 0) {
             const specIds = stockLevels.map(s => s.inventoryId);
+            // Firestore 'in' queries fail with an empty array.
+            if (specIds.length === 0) {
+              setLowStockItemSpecs([]);
+              setLoading(false);
+              return;
+            }
             const specQuery = query(collection(db, 'inventory'), where('__name__', 'in', specIds));
             onSnapshot(specQuery, (specSnapshot) => {
                 const specs: InventoryItem[] = [];
