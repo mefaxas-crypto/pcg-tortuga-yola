@@ -154,7 +154,7 @@ export default function PurchaseOrderPage() {
             <TableBody>
               {po.items.map((item) => (
                 <TableRow key={item.itemId}>
-                  <TableCell className='text-muted-foreground'>{item.itemId.substring(0, 8)}...</TableCell>
+                  <TableCell className='text-muted-foreground'>{item.materialCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-right">
                     {item.orderQuantity}

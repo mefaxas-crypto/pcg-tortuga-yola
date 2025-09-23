@@ -48,6 +48,7 @@ import { useOutletContext } from '@/context/OutletContext';
 const poItemSchema = z.object({
   itemId: z.string(),
   name: z.string(),
+  materialCode: z.string(),
   purchaseUnit: z.string(),
   purchasePrice: z.number(),
   onHand: z.number(),
@@ -132,6 +133,7 @@ export function PurchaseOrderForm() {
         return {
           itemId: item.id,
           name: item.name,
+          materialCode: item.materialCode,
           purchaseUnit: item.purchaseUnit,
           purchasePrice: item.purchasePrice,
           onHand: onHandQty,
@@ -161,25 +163,19 @@ export function PurchaseOrderForm() {
         return;
     }
 
-    const itemsToOrder = values.items.filter(item => item.orderQuantity > 0);
-    if (itemsToOrder.length === 0) {
-        toast({ variant: 'destructive', title: "No items to order.", description: "Please enter a quantity for at least one item."});
-        setLoading(false);
-        return;
-    }
-
     try {
         await addPurchaseOrder({
             supplierId: supplier.id,
             supplierName: supplier.name,
-            items: itemsToOrder,
+            items: values.items,
             status: 'Pending',
         }, selectedOutlet.id);
         toast({ title: "Purchase Order Created!", description: `PO for ${supplier.name} has been saved.` });
         form.reset({ supplierId: '', items: [] });
     } catch (error) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to create purchase order.' });
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({ variant: 'destructive', title: 'Error', description: errorMessage });
     } finally {
         setLoading(false);
     }

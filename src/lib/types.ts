@@ -1,5 +1,6 @@
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -238,6 +239,7 @@ export type ButcheringLog = {
 export type PurchaseOrderItem = {
     itemId: string;
     name: string;
+    materialCode: string;
     orderQuantity: number;
     purchaseUnit: Unit;
     purchasePrice: number;
@@ -262,6 +264,7 @@ export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'crea
     items: {
         itemId: string;
         name: string;
+        materialCode: string;
         orderQuantity: number;
         purchaseUnit: string;
         purchasePrice: number;
