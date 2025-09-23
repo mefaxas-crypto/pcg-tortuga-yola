@@ -11,7 +11,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { addDays, format } from 'date-fns';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -24,6 +24,18 @@ type AggregatedSale = {
   totalProfit: number;
   foodCost: number;
 }
+
+const chartConfig = {
+  Revenue: {
+    label: 'Revenue',
+    color: 'hsl(var(--chart-2))',
+  },
+  Profit: {
+    label: 'Profit',
+    color: 'hsl(var(--chart-1))',
+  },
+} satisfies ChartConfig;
+
 
 export function SalesAndProfitability() {
   const { selectedOutlet } = useOutletContext();
@@ -206,7 +218,7 @@ export function SalesAndProfitability() {
                 <CardDescription>Daily revenue and profit for the selected period.</CardDescription>
             </CardHeader>
             <CardContent className='h-[400px]'>
-                <ResponsiveContainer width="100%" height="100%">
+                 <ChartContainer config={chartConfig} className="w-full h-full">
                     <LineChart data={salesByDay} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" tickFormatter={(val) => format(new Date(val), 'MMM d')} />
@@ -215,7 +227,7 @@ export function SalesAndProfitability() {
                         <Line type="monotone" dataKey="Revenue" stroke="hsl(var(--chart-2))" />
                         <Line type="monotone" dataKey="Profit" stroke="hsl(var(--chart-1))" />
                     </LineChart>
-                </ResponsiveContainer>
+                </ChartContainer>
             </CardContent>
         </Card>
         
