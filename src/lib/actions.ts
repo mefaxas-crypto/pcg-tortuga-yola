@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -344,6 +345,8 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[], outlet
                     where('inventoryId', '==', item.id),
                     where('outletId', '==', outletId)
                 );
+                // This read needs to be outside the transaction write phase.
+                // It's safe here because we're inside runTransaction's callback.
                 const stockSnaps = await getDocs(stockQuery);
 
                 if (stockSnaps.empty) {
@@ -375,6 +378,7 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[], outlet
                 logDate: serverTimestamp(),
                 outletId: outletId,
                 items: variances,
+                user: 'Chef John Doe' // Placeholder
             });
 
         });
@@ -719,7 +723,8 @@ export async function logProduction(data: LogProductionData, outletId: string) {
             return { inventoryId: invId, ref: doc(collection(db, 'inventoryStock')), snap: null };
           }
           const stockRef = stockDocs.docs[0].ref;
-          return { inventoryId: invId, ref: stockRef, snap: await transaction.get(stockRef) };
+          const stockSnap = await transaction.get(stockRef);
+          return { inventoryId: invId, ref: stockRef, snap: stockSnap };
         })
       );
       const stockDocMap = new Map(stockRefsAndSnaps.map(item => [item.inventoryId, { ref: item.ref, snap: item.snap }]));
@@ -962,12 +967,9 @@ export async function logButchering(data: ButcheringData, outletId: string) {
             const specRef = doc(db, 'inventory', item.itemId);
             const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', item.itemId), where('outletId', '==', outletId));
             const stockDocs = await getDocs(stockQuery);
-            return {
-              itemData: item,
-              specSnap: await transaction.get(specRef),
-              stockSnap: stockDocs.empty ? null : await transaction.get(stockDocs.docs[0].ref),
-              stockRef: stockDocs.empty ? doc(collection(db, 'inventoryStock')) : stockDocs.docs[0].ref,
-            };
+            const stockRef = stockDocs.empty ? doc(collection(db, 'inventoryStock')) : stockDocs.docs[0].ref;
+            const stockSnap = stockDocs.empty ? null : await transaction.get(stockRef);
+            return { itemData: item, specSnap: await transaction.get(specRef), stockSnap, stockRef };
           }));
 
           // --- 2. CALCULATION PHASE ---
@@ -1228,21 +1230,15 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         const specRef = doc(db, 'inventory', item.itemId);
         const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', item.itemId), where('outletId', '==', outletId));
         const stockDocs = await getDocs(stockQuery);
-        if (stockDocs.empty) {
-            console.warn(`Stock record for item ${item.name} not found at outlet ${outletId}. It will be created.`);
-            return {
-              receivedItem: item,
-              specSnap: await transaction.get(specRef),
-              stockSnap: null,
-              stockRef: doc(collection(db, 'inventoryStock'))
-            };
-        };
-        const stockRef = stockDocs.docs[0].ref;
+        
+        const stockRef = stockDocs.empty ? doc(collection(db, 'inventoryStock')) : stockDocs.docs[0].ref;
+        const stockSnap = stockDocs.empty ? null : await transaction.get(stockRef);
+
         return {
           receivedItem: item,
           specSnap: await transaction.get(specRef),
-          stockSnap: await transaction.get(stockRef),
-          stockRef: stockRef,
+          stockSnap,
+          stockRef
         };
       }));
       

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -87,7 +88,7 @@ export function PhysicalCountTable() {
     // Initialize physical counts state once combined inventory is ready
     const initialCounts: PhysicalCountState = {};
     combined.forEach(item => {
-        initialCounts[item.id] = { unit: item.unit as Unit };
+        initialCounts[item.id] = { unit: item.purchaseUnit as Unit };
     });
     setPhysicalCounts(initialCounts);
     
@@ -126,7 +127,7 @@ export function PhysicalCountTable() {
     if (!baseUnitType) return [{ value: baseUnit, label: getUnitLabel(baseUnit) }];
 
     return Object.entries(allUnits)
-        .filter(([, unitDetails]) => unitDetails.type === baseUnitType)
+        .filter(([, unitDetails]) => unitDetails.type === baseUnitType || unitDetails.type === 'each')
         .map(([unitKey, unitDetails]) => ({
             value: unitKey,
             label: unitDetails.name,
@@ -140,17 +141,17 @@ export function PhysicalCountTable() {
         const physicalCountData = physicalCounts[item.id];
         if (physicalCountData?.count === undefined) return null;
 
-        const countInBaseUnit = convert(physicalCountData.count, physicalCountData.unit, item.unit as Unit);
+        const countInPurchaseUnit = convert(physicalCountData.count, physicalCountData.unit, item.purchaseUnit as Unit);
 
-        // Only include if there's an actual change
-        if (Math.abs(countInBaseUnit - (item.quantity ?? 0)) < 0.001) return null;
+        // Only include if there's an actual change in purchase units
+        if (Math.abs(countInPurchaseUnit - (item.quantity ?? 0)) < 0.001) return null;
 
         return {
             id: item.id,
             name: item.name,
-            physicalQuantity: countInBaseUnit,
+            physicalQuantity: countInPurchaseUnit, // This is the final quantity in the *purchase unit*
             theoreticalQuantity: item.quantity ?? 0,
-            unit: item.unit,
+            unit: item.purchaseUnit, // The unit is the purchase unit
         }
       })
       .filter(item => item !== null) as PhysicalCountItem[];
@@ -170,6 +171,14 @@ export function PhysicalCountTable() {
 
 
   const handleSaveChanges = async () => {
+     if (!selectedOutlet) {
+      toast({
+        variant: "destructive",
+        title: "No Outlet Selected",
+        description: "Please select an outlet before saving counts.",
+      });
+      return;
+    }
     if (changedItems.length === 0) {
         toast({
             title: "No changes to save",
@@ -179,7 +188,7 @@ export function PhysicalCountTable() {
     }
     setIsSaving(true);
     try {
-        // await updatePhysicalInventory(changedItems);
+        await updatePhysicalInventory(changedItems, selectedOutlet.id);
         toast({
             title: "Inventory Updated",
             description: "Your physical counts have been saved successfully.",
@@ -260,26 +269,26 @@ export function PhysicalCountTable() {
                 const theoretical = item.quantity ?? 0;
                 const physicalCountData = physicalCounts[item.id];
                 const physicalCountValue = physicalCountData?.count;
-                const countUnit = physicalCountData?.unit || item.unit as Unit;
+                const countUnit = physicalCountData?.unit || item.purchaseUnit as Unit;
                 
                 let variance = 0;
                 if (physicalCountValue !== undefined) {
                     try {
-                        const physicalInBaseUnit = convert(physicalCountValue, countUnit, item.unit as Unit);
-                        variance = physicalInBaseUnit - theoretical;
+                        const physicalInPurchaseUnit = convert(physicalCountValue, countUnit, item.purchaseUnit as Unit);
+                        variance = physicalInPurchaseUnit - theoretical;
                     } catch (e) {
                         console.error(e);
                         // In case of a conversion error, variance is not shown
                     }
                 }
                 
-                const compatibleUnits = getCompatibleUnits(item.unit as Unit);
+                const compatibleUnits = getCompatibleUnits(item.purchaseUnit as Unit);
 
                 return (
                     <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell className="text-muted-foreground">{item.category}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{theoretical.toFixed(2)} {getUnitLabel(item.unit)}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{theoretical.toFixed(2)} {getUnitLabel(item.purchaseUnit)}</TableCell>
                         <TableCell>
                             <Input 
                                 type="number"
@@ -306,7 +315,7 @@ export function PhysicalCountTable() {
                             variance > 0 && 'text-green-600',
                             variance < 0 && 'text-destructive'
                         )}>
-                            {physicalCountValue !== undefined ? `${variance.toFixed(2)} ${getUnitLabel(item.unit)}` : '-'}
+                            {physicalCountValue !== undefined ? `${variance.toFixed(2)} ${getUnitLabel(item.purchaseUnit)}` : '-'}
                         </TableCell>
                     </TableRow>
                 );

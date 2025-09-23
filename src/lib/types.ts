@@ -1,4 +1,5 @@
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -196,9 +197,9 @@ export type ButcheryTemplate = {
 export type PhysicalCountItem = {
     id: string;
     name: string;
-    physicalQuantity: number; // The final count in the item's base unit
+    physicalQuantity: number; // The final count in the item's purchase unit
     theoreticalQuantity: number;
-    unit: Unit;
+    unit: Unit; // The purchase unit
 }
 
 export type ProductionLog = {
