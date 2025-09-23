@@ -5,6 +5,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -12,26 +13,40 @@ export type InventoryItem = {
   materialCode: string;
   name: string;
   category: string;
-  quantity: number; // Current stock in the `unit` of tracking
+  // Stock level fields are now in InventoryStockItem
+  quantity: number;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  
+  // Fields moved from the old model but still part of the master spec
   unit: Unit; // The unit for inventory tracking (e.g., 'un.' for bottles, 'kg' for bulk flour), same as purchaseUnit
   purchaseQuantity: number; // e.g., 1 for a case, 10 for a kg bag
   purchaseUnit: Unit; // The unit of the purchase (e.g., 'un.' for case, 'kg' for bag)
   purchasePrice: number; // Price for one purchaseQuantity
   minStock: number; // Re-order point in `purchaseUnit`
   maxStock: number; // Target quantity after re-ordering in `purchaseUnit`
+  
+  // Supplier and Costing
   supplier: string; // Supplier Name
   supplierId: string; // Supplier Document ID
-  // Costing fields
   unitCost: number; // The cost of a single `recipeUnit` (e.g., price per gram, per ml)
   recipeUnit: Unit; // The base unit for recipes (e.g., g, ml)
   recipeUnitConversion: number; // How many recipeUnits are in ONE purchaseUnit (e.g., 750ml in 1 un. bottle)
+  
   // Meta fields
   allergens?: string[];
-  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  
   // Legacy field for migration
   parLevel?: number;
 };
 
+// New type for outlet-specific stock
+export type InventoryStockItem = {
+  id: string;
+  inventoryId: string;
+  outletId: string;
+  quantity: number;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+}
 
 // This is the data received from the form
 export type InventoryFormData = {
@@ -45,7 +60,7 @@ export type InventoryFormData = {
   maxStock: number;
   supplierId?: string;
   allergens?: string[];
-  quantity?: number; // Optional initial stock
+  quantity?: number; // Optional initial stock for all outlets
   // Optional fields for 'un' conversion
   recipeUnit?: Unit;
   recipeUnitConversion?: number;

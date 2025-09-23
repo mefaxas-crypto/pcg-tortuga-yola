@@ -123,38 +123,52 @@ function getStatus(
 
 export async function addInventoryItem(formData: InventoryFormData) {
   try {
-    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, minStock, maxStock, ...restOfForm } = formData;
-    
+    // Separate form data
+    const {
+      purchaseQuantity,
+      purchaseUnit,
+      purchasePrice,
+      recipeUnit,
+      recipeUnitConversion,
+      minStock,
+      maxStock,
+      ...restOfForm
+    } = formData;
+
     const inventoryUnit = purchaseUnit;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
     let unitCost = 0;
     let finalRecipeUnitConversion = 1;
 
+    // Calculate conversion and unit cost
     if (purchaseUnit === 'un.') {
       if (!recipeUnitConversion || !recipeUnit) {
         throw new Error("Conversion factor is required for 'un.' items.");
       }
       finalRecipeUnitConversion = recipeUnitConversion;
       const totalRecipeUnitsInPurchase = purchaseQuantity * finalRecipeUnitConversion;
-      unitCost = totalRecipeUnitsInPurchase > 0 ? purchasePrice / totalRecipeUnitsInPurchase : 0;
+      unitCost =
+        totalRecipeUnitsInPurchase > 0
+          ? purchasePrice / totalRecipeUnitsInPurchase
+          : 0;
     } else {
-      finalRecipeUnitConversion = convert(1, purchaseUnit as Unit, finalRecipeUnit as Unit);
+      finalRecipeUnitConversion = convert(
+        1,
+        purchaseUnit as Unit,
+        finalRecipeUnit as Unit
+      );
       const totalBaseUnits = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
-    
-    const quantity = formData.quantity || 0;
-    const status = getStatus(quantity, minStock);
     const supplierName = await getSupplierName(formData.supplierId);
 
-    const fullItemData = {
+    // This is the master inventory item data (the "spec")
+    const itemSpecData = {
       ...restOfForm,
-      quantity,
-      status,
       supplier: supplierName,
       supplierId: formData.supplierId || '',
-      purchaseQuantity: purchaseQuantity,
-      purchaseUnit: purchaseUnit,
+      purchaseQuantity,
+      purchaseUnit,
       purchasePrice,
       minStock,
       maxStock,
@@ -163,17 +177,43 @@ export async function addInventoryItem(formData: InventoryFormData) {
       recipeUnit: finalRecipeUnit,
       recipeUnitConversion: finalRecipeUnitConversion,
     };
+    
+    // We use a transaction to ensure both the main item and its stock records are created atomically.
+    const newDocRef = await runTransaction(db, async (transaction) => {
+      // 1. Create the main inventory item document
+      const docRef = doc(collection(db, 'inventory'));
+      transaction.set(docRef, itemSpecData);
+      
+      // 2. Fetch all existing outlets
+      const outletsQuery = query(collection(db, 'outlets'));
+      const outletsSnapshot = await getDocs(outletsQuery); // Use getDocs, not transaction.get
 
-    const docRef = await addDoc(collection(db, 'inventory'), fullItemData);
+      // 3. For each outlet, create a new stock record with quantity 0
+      outletsSnapshot.forEach(outletDoc => {
+        const outletData = outletDoc.data() as Outlet;
+        const stockRef = doc(collection(db, 'inventoryStock'));
+        transaction.set(stockRef, {
+          inventoryId: docRef.id,
+          outletId: outletDoc.id,
+          quantity: formData.quantity || 0,
+          status: getStatus(formData.quantity || 0, itemSpecData.minStock),
+        });
+      });
+      
+      return docRef;
+    });
 
     const newItem: InventoryItem = {
-      id: docRef.id,
-      ...(fullItemData as Omit<InventoryItem, 'id'>),
+      id: newDocRef.id,
+      ...(itemSpecData as Omit<InventoryItem, 'id' | 'quantity' | 'status'>),
+      quantity: 0, // This is now stored in inventoryStock
+      status: 'Out of Stock', // This is now stored in inventoryStock
     };
 
     revalidatePath('/inventory');
     revalidatePath('/recipes/**');
     return newItem;
+
   } catch (e) {
     console.error('Error adding document: ', e);
     const errorMessage = e instanceof Error ? e.message : String(e);
@@ -201,9 +241,6 @@ export async function editInventoryItem(
 ) {
   try {
     const itemRef = doc(db, 'inventory', id);
-    const itemSnap = await getDoc(itemRef);
-    if (!itemSnap.exists()) throw new Error("Item not found");
-    const currentItem = itemSnap.data() as InventoryItem;
 
     const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, minStock, maxStock, ...restOfForm } = formData;
     
@@ -225,14 +262,10 @@ export async function editInventoryItem(
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
 
-    const quantity = currentItem.quantity;
-    const status = getStatus(quantity, minStock);
     const supplierName = await getSupplierName(formData.supplierId);
 
     const dataToUpdate = {
       ...restOfForm,
-      quantity,
-      status,
       supplier: supplierName,
       supplierId: formData.supplierId || '',
       purchaseQuantity,
@@ -245,7 +278,8 @@ export async function editInventoryItem(
       recipeUnit: finalRecipeUnit,
       recipeUnitConversion: finalRecipeUnitConversion,
     };
-
+    
+    // Here we only update the main spec. Stock levels are updated separately.
     await updateDoc(itemRef, dataToUpdate);
 
     revalidatePath('/inventory');
@@ -260,7 +294,19 @@ export async function editInventoryItem(
 
 export async function deleteInventoryItem(itemId: string) {
   try {
-    await deleteDoc(doc(db, 'inventory', itemId));
+    await runTransaction(db, async (transaction) => {
+        const itemRef = doc(db, 'inventory', itemId);
+        // Delete the main item spec
+        transaction.delete(itemRef);
+
+        // Find and delete all associated stock records
+        const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', itemId));
+        const stockSnaps = await getDocs(stockQuery);
+        stockSnaps.forEach(stockDoc => {
+            transaction.delete(stockDoc.ref);
+        });
+    });
+
     revalidatePath('/inventory');
     return {success: true};
   } catch (e) {
