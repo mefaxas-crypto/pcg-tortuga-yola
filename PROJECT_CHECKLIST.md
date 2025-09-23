@@ -45,9 +45,9 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] **Enhancement:** Add the ability to attach scanned documents (PDFs, images) to a received PO.
 
 *   **2.4 Multi-Outlet & Central Kitchen Support:**
-    *   [ ] Create "Outlets" data model and management UI (e.g., "Hotel", "Restaurant").
-    *   [ ] **Strategy:** Refactor inventory to separate shared "Item Specifications" (in `/inventory`) from outlet-specific "Stock Levels" (in a new `/inventoryStock` collection).
-    *   [ ] Scope all data (sales, inventory views, purchasing) to a specific outlet, likely via a global state/context.
+    *   [x] Create "Outlets" data model and management UI (e.g., "Hotel", "Restaurant").
+    *   [x] **Strategy:** Refactor inventory to separate shared "Item Specifications" (in `/inventory`) from outlet-specific "Stock Levels" (in a new `/inventoryStock` collection).
+    *   [x] Scope all data (sales, inventory views, purchasing) to a specific outlet, likely via a global state/context.
     *   [ ] Implement inventory transfers between outlets.
 
 ## PHASE 3: PROFESSIONAL & ENTERPRISE FEATURES
@@ -64,6 +64,16 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Restrict access to pages and actions based on user role.
     *   [ ] Track which user performs critical actions (e.g., receiving POs, logging sales, updating inventory).
     *   [ ] **Approval Workflow:** Implement a two-step approval process. Critical actions (like PO receiving) by a Supervisor will enter a "Pending Approval" state until confirmed by a Manager or Admin.
+
+*   **3.3 Multi-language Support:**
+    *   [ ] Implement i18n (internationalization) routing and file structure.
+    *   [ ] Add a language switcher to the UI.
+    *   [ ] Use AI to translate UI text into Spanish, French, and English.
+
+*   **3.4 Mobile & Tablet UI/UX Polish:**
+    *   [ ] Review and optimize all pages for a seamless experience on smaller screens.
+    *   [ ] Ensure touch targets are appropriately sized for touch-based interaction.
+    *   [ ] Test and refine complex forms (like recipe creation) for ease of use on mobile devices.
 
 ## PHASE 4: WORLD-CLASS AI INTEGRATION
 
