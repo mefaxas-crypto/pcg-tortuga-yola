@@ -584,8 +584,7 @@ export async function logSale(saleData: AddSaleData) {
 
   try {
     await runTransaction(db, async (transaction) => {
-      // READ PHASE
-      // 1. Fetch the recipe to know which ingredients to deplete
+      // --- READ PHASE ---
       const recipeRef = doc(db, 'recipes', saleData.recipeId);
       const recipeSnap = await transaction.get(recipeRef);
       if (!recipeSnap.exists()) {
@@ -593,7 +592,6 @@ export async function logSale(saleData: AddSaleData) {
       }
       const recipe = recipeSnap.data() as Recipe;
 
-      // 2. For each ingredient, fetch its master spec and its outlet-specific stock
       const readPromises = recipe.ingredients.map(async (recipeIngredient) => {
         const invItemRef = doc(db, 'inventory', recipeIngredient.itemId);
         
@@ -602,8 +600,6 @@ export async function logSale(saleData: AddSaleData) {
           where('inventoryId', '==', recipeIngredient.itemId),
           where('outletId', '==', saleData.outletId)
         );
-        // Note: We use getDocs outside the transaction for the query part,
-        // then read the specific doc inside the transaction. This is a common pattern.
         const stockSnaps = await getDocs(stockQuery);
         if (stockSnaps.empty) {
           console.warn(`Stock record for ingredient ${recipeIngredient.name} (ID: ${recipeIngredient.itemId}) not found at outlet ${saleData.outletId}. Cannot deplete stock.`);
@@ -621,16 +617,8 @@ export async function logSale(saleData: AddSaleData) {
       });
       
       const ingredientsData = (await Promise.all(readPromises)).filter(Boolean);
-
-      // WRITE PHASE
-      // 3. Log the sale
-      const saleRef = doc(collection(db, 'sales'));
-      transaction.set(saleRef, {
-        ...saleData,
-        saleDate: serverTimestamp(),
-      });
-
-      // 4. Deplete each ingredient's stock
+      
+      // --- WRITE PHASE ---
       for (const data of ingredientsData) {
         if (!data || !data.invItemSnap.exists() || !data.stockDocSnap.exists()) {
           console.warn(`Missing data for an ingredient, skipping depletion.`);
@@ -660,9 +648,14 @@ export async function logSale(saleData: AddSaleData) {
             status: newStatus
         });
       }
+      
+      const saleRef = doc(collection(db, 'sales'));
+      transaction.set(saleRef, {
+        ...saleData,
+        saleDate: serverTimestamp(),
+      });
     });
 
-    // 5. Revalidate paths
     revalidatePath('/sales');
     revalidatePath('/inventory');
     revalidatePath('/'); // Revalidate dashboard for low stock items
@@ -1210,15 +1203,18 @@ export async function cancelPurchaseOrder(poId: string) {
     }
 }
 
-export async function receivePurchaseOrder(data: ReceivePurchaseOrderData, outletId: string) {
-  if (!outletId) {
-    throw new Error("Outlet ID is required to receive a purchase order.");
-  }
+export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
+  
   try {
     await runTransaction(db, async (transaction) => {
       // --- READS ---
-      const receivedItems = data.items.filter((item) => item.received > 0);
       const poRef = doc(db, 'purchaseOrders', data.poId);
+      const poSnap = await transaction.get(poRef);
+      if (!poSnap.exists()) throw new Error("Purchase Order not found.");
+      const outletId = poSnap.data().outletId;
+      if (!outletId) throw new Error("PO is not associated with an outlet.");
+
+      const receivedItems = data.items.filter((item) => item.received > 0);
 
       const itemReads = await Promise.all(receivedItems.map(async (item) => {
         const specRef = doc(db, 'inventory', item.itemId);

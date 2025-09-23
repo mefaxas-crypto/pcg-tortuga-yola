@@ -205,6 +205,7 @@ export type ProductionLog = {
     id: string;
     logDate: Date;
     user: string;
+    outletId?: string;
     producedItems: {
         recipeId: string;
         recipeName: string;
@@ -218,6 +219,7 @@ export type ButcheringLog = {
     id: string;
     logDate: Date;
     user: string;
+    outletId?: string;
     primaryItem: {
         itemId: string;
         itemName: string;
@@ -243,6 +245,7 @@ export type PurchaseOrderItem = {
 export type PurchaseOrder = {
     id: string;
     poNumber: string; // e.g., PO-2024-001
+    outletId: string;
     supplierId: string;
     supplierName: string;
     items: PurchaseOrderItem[];
@@ -252,7 +255,7 @@ export type PurchaseOrder = {
     notes?: string;
 };
 
-export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt'> & {
+export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt' | 'outletId'> & {
     createdAt?: Date; // Optional because server will set it
     items: {
         itemId: string;

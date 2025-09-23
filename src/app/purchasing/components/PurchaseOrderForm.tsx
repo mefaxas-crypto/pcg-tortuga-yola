@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { db } from '@/lib/firebase';
-import type { InventoryItem, Supplier } from '@/lib/types';
+import type { InventoryItem, Supplier, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
@@ -43,6 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Save, Trash2 } from 'lucide-react';
 import { addPurchaseOrder } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useOutletContext } from '@/context/OutletContext';
 
 const poItemSchema = z.object({
   itemId: z.string(),
@@ -62,9 +63,9 @@ const formSchema = z.object({
 
 export function PurchaseOrderForm() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { selectedOutlet } = useOutletContext();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -92,24 +93,40 @@ export function PurchaseOrderForm() {
   }, []);
 
   useEffect(() => {
-    if (!supplierId) {
+    if (!supplierId || !selectedOutlet) {
       replace([]);
-      setInventoryItems([]);
       return;
     }
+
     const q = query(
       collection(db, 'inventory'),
       where('supplierId', '==', supplierId)
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const inv: InventoryItem[] = [];
-      snapshot.forEach((doc) => inv.push({ id: doc.id, ...doc.data() } as InventoryItem));
-      const sortedInv = inv.sort((a,b) => a.name.localeCompare(b.name));
-      setInventoryItems(sortedInv);
 
-      const poItems = sortedInv.map(item => {
-        const suggestedQuantity = item.quantity <= item.minStock
-          ? Math.ceil(item.maxStock - item.quantity)
+    const unsubscribe = onSnapshot(q, async (invSnapshot) => {
+      const inventorySpecs = invSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+      
+      if (inventorySpecs.length === 0) {
+        replace([]);
+        return;
+      }
+
+      const inventoryIds = inventorySpecs.map(item => item.id);
+      const stockQuery = query(
+        collection(db, 'inventoryStock'),
+        where('outletId', '==', selectedOutlet.id),
+        where('inventoryId', 'in', inventoryIds)
+      );
+
+      const stockSnapshot = await getDocs(stockQuery);
+      const stockLevels = new Map(stockSnapshot.docs.map(doc => [doc.data().inventoryId, doc.data() as InventoryStockItem]));
+
+      const poItems = inventorySpecs.map(item => {
+        const stock = stockLevels.get(item.id);
+        const onHandQty = stock?.quantity ?? 0;
+        
+        const suggestedQuantity = onHandQty <= item.minStock
+          ? Math.ceil(item.maxStock - onHandQty)
           : 0;
           
         return {
@@ -117,19 +134,25 @@ export function PurchaseOrderForm() {
           name: item.name,
           purchaseUnit: item.purchaseUnit,
           purchasePrice: item.purchasePrice,
-          onHand: item.quantity,
+          onHand: onHandQty,
           minStock: item.minStock,
           maxStock: item.maxStock,
           orderQuantity: Math.max(0, suggestedQuantity),
         };
       });
-      replace(poItems);
+
+      replace(poItems.sort((a,b) => a.name.localeCompare(b.name)));
     });
+
     return () => unsubscribe();
-  }, [supplierId, replace]);
+  }, [supplierId, selectedOutlet, replace]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!selectedOutlet) {
+        toast({ variant: 'destructive', title: "No Outlet Selected", description: "Please select an outlet before creating a purchase order." });
+        return;
+    }
     setLoading(true);
     const supplier = suppliers.find(s => s.id === values.supplierId);
     if (!supplier) {
@@ -151,8 +174,7 @@ export function PurchaseOrderForm() {
             supplierName: supplier.name,
             items: itemsToOrder,
             status: 'Pending',
-            createdAt: new Date(), // server will overwrite
-        });
+        }, selectedOutlet.id);
         toast({ title: "Purchase Order Created!", description: `PO for ${supplier.name} has been saved.` });
         form.reset({ supplierId: '', items: [] });
     } catch (error) {
@@ -168,7 +190,7 @@ export function PurchaseOrderForm() {
       <CardHeader>
         <CardTitle>Create Purchase Order</CardTitle>
         <CardDescription>
-          Select a supplier to see their items and create a new purchase order. Quantities are suggested based on your Min/Max levels.
+          Select a supplier to see their items and create a new purchase order for the selected outlet. Quantities are suggested based on your Min/Max levels.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -180,10 +202,10 @@ export function PurchaseOrderForm() {
               render={({ field }) => (
                 <FormItem className="max-w-sm">
                   <FormLabel>Supplier</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedOutlet}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a supplier" />
+                        <SelectValue placeholder={!selectedOutlet ? "Select an outlet first" : "Select a supplier"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
