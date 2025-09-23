@@ -129,7 +129,7 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
                           >
                             <DropdownMenuItem
                               onSelect={(e) => e.preventDefault()}
-                              className="text-destructive-foreground focus:text-destructive-foreground focus:bg-destructive/90"
+                              className="text-destructive focus:text-destructive focus:bg-destructive/10"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
