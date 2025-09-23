@@ -211,7 +211,7 @@ export function SalesAndProfitability() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" tickFormatter={(val) => format(new Date(val), 'MMM d')} />
                         <YAxis tickFormatter={(val) => formatCurrency(val)} />
-                        <Tooltip content={<ChartTooltipContent formatter={(value, name) => &lt;div&gt;&lt;p&gt;{name}&lt;/p&gt;&lt;p&gt;{formatCurrency(value as number)}&lt;/p&gt;&lt;/div&gt;} />} />
+                        <Tooltip content={<ChartTooltipContent formatter={(value, name) => (<div><p>{name}</p><p>{formatCurrency(value as number)}</p></div>)} />} />
                         <Line type="monotone" dataKey="Revenue" stroke="hsl(var(--chart-2))" />
                         <Line type="monotone" dataKey="Profit" stroke="hsl(var(--chart-1))" />
                     </LineChart>
@@ -221,61 +221,61 @@ export function SalesAndProfitability() {
         
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
             <Card>
-                <CardHeader>&lt;CardTitle&gt;Top 5 by Revenue&lt;/CardTitle&gt;&lt;/CardHeader&gt;
-                &lt;CardContent&gt;
-                    &lt;Table&gt;
-                        &lt;TableHeader&gt;
-                            &lt;TableRow&gt;&lt;TableHead&gt;Item&lt;/TableHead&gt;&lt;TableHead className='text-right'&gt;Revenue&lt;/TableHead&gt;&lt;/TableRow&gt;
-                        &lt;/TableHeader&gt;
-                        &lt;TableBody&gt;
-                            {topByRevenue.map(item =&gt; &lt;TableRow key={item.recipeId}&gt;&lt;TableCell&gt;{item.recipeName}&lt;/TableCell&gt;&lt;TableCell className='text-right'&gt;{formatCurrency(item.totalRevenue)}&lt;/TableCell&gt;&lt;/TableRow&gt;)}
-                        &lt;/TableBody&gt;
-                    &lt;/Table&gt;
-                &lt;/CardContent&gt;
-            &lt;/Card&gt;
-            &lt;Card&gt;
-                &lt;CardHeader&gt;&lt;CardTitle&gt;Top 5 by Profit&lt;/CardTitle&gt;&lt;/CardHeader&gt;
-                &lt;CardContent&gt;
-                     &lt;Table&gt;
-                        &lt;TableHeader&gt;
-                            &lt;TableRow&gt;&lt;TableHead&gt;Item&lt;/TableHead&gt;&lt;TableHead className='text-right'&gt;Profit&lt;/TableHead&gt;&lt;/TableRow&gt;
-                        &lt;/TableHeader&gt;
-                        &lt;TableBody&gt;
-                            {topByProfit.map(item =&gt; &lt;TableRow key={item.recipeId}&gt;&lt;TableCell&gt;{item.recipeName}&lt;/TableCell&gt;&lt;TableCell className='text-right'&gt;{formatCurrency(item.totalProfit)}&lt;/TableCell&gt;&lt;/TableRow&gt;)}
-                        &lt;/TableBody&gt;
-                    &lt;/Table&gt;
-                &lt;/CardContent&gt;
-            &lt;/Card&gt;
-            &lt;Card&gt;
-                &lt;CardHeader&gt;&lt;CardTitle&gt;Top 5 by Quantity&lt;/CardTitle&gt;&lt;/CardHeader&gt;
-                &lt;CardContent&gt;
-                     &lt;Table&gt;
-                        &lt;TableHeader&gt;
-                            &lt;TableRow&gt;&lt;TableHead&gt;Item&lt;/TableHead&gt;&lt;TableHead className='text-right'&gt;Sold&lt;/TableHead&gt;&lt;/TableRow&gt;
-                        &lt;/TableHeader&gt;
-                        &lt;TableBody&gt;
-                            {topByQuantity.map(item =&gt; &lt;TableRow key={item.recipeId}&gt;&lt;TableCell&gt;{item.recipeName}&lt;/TableCell&gt;&lt;TableCell className='text-right'&gt;{item.totalQuantity}&lt;/TableCell&gt;&lt;/TableRow&gt;)}
-                        &lt;/TableBody&gt;
-                    &lt;/Table&gt;
-                &lt;/CardContent&gt;
-            &lt;/Card&gt;
-        &lt;/div&gt;
-    &lt;/&gt;
+                <CardHeader><CardTitle>Top 5 by Revenue</CardTitle></CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow><TableHead>Item</TableHead><TableHead className='text-right'>Revenue</TableHead></TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {topByRevenue.map(item => <TableRow key={item.recipeId}><TableCell>{item.recipeName}</TableCell><TableCell className='text-right'>{formatCurrency(item.totalRevenue)}</TableCell></TableRow>)}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Top 5 by Profit</CardTitle></CardHeader>
+                <CardContent>
+                     <Table>
+                        <TableHeader>
+                            <TableRow><TableHead>Item</TableHead><TableHead className='text-right'>Profit</TableHead></TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {topByProfit.map(item => <TableRow key={item.recipeId}><TableCell>{item.recipeName}</TableCell><TableCell className='text-right'>{formatCurrency(item.totalProfit)}</TableCell></TableRow>)}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Top 5 by Quantity</CardTitle></CardHeader>
+                <CardContent>
+                     <Table>
+                        <TableHeader>
+                            <TableRow><TableHead>Item</TableHead><TableHead className='text-right'>Sold</TableHead></TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {topByQuantity.map(item => <TableRow key={item.recipeId}><TableCell>{item.recipeName}</TableCell><TableCell className='text-right'>{item.totalQuantity}</TableCell></TableRow>)}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
+    </>
     )
   }
 
   return (
-    &lt;div className='space-y-6'&gt;
-        &lt;Card&gt;
-            &lt;CardHeader&gt;
-                &lt;CardTitle&gt;Sales &amp; Profitability Analysis&lt;/CardTitle&gt;
-                &lt;CardDescription&gt;Analyze your sales performance for the selected outlet and date range.&lt;/CardDescription&gt;
-            &lt;/CardHeader&gt;
-            &lt;CardContent&gt;
-                &lt;DateRangePicker date={date} onDateChange={setDate} /&gt;
-            &lt;/CardContent&gt;
-        &lt;/Card&gt;
+    <div className='space-y-6'>
+        <Card>
+            <CardHeader>
+                <CardTitle>Sales & Profitability Analysis</CardTitle>
+                <CardDescription>Analyze your sales performance for the selected outlet and date range.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <DateRangePicker date={date} onDateChange={setDate} />
+            </CardContent>
+        </Card>
         {renderContent()}
-    &lt;/div&gt;
+    </div>
   )
 }
