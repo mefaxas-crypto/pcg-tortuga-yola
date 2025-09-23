@@ -110,7 +110,14 @@ export function PurchaseOrderForm() {
   }, [supplierId, replace]);
 
   useEffect(() => {
-    const poItems = inventoryItems.map(item => ({
+    const poItems = inventoryItems.map(item => {
+      // Logic: suggest ordering up to maxStock if current quantity is below minStock.
+      // Ensure suggested quantity is never negative.
+      const suggestedQuantity = item.quantity <= item.minStock
+        ? Math.ceil(item.maxStock - item.quantity)
+        : 0;
+        
+      return {
         itemId: item.id,
         name: item.name,
         purchaseUnit: item.purchaseUnit,
@@ -118,8 +125,9 @@ export function PurchaseOrderForm() {
         onHand: item.quantity,
         minStock: item.minStock,
         maxStock: item.maxStock,
-        orderQuantity: item.quantity <= item.minStock ? Math.ceil(item.maxStock - item.quantity) : 0,
-    }));
+        orderQuantity: Math.max(0, suggestedQuantity), // Ensure order quantity is not negative
+      };
+    });
     replace(poItems);
   }, [inventoryItems, replace]);
 
@@ -134,7 +142,7 @@ export function PurchaseOrderForm() {
 
     const itemsToOrder = values.items.filter(item => item.orderQuantity > 0);
     if (itemsToOrder.length === 0) {
-        toast({ variant: 'destructive', title: "No items to order."});
+        toast({ variant: 'destructive', title: "No items to order.", description: "Please enter a quantity for at least one item."});
         setLoading(false);
         return;
     }
@@ -221,7 +229,7 @@ export function PurchaseOrderForm() {
                             />
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => remove(index)}>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
@@ -240,7 +248,7 @@ export function PurchaseOrderForm() {
             )}
             
             <div className="flex justify-end">
-                <Button type="submit" disabled={loading || !supplierId || fields.length === 0}>
+                <Button type="submit" disabled={loading || !supplierId}>
                     {loading ? 'Saving...' : 'Create Purchase Order'}
                     <Save className="ml-2 h-4 w-4" />
                 </Button>
