@@ -33,7 +33,7 @@ export default function SalesPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Suspense fallback={<Skeleton className='h-60' />}>
+                  <Suspense fallback={<Skeleton className='h-96' />}>
                     <RecentSales />
                   </Suspense>
                 </CardContent>

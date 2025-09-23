@@ -13,6 +13,7 @@ import { LowStockItems } from './dashboard/components/LowStockItems';
 import { Suspense } from 'react';
 import { DashboardStats } from './dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function Home() {
@@ -40,7 +41,9 @@ export default function Home() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" />
 
-      <DashboardStats />
+      <Suspense fallback={<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><Skeleton className='h-28' /><Skeleton className='h-28' /><Skeleton className='h-28' /><Skeleton className='h-28' /></div>}>
+        <DashboardStats />
+      </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -57,7 +60,9 @@ export default function Home() {
           </CardContent>
         </Card>
         
-         <DashboardStats showTopSelling={true} />
+        <Suspense fallback={<Skeleton className='h-96' />}>
+          <DashboardStats showTopSelling={true} />
+        </Suspense>
         
       </div>
     </div>
