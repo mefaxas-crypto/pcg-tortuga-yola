@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -16,35 +17,63 @@ import {
     TableRow,
   } from '@/components/ui/table';
 import { db } from '@/lib/firebase';
-import type { InventoryItem } from '@/lib/types';
+import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { BarChart3, Bot, Package } from 'lucide-react';
+import { Package } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useOutletContext } from '@/context/OutletContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type LowStockItemsProps = {
     showTable?: boolean;
 }
 
 export function LowStockItems({ showTable = false }: LowStockItemsProps) {
-  const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
+  const { selectedOutlet } = useOutletContext();
+  const [lowStockItemSpecs, setLowStockItemSpecs] = useState<InventoryItem[] | null>(null);
+  const [lowStockLevels, setLowStockLevels] = useState<InventoryStockItem[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'inventory'),
+    if (!selectedOutlet) {
+        setLowStockItemSpecs([]);
+        setLowStockLevels([]);
+        setLoading(false);
+        return;
+    }
+    setLoading(true);
+
+    const stockQuery = query(
+      collection(db, 'inventoryStock'),
+      where('outletId', '==', selectedOutlet.id),
       where('status', 'in', ['Low Stock', 'Out of Stock'])
     );
 
     const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const items: InventoryItem[] = [];
-        snapshot.forEach((doc) => {
-          items.push({ id: doc.id, ...doc.data() } as InventoryItem);
+      stockQuery,
+      (stockSnapshot) => {
+        const stockLevels: InventoryStockItem[] = [];
+        stockSnapshot.forEach((doc) => {
+          stockLevels.push({ id: doc.id, ...doc.data() } as InventoryStockItem);
         });
-        setLowStockItems(items.sort((a,b) => a.name.localeCompare(b.name)));
-        setLoading(false);
+        setLowStockLevels(stockLevels);
+
+        if (stockLevels.length > 0) {
+            const specIds = stockLevels.map(s => s.inventoryId);
+            const specQuery = query(collection(db, 'inventory'), where('__name__', 'in', specIds));
+            onSnapshot(specQuery, (specSnapshot) => {
+                const specs: InventoryItem[] = [];
+                specSnapshot.forEach((doc) => {
+                    specs.push({ id: doc.id, ...doc.data() } as InventoryItem);
+                });
+                setLowStockItemSpecs(specs);
+                setLoading(false);
+            });
+        } else {
+            setLowStockItemSpecs([]);
+            setLoading(false);
+        }
       },
       (error) => {
         console.error('Error fetching low stock items:', error);
@@ -53,13 +82,31 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
+
+  const combinedItems = useMemo(() => {
+    if (!lowStockItemSpecs || !lowStockLevels) return [];
+    
+    return lowStockLevels.map(stock => {
+      const spec = lowStockItemSpecs.find(s => s.id === stock.inventoryId);
+      return {
+        ...spec,
+        ...stock,
+      } as InventoryItem & InventoryStockItem;
+    }).sort((a,b) => a.name.localeCompare(b.name));
+  }, [lowStockItemSpecs, lowStockLevels]);
 
   if (showTable) {
     if (loading) {
-        return <div className="py-12 text-center text-muted-foreground">Loading...</div>
+      return (
+         <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+        </div>
+      );
     }
-    if (lowStockItems.length === 0) {
+    if (combinedItems.length === 0) {
       return (
         <div className="py-12 text-center text-muted-foreground">
           All items are well-stocked!
@@ -75,10 +122,10 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {lowStockItems.map(item => (
+                {combinedItems.map(item => (
                     <TableRow key={item.id}>
                         <TableCell className='font-medium'>{item.name}</TableCell>
-                        <TableCell className='text-right'>{item.quantity} {item.unit}</TableCell>
+                        <TableCell className='text-right'>{item.quantity.toFixed(2)} {item.unit}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -86,73 +133,24 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
     )
   }
 
-  // Render stat cards
+  // Render stat card
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Revenue Today</CardTitle>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            className="h-4 w-4 text-muted-foreground"
-          >
-            <line x1="12" x2="12" y1="2" y2="22" />
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">$4,291.37</div>
-          <p className="text-xs text-muted-foreground">
-            +12.1% from yesterday
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+        <Package className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {loading ? <Skeleton className="h-7 w-8 mt-1" /> : (
+            <div className="text-2xl font-bold">{combinedItems.length}</div>
+        )}
+        <Link href="/inventory">
+          <p className="text-xs text-muted-foreground hover:underline">
+              Items below minimum level
           </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Sales Count</CardTitle>
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">+212</div>
-          <p className="text-xs text-muted-foreground">+15% from last hour</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{loading ? '...' : lowStockItems.length}</div>
-          <Link href="/inventory">
-            <p className="text-xs text-muted-foreground hover:underline">
-                Items below par level
-            </p>
-          </Link>
-        </CardContent>
-      </Card>
-      <Card className="bg-accent/20 border-accent/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            AI Waste Prediction
-          </CardTitle>
-          <Bot className="h-4 w-4 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">~ $125.50</div>
-           <Link href="/ai-tools">
-             <p className="text-xs text-muted-foreground hover:underline">
-              Predicted waste for today
-            </p>
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+        </Link>
+      </CardContent>
+    </Card>
   );
 }
+
