@@ -1,5 +1,4 @@
 
-
 import {Inter, Playfair_Display} from 'next/font/google';
 
 import {cn} from '@/lib/utils';
