@@ -253,6 +253,7 @@ export type PurchaseOrder = {
     status: 'Pending' | 'Partially Received' | 'Received' | 'Cancelled';
     createdAt: Date;
     receivedAt?: Date;
+    user?: string;
     notes?: string;
 };
 

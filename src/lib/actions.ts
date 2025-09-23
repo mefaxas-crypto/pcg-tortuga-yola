@@ -4,6 +4,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -1188,6 +1189,7 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData, outletId: s
                 items: itemsToOrder, // Save only the items being ordered
                 outletId,
                 poNumber,
+                user: 'Chef John Doe', // Placeholder
                 createdAt: serverTimestamp(),
             });
         });

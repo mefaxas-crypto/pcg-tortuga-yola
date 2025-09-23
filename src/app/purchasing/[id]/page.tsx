@@ -122,7 +122,7 @@ export default function PurchaseOrderPage({
           </div>
         </CardHeader>
         <CardContent>
-            <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-4 mb-8">
                 <div>
                     <h3 className="font-semibold mb-2">Vendor</h3>
                     <div className="text-muted-foreground">
@@ -132,8 +132,14 @@ export default function PurchaseOrderPage({
                  <div className='text-right'>
                     <h3 className="font-semibold mb-2">Details</h3>
                     <div className="text-muted-foreground">
-                        <p>Date: {format(po.createdAt, 'PPP')}</p>
+                        <p>Date: {format(po.createdAt, 'PPP p')}</p>
                         <p>Status: <span className='font-medium'>{po.status}</span></p>
+                    </div>
+                </div>
+                <div className='text-right'>
+                    <h3 className="font-semibold mb-2">Requested By</h3>
+                    <div className="text-muted-foreground">
+                        <p>{po.user || 'N/A'}</p>
                     </div>
                 </div>
             </div>
