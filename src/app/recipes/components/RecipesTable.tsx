@@ -61,10 +61,9 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Recipe Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>SAP Code</TableHead>
-                <TableHead>Ingredients</TableHead>
+                <TableHead>Recipe</TableHead>
+                <TableHead className='hidden md:table-cell'>Category</TableHead>
+                <TableHead className='hidden sm:table-cell'>Ingredients</TableHead>
                 <TableHead className="text-right">Total Cost</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -78,13 +77,10 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
                     <TableCell>
                       <Skeleton className="h-5 w-32" />
                     </TableCell>
-                     <TableCell>
+                     <TableCell className='hidden md:table-cell'>
                       <Skeleton className="h-5 w-24" />
                     </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-20" />
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden sm:table-cell'>
                       <Skeleton className="h-5 w-16" />
                     </TableCell>
                     <TableCell>
@@ -98,12 +94,12 @@ export function RecipesTable({ onEdit }: RecipesTableProps) {
               {!loading &&
                 recipes?.map((recipe) => (
                   <TableRow key={recipe.id}>
-                    <TableCell className="font-medium">
-                      {recipe.name}
+                    <TableCell>
+                      <div className="font-medium">{recipe.name}</div>
+                      <div className="text-xs text-muted-foreground md:hidden">{recipe.category}</div>
                     </TableCell>
-                    <TableCell>{recipe.category}</TableCell>
-                    <TableCell>{recipe.sapCode || 'N/A'}</TableCell>
-                    <TableCell>{recipe.ingredients.length}</TableCell>
+                    <TableCell className="hidden md:table-cell">{recipe.category}</TableCell>
+                    <TableCell className='hidden sm:table-cell'>{recipe.ingredients.length}</TableCell>
                     <TableCell className="text-right">
                       {new Intl.NumberFormat('en-US', {
                         style: 'currency',

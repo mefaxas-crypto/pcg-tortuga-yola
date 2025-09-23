@@ -178,14 +178,12 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
           <Table>
             <TableHeader>
               <TableRow className='border-b-0'>
-                <TableHead>Material</TableHead>
                 <TableHead>Item</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className='hidden md:table-cell'>Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>On Hand Qty</TableHead>
-                <TableHead>Purchase Unit</TableHead>
-                <TableHead>Conversion</TableHead>
-                <TableHead className="text-right">Purchase Price</TableHead>
+                <TableHead>On Hand</TableHead>
+                <TableHead className="hidden lg:table-cell">Purchase Unit</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Purchase Price</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -194,22 +192,23 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
             <TableBody>
               {loading && Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className='hidden md:table-cell'><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                    <TableCell className='hidden lg:table-cell'><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className='hidden lg:table-cell'><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
               ))}
               {!loading && filteredItems?.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className='text-muted-foreground'>{item.materialCode}</TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell className='text-muted-foreground'>{item.category}</TableCell>
+                  <TableCell>
+                    <div className='font-medium'>{item.name}</div>
+                    <div className='text-xs text-muted-foreground md:hidden'>{item.category}</div>
+                    <div className='text-xs text-muted-foreground'>{item.materialCode}</div>
+                  </TableCell>
+                  <TableCell className='hidden md:table-cell text-muted-foreground'>{item.category}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
@@ -221,11 +220,8 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                   <TableCell>
                     {(item.quantity ?? 0).toFixed(2)} {getUnitLabel(item.purchaseUnit)}
                   </TableCell>
-                   <TableCell>{item.purchaseQuantity} {getUnitLabel(item.purchaseUnit)}</TableCell>
-                   <TableCell>
-                     {item.recipeUnitConversion ? `1 ${getUnitLabel(item.purchaseUnit)} = ${item.recipeUnitConversion} ${getUnitLabel(item.recipeUnit)}` : 'N/A'}
-                   </TableCell>
-                  <TableCell className="text-right">
+                   <TableCell className="hidden lg:table-cell">{item.purchaseQuantity} {getUnitLabel(item.purchaseUnit)}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-right">
                     {formatCurrency(item.purchasePrice || 0)}
                   </TableCell>
                   <TableCell>

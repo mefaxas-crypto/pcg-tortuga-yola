@@ -80,8 +80,8 @@ export function MenusTable() {
               <TableRow>
                 <TableHead>Menu Name</TableHead>
                 <TableHead>Items</TableHead>
-                <TableHead className="text-right">Total Cost</TableHead>
-                <TableHead className="text-right">Total Revenue</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Total Cost</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Total Revenue</TableHead>
                 <TableHead className="text-right">Total Profit</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -98,10 +98,10 @@ export function MenusTable() {
                     <TableCell>
                       <Skeleton className="h-5 w-16" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden sm:table-cell'>
                       <Skeleton className="h-5 w-20 ml-auto" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden sm:table-cell'>
                       <Skeleton className="h-5 w-20 ml-auto" />
                     </TableCell>
                      <TableCell>
@@ -121,10 +121,10 @@ export function MenusTable() {
                         {menu.name}
                       </TableCell>
                       <TableCell>{menu.items.length}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right hidden sm:table-cell">
                         {formatCurrency(totalCost)}
                       </TableCell>
-                       <TableCell className="text-right text-green-600">
+                       <TableCell className="text-right text-green-600 hidden sm:table-cell">
                         {formatCurrency(totalRevenue)}
                       </TableCell>
                        <TableCell className="text-right font-bold text-primary">

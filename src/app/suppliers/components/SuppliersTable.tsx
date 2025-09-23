@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -61,9 +62,9 @@ export function SuppliersTable({ onEdit }: SuppliersTableProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Contact Person</TableHead>
-                <TableHead>Phone Number</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className='hidden md:table-cell'>Contact Person</TableHead>
+                <TableHead className='hidden sm:table-cell'>Phone Number</TableHead>
+                <TableHead className='hidden md:table-cell'>Email</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -76,13 +77,13 @@ export function SuppliersTable({ onEdit }: SuppliersTableProps) {
                     <TableCell>
                       <Skeleton className="h-5 w-32" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden md:table-cell'>
                       <Skeleton className="h-5 w-24" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden sm:table-cell'>
                       <Skeleton className="h-5 w-28" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden md:table-cell'>
                       <Skeleton className="h-5 w-36" />
                     </TableCell>
                     <TableCell>
@@ -93,12 +94,14 @@ export function SuppliersTable({ onEdit }: SuppliersTableProps) {
               {!loading &&
                 suppliers?.map((supplier) => (
                   <TableRow key={supplier.id}>
-                    <TableCell className="font-medium">
-                      {supplier.name}
+                    <TableCell>
+                      <div className="font-medium">{supplier.name}</div>
+                      <div className="text-xs text-muted-foreground md:hidden">{supplier.contactPerson}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">{supplier.phoneNumber}</div>
                     </TableCell>
-                    <TableCell>{supplier.contactPerson}</TableCell>
-                    <TableCell>{supplier.phoneNumber}</TableCell>
-                    <TableCell>{supplier.email}</TableCell>
+                    <TableCell className='hidden md:table-cell'>{supplier.contactPerson}</TableCell>
+                    <TableCell className='hidden sm:table-cell'>{supplier.phoneNumber}</TableCell>
+                    <TableCell className='hidden md:table-cell'>{supplier.email}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
