@@ -27,7 +27,7 @@ import {
 import { db } from '@/lib/firebase';
 import type { InventoryItem, Supplier, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
