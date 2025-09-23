@@ -5,6 +5,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -1033,6 +1034,20 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData) {
     }
 }
 
+export async function cancelPurchaseOrder(poId: string) {
+    try {
+        const poRef = doc(db, 'purchaseOrders', poId);
+        await updateDoc(poRef, {
+            status: 'Cancelled',
+        });
+        revalidatePath('/purchasing');
+        return { success: true };
+    } catch (e) {
+        console.error('Error cancelling purchase order: ', e);
+        throw new Error('Failed to cancel purchase order');
+    }
+}
+
 export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
   try {
     await runTransaction(db, async (transaction) => {
@@ -1088,11 +1103,11 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
 
             // Recalculate unitCost based on the new average purchase price
             if (invItem.purchaseUnit === 'un.') {
-              const totalRecipeUnitsInPurchase = invItem.purchaseQuantity * invItem.recipeUnitConversion;
+              const totalRecipeUnitsInPurchase = invItem.purchaseQuantity * (invItem.recipeUnitConversion || 1);
               updateData.unitCost = totalRecipeUnitsInPurchase > 0 ? newAveragePrice / totalRecipeUnitsInPurchase : 0;
             } else {
-              const totalBaseUnits = invItem.purchaseQuantity * (invItem.recipeUnitConversion || 1);
-              updateData.unitCost = totalBaseUnits > 0 ? newAveragePrice / totalBaseUnits : 0;
+              const baseUnitsPerPurchase = convert(invItem.purchaseQuantity, invItem.purchaseUnit as Unit, invItem.recipeUnit as Unit);
+              updateData.unitCost = baseUnitsPerPurchase > 0 ? newAveragePrice / baseUnitsPerPurchase : 0;
             }
           }
         }
