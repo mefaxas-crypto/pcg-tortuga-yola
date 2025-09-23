@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -709,21 +710,19 @@ export async function logProduction(data: LogProductionData, outletId: string) {
       const invSnaps = await Promise.all(Array.from(inventoryRefsToFetch.values()).map(ref => transaction.get(ref)));
       const invSnapMap = new Map(invSnaps.map(snap => [snap.id, snap]));
 
-      const stockReadPromises: Promise<{ ref: DocumentReference, snap: any }>[] = [];
-      for (const invId of inventoryRefsToFetch.keys()) {
+      const stockRefsAndSnaps = await Promise.all(
+        Array.from(inventoryRefsToFetch.keys()).map(async (invId) => {
           const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', invId), where('outletId', '==', outletId));
-          stockReadPromises.push(getDocs(stockQuery).then(docs => ({ ref: docs.empty ? doc(collection(db, 'inventoryStock')) : docs.docs[0].ref, snap: docs.empty ? null : docs.docs[0] })));
-      }
-      const stockRefsAndSnaps = await Promise.all(stockReadPromises);
-      
-      const stockDocMap = new Map<string, { ref: DocumentReference, snap: any }>();
-      for (const { ref, snap } of stockRefsAndSnaps) {
-          const invId = snap ? snap.data().inventoryId : inventoryRefsToFetch.get(ref.id)?.id;
-          if (invId) {
-             const stockSnap = snap ? await transaction.get(ref) : null;
-             stockDocMap.set(invId, { ref, snap: stockSnap });
+          const stockDocs = await getDocs(stockQuery);
+          if (stockDocs.empty) {
+            // If stock doesn't exist, we can't read it in the transaction, but we can create it later.
+            return { inventoryId: invId, ref: doc(collection(db, 'inventoryStock')), snap: null };
           }
-      }
+          const stockRef = stockDocs.docs[0].ref;
+          return { inventoryId: invId, ref: stockRef, snap: await transaction.get(stockRef) };
+        })
+      );
+      const stockDocMap = new Map(stockRefsAndSnaps.map(item => [item.inventoryId, { ref: item.ref, snap: item.snap }]));
 
       // --- WRITE PHASE ---
       for (let i = 0; i < data.items.length; i++) {
@@ -766,19 +765,23 @@ export async function logProduction(data: LogProductionData, outletId: string) {
         const totalYieldQuantity = itemToProduce.quantityProduced * (subRecipe.yield || 1);
         
         const producedStockDocData = stockDocMap.get(subRecipeInvSnap.id);
-        if(producedStockDocData && producedStockDocData.snap) { // Update existing
-            const newQuantity = (producedStockDocData.snap.data()?.quantity ?? 0) + totalYieldQuantity;
-            transaction.update(producedStockDocData.ref, {
-              quantity: newQuantity,
-              status: getStatus(newQuantity, producedInvItem.minStock),
-            });
-        } else if (producedStockDocData) { // Create new
-            transaction.set(producedStockDocData.ref, {
-                inventoryId: subRecipeInvSnap.id,
-                outletId: outletId,
-                quantity: totalYieldQuantity,
-                status: getStatus(totalYieldQuantity, producedInvItem.minStock),
-            });
+        if(producedStockDocData) {
+            const currentQuantity = producedStockDocData.snap?.data()?.quantity ?? 0;
+            const newQuantity = currentQuantity + totalYieldQuantity;
+            
+            if (producedStockDocData.snap) { // Update existing
+                transaction.update(producedStockDocData.ref, {
+                    quantity: newQuantity,
+                    status: getStatus(newQuantity, producedInvItem.minStock),
+                });
+            } else { // Create new
+                transaction.set(producedStockDocData.ref, {
+                    inventoryId: subRecipeInvSnap.id,
+                    outletId: outletId,
+                    quantity: newQuantity,
+                    status: getStatus(newQuantity, producedInvItem.minStock),
+                });
+            }
         }
       }
       
@@ -1166,6 +1169,12 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData, outletId: s
     if (!outletId) {
       throw new Error("An outlet must be specified to create a purchase order.");
     }
+
+    const itemsToOrder = poData.items.filter(item => item.orderQuantity > 0);
+    if (itemsToOrder.length === 0) {
+        throw new Error("Cannot create a purchase order with no items. Please add a quantity to at least one item.");
+    }
+
     try {
         await runTransaction(db, async (transaction) => {
             // In a real app, you'd have a counter document to get a sequential PO number
@@ -1173,6 +1182,7 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData, outletId: s
             const poRef = doc(collection(db, 'purchaseOrders'));
             transaction.set(poRef, {
                 ...poData,
+                items: itemsToOrder, // Save only the items being ordered
                 outletId,
                 poNumber,
                 createdAt: serverTimestamp(),
@@ -1185,6 +1195,7 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData, outletId: s
         throw new Error('Failed to add purchase order');
     }
 }
+
 
 export async function cancelPurchaseOrder(poId: string) {
     try {
@@ -1255,7 +1266,7 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         const newQuantity = currentQuantity + receivedItem.received;
         const newStatus = getStatus(newQuantity, invItemSpec.minStock);
 
-        if(stockSnap) { // If stock document exists, update it
+        if(stockSnap && stockSnap.exists()) { // If stock document exists, update it
              transaction.update(stockRef, {
                 quantity: newQuantity,
                 status: newStatus,
