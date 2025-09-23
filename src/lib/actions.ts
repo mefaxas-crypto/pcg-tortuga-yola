@@ -975,7 +975,7 @@ export async function logButchering(data: ButcheringData, outletId: string) {
             const stockDocs = await getDocs(stockQuery);
             const stockRef = stockDocs.empty ? doc(collection(db, 'inventoryStock')) : stockDocs.docs[0].ref;
             const stockSnap = stockDocs.empty ? null : await transaction.get(stockRef);
-            return { itemData: item, specSnap: await transaction.get(specRef), stockSnap, stockRef };
+            return { itemData: item, specRef: specRef, specSnap: await transaction.get(specRef), stockSnap, stockRef };
           }));
 
           // --- 2. CALCULATION PHASE ---
@@ -983,8 +983,8 @@ export async function logButchering(data: ButcheringData, outletId: string) {
           if (quantityUsedInPurchaseUnit > (primaryStock.quantity ?? 0)) {
               throw new Error(`Not enough stock for ${primaryItemSpec.name}. Available: ${(primaryStock.quantity ?? 0).toFixed(2)} ${primaryItemSpec.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit.toFixed(2)} ${primaryItemSpec.purchaseUnit}`);
           }
-          const costOfButcheredPortion = (primaryItemSpec.purchasePrice / primaryItemSpec.purchaseQuantity) * quantityUsedInPurchaseUnit;
-
+          const costOfButcheredPortion = (primaryItemSpec.purchasePrice / (primaryItemSpec.purchaseQuantity || 1)) * quantityUsedInPurchaseUnit;
+          
           // --- 3. WRITE PHASE ---
           const newPrimaryQuantity = (primaryStock.quantity ?? 0) - quantityUsedInPurchaseUnit;
           transaction.update(primaryStockRef, {
@@ -997,15 +997,39 @@ export async function logButchering(data: ButcheringData, outletId: string) {
           for (const readData of yieldedItemReads) {
               if (!readData.specSnap.exists()) throw new Error(`Yielded item "${readData.itemData.name}" could not be found.`);
               const yieldedItemSpec = readData.specSnap.data() as InventoryItem;
-              // const costOfThisYield = costOfButcheredPortion * ((readData.itemData.finalCostDistribution || 0) / 100);
+              
+              const costOfThisYield = costOfButcheredPortion * ((readData.itemData.finalCostDistribution || 0) / 100);
               const quantityToAddInPurchaseUnit = readData.itemData.weight;
               
-              if (readData.stockSnap && readData.stockSnap.exists() && readData.stockRef) { // Existing stock
+              // Calculate new purchase price for the yielded item spec
+              const newPurchasePrice = quantityToAddInPurchaseUnit > 0 ? costOfThisYield / quantityToAddInPurchaseUnit : 0;
+
+              let currentStockValue = 0;
+              let currentStockQty = 0;
+              if (readData.stockSnap && readData.stockSnap.exists()) {
                   const yieldedStock = readData.stockSnap.data() as InventoryStockItem;
-                  const newQuantity = (yieldedStock.quantity ?? 0) + quantityToAddInPurchaseUnit;
+                  currentStockQty = yieldedStock.quantity ?? 0;
+                  currentStockValue = currentStockQty * (yieldedItemSpec.purchasePrice / (yieldedItemSpec.purchaseQuantity || 1));
+              }
+
+              // Weighted Average Cost Calculation
+              const totalValue = currentStockValue + costOfThisYield;
+              const totalQuantity = currentStockQty + quantityToAddInPurchaseUnit;
+              const newWeightedAveragePrice = totalQuantity > 0 ? totalValue / totalQuantity : 0;
+              const newUnitCost = newWeightedAveragePrice; // Assuming purchase unit is the base unit for yielded items for simplicity
+              
+              // Update inventory item spec with new cost
+              transaction.update(readData.specRef, {
+                purchasePrice: isFinite(newWeightedAveragePrice) ? newWeightedAveragePrice : 0,
+                purchaseQuantity: 1, // Yielded items are costed per their unit
+                unitCost: isFinite(newUnitCost) ? newUnitCost : 0,
+              });
+
+              // Update stock
+              if (readData.stockSnap && readData.stockSnap.exists() && readData.stockRef) { // Existing stock
                   transaction.update(readData.stockRef, {
-                      quantity: newQuantity,
-                      status: getStatus(newQuantity, yieldedItemSpec.minStock),
+                      quantity: totalQuantity,
+                      status: getStatus(totalQuantity, yieldedItemSpec.minStock),
                   });
               } else if (readData.stockRef) { // New stock
                   transaction.set(readData.stockRef, {
@@ -1015,7 +1039,6 @@ export async function logButchering(data: ButcheringData, outletId: string) {
                     status: getStatus(quantityToAddInPurchaseUnit, yieldedItemSpec.minStock),
                   });
               }
-              // Note: Weighted-average cost update on butchering is complex and has been omitted for simplicity.
 
               yieldedItemsForLog.push({
                   itemId: readData.specSnap.id,
