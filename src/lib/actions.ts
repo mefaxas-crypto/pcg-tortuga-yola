@@ -3,6 +3,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -1060,31 +1061,36 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         const invItem = itemSnap.data() as InventoryItem;
         const invItemRef = itemSnap.ref;
 
-        // Add received quantity to stock
-        const newQuantity = invItem.quantity + receivedItem.received;
-        const newStatus = getStatus(newQuantity, invItem.minStock);
-
-        // Check if price needs updating
-        const hasNewPrice = receivedItem.purchasePrice !== invItem.purchasePrice;
+        const newQuantityInPurchaseUnit = invItem.quantity + receivedItem.received;
+        const newStatus = getStatus(newQuantityInPurchaseUnit, invItem.minStock);
 
         const updateData: Partial<InventoryItem> = {
-          quantity: newQuantity,
+          quantity: newQuantityInPurchaseUnit,
           status: newStatus,
         };
 
-        if (hasNewPrice) {
-          updateData.purchasePrice = receivedItem.purchasePrice;
+        const hasNewPrice = receivedItem.purchasePrice !== invItem.purchasePrice;
 
-          // Recalculate unitCost
-          if (invItem.purchaseUnit === 'un.') {
-            const totalRecipeUnitsInPurchase = invItem.purchaseQuantity * invItem.recipeUnitConversion;
-            updateData.unitCost = totalRecipeUnitsIn-purchase > 0 ? receivedItem.purchasePrice / totalRecipeUnitsInPurchase : 0;
-          } else {
-            const totalBaseUnits = invItem.purchaseQuantity * invItem.recipeUnitConversion;
-            updateData.unitCost = totalBaseUnits > 0 ? receivedItem.purchasePrice / totalBaseUnits : 0;
+        if (hasNewPrice) {
+          // Weighted-Average Cost Calculation
+          const currentTotalValue = invItem.quantity * invItem.purchasePrice;
+          const receivedValue = receivedItem.received * receivedItem.purchasePrice;
+          
+          if (newQuantityInPurchaseUnit > 0) {
+            const newAveragePrice = (currentTotalValue + receivedValue) / newQuantityInPurchaseUnit;
+            updateData.purchasePrice = newAveragePrice;
+
+            // Recalculate unitCost based on the new average purchase price
+            if (invItem.purchaseUnit === 'un.') {
+              const totalRecipeUnitsInPurchase = invItem.purchaseQuantity * invItem.recipeUnitConversion;
+              updateData.unitCost = totalRecipeUnitsInPurchase > 0 ? newAveragePrice / totalRecipeUnitsInPurchase : 0;
+            } else {
+              const totalBaseUnits = invItem.purchaseQuantity * invItem.recipeUnitConversion;
+              updateData.unitCost = totalBaseUnits > 0 ? newAveragePrice / totalBaseUnits : 0;
+            }
           }
         }
-
+        
         transaction.update(invItemRef, updateData);
 
         if (receivedItem.received < receivedItem.ordered) {

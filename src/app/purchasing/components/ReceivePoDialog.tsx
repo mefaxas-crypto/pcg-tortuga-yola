@@ -122,7 +122,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
           <DialogHeader>
             <DialogTitle>Receive Purchase Order: {po.poNumber}</DialogTitle>
             <DialogDescription>
-              Confirm the quantities and prices received from {po.supplierName}. Any discrepancies will create a partial order. Updated prices will be saved to the inventory item.
+              Confirm the quantities and prices received from {po.supplierName}. Any discrepancies will create a partial order. Updated prices will be saved to the inventory item using a weighted-average cost.
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -217,7 +217,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
       <AlertDialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
                 Please verify that all received counts and prices are correct before submitting. This action will permanently update your inventory levels and item costs.
             </AlertDialogDescription>
