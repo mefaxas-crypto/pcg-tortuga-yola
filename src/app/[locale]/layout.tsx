@@ -1,6 +1,6 @@
 
 import {notFound} from 'next/navigation';
-import {NextIntlClientProvider, useMessages} from 'next-intl';
+import {NextIntlClientProvider} from 'next-intl';
 import {Inter, Playfair_Display} from 'next/font/google';
 
 import {cn} from '@/lib/utils';
@@ -30,11 +30,17 @@ type Props = {
 
 const locales = ['en', 'es', 'fr'];
 
-export default function LocaleLayout({children, params: {locale}}: Props) {
+export default async function LocaleLayout({children, params: {locale}}: Props) {
   if (!locales.includes(locale)) {
     notFound();
   }
-  const messages = useMessages();
+
+  let messages;
+  try {
+    messages = (await import(`../../messages/${locale}.json`)).default;
+  } catch (error) {
+    notFound();
+  }
 
   return (
     <html
