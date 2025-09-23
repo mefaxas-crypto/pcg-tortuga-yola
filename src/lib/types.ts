@@ -135,6 +135,7 @@ export type EditMenuData = Omit<Menu, 'id'>;
 
 export type Sale = {
   id: string;
+  outletId: string;
   menuId: string;
   menuName: string;
   recipeId: string;

@@ -27,6 +27,7 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { useOutletContext } from '@/context/OutletContext';
 
 const formSchema = z.object({
   menuId: z.string().min(1, 'Please select a menu.'),
@@ -39,6 +40,7 @@ export function SalesForm() {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const { toast } = useToast();
+  const { selectedOutlet } = useOutletContext();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,6 +76,14 @@ export function SalesForm() {
   }, [selectedMenuId, menus, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!selectedOutlet) {
+      toast({
+        variant: 'destructive',
+        title: 'No Outlet Selected',
+        description: 'Please select an outlet from the header before logging a sale.',
+      });
+      return;
+    }
     setLoading(true);
 
     const selectedMenu = menus.find(menu => menu.id === values.menuId);
@@ -91,6 +101,7 @@ export function SalesForm() {
 
     try {
         await logSale({
+            outletId: selectedOutlet.id,
             menuId: values.menuId,
             menuName: selectedMenu.name,
             recipeId: values.recipeId,
@@ -112,10 +123,11 @@ export function SalesForm() {
       });
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to log sale. Please try again.',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -186,7 +198,7 @@ export function SalesForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading || !selectedOutlet} className="w-full">
           {loading ? 'Logging Sale...' : 'Log Sale'}
         </Button>
       </form>

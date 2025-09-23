@@ -32,6 +32,7 @@ import type {
   ButcheryTemplate,
   InventoryFormData,
   InventoryItem,
+  InventoryStockItem,
   LogProductionData,
   Menu,
   Outlet,
@@ -430,27 +431,32 @@ export async function addRecipe(recipeData: AddRecipeData) {
 
       // 2. If it's a sub-recipe, create its master inventory item spec (but NO stock records)
       if (recipeData.isSubRecipe) {
-        const inventoryRef = doc(db, 'inventory');
-        const unitCost = recipeData.totalCost / (recipeData.yield || 1);
-        
-        const inventorySpec = {
-          materialCode: recipeData.internalCode,
-          name: recipeData.name,
-          category: 'Sub-recipe',
-          unit: recipeData.yieldUnit || 'un.',
-          purchaseUnit: recipeData.yieldUnit || 'un.',
-          purchaseQuantity: recipeData.yield || 1,
-          minStock: 0,
-          maxStock: 0,
-          supplier: 'In-house',
-          supplierId: '',
-          purchasePrice: isFinite(unitCost) ? unitCost : 0,
-          unitCost: isFinite(unitCost) ? unitCost : 0,
-          allergens: [],
-          recipeUnit: recipeData.yieldUnit || 'un.',
-          recipeUnitConversion: 1,
-        };
-        transaction.set(inventoryRef, inventorySpec);
+        const inventoryQuery = query(collection(db, 'inventory'), where('materialCode', '==', recipeData.internalCode));
+        const existingInv = await getDocs(inventoryQuery);
+
+        if (existingInv.empty) {
+          const inventoryRef = doc(collection(db, 'inventory'));
+          const unitCost = recipeData.totalCost / (recipeData.yield || 1);
+          
+          const inventorySpec = {
+            materialCode: recipeData.internalCode,
+            name: recipeData.name,
+            category: 'Sub-recipe',
+            unit: recipeData.yieldUnit || 'un.',
+            purchaseUnit: recipeData.yieldUnit || 'un.',
+            purchaseQuantity: recipeData.yield || 1,
+            minStock: 0,
+            maxStock: 0,
+            supplier: 'In-house',
+            supplierId: '',
+            purchasePrice: isFinite(unitCost) ? unitCost : 0,
+            unitCost: isFinite(unitCost) ? unitCost : 0,
+            allergens: [],
+            recipeUnit: recipeData.yieldUnit || 'un.',
+            recipeUnitConversion: 1,
+          };
+          transaction.set(inventoryRef, inventorySpec);
+        }
       }
     });
 
@@ -559,6 +565,10 @@ export async function deleteMenu(menuId: string) {
 
 // Sales Actions
 export async function logSale(saleData: AddSaleData) {
+  if (!saleData.outletId) {
+    throw new Error('An outlet must be specified to log a sale.');
+  }
+
   try {
     await runTransaction(db, async (transaction) => {
       // 1. Log the sale
@@ -576,30 +586,36 @@ export async function logSale(saleData: AddSaleData) {
       }
       const recipe = recipeSnap.data() as Recipe;
 
-      // 3. Deplete each ingredient
+      // 3. Deplete each ingredient from the correct outlet's stock
       for (const recipeIngredient of recipe.ingredients) {
-        let invItemSnap;
-        if (recipeIngredient.ingredientType === 'recipe') {
-            const itemToDepleteQuery = query(collection(db, 'inventory'), where('materialCode', '==', recipeIngredient.itemCode));
-            const querySnapshot = await getDocs(itemToDepleteQuery);
-             if (!querySnapshot.empty) {
-                invItemSnap = await transaction.get(querySnapshot.docs[0].ref);
-            }
-        } else {
-            const itemToDepleteRef = doc(db, 'inventory', recipeIngredient.itemId);
-            invItemSnap = await transaction.get(itemToDepleteRef);
+        // Find the inventory stock document for this ingredient at this outlet
+        const stockQuery = query(
+          collection(db, 'inventoryStock'),
+          where('inventoryId', '==', recipeIngredient.itemId),
+          where('outletId', '==', saleData.outletId)
+        );
+        const stockSnaps = await getDocs(stockQuery);
+
+        if (stockSnaps.empty) {
+          console.warn(`Stock record for ingredient ${recipeIngredient.name} (ID: ${recipeIngredient.itemId}) not found at outlet ${saleData.outletId}. Cannot deplete stock.`);
+          continue; // Or throw an error if this should be impossible
         }
 
-        if (!invItemSnap || !invItemSnap.exists()) {
-          console.warn(`Inventory item with ID ${recipeIngredient.itemId} or code ${recipeIngredient.itemCode} not found during sale depletion.`);
+        const stockDocRef = stockSnaps.docs[0].ref;
+        const stockDoc = await transaction.get(stockDocRef);
+        const stockData = stockDoc.data() as InventoryStockItem;
+
+        // Fetch the master inventory item to get conversion details
+        const invItemRef = doc(db, 'inventory', recipeIngredient.itemId);
+        const invItemSnap = await transaction.get(invItemRef);
+        if (!invItemSnap.exists()) {
+          console.warn(`Master inventory item ${recipeIngredient.itemId} not found.`);
           continue;
         }
-
         const invItem = invItemSnap.data() as InventoryItem;
-        const invItemRef = invItemSnap.ref;
-        
+
+        // --- Depletion Calculation ---
         const quantityInRecipeUnit = recipeIngredient.quantity * saleData.quantity;
-        
         const neededInBaseUnit = convert(quantityInRecipeUnit, recipeIngredient.unit as Unit, invItem.recipeUnit as Unit);
 
         let quantityToDeplete: number;
@@ -610,11 +626,12 @@ export async function logSale(saleData: AddSaleData) {
         } else {
             quantityToDeplete = convert(neededInBaseUnit, invItem.recipeUnit as Unit, invItem.unit as Unit);
         }
+        // --- End Calculation ---
 
-        const newQuantity = (invItem.quantity ?? 0) - quantityToDeplete;
+        const newQuantity = (stockData.quantity ?? 0) - quantityToDeplete;
         const newStatus = getStatus(newQuantity, invItem.minStock);
         
-        transaction.update(invItemRef, { 
+        transaction.update(stockDocRef, { 
             quantity: newQuantity,
             status: newStatus
         });
