@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -9,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Languages } from 'lucide-react';
 import { useLocale } from 'next-intl';
-import { useRouter, usePathname } from 'next-intl/client';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 export function LanguageSwitcher() {
@@ -19,8 +20,11 @@ export function LanguageSwitcher() {
   const [isPending, startTransition] = useTransition();
 
   const handleLocaleChange = (nextLocale: string) => {
+    // pathname here will include the current locale, so we need to remove it.
+    const newPath = pathname.startsWith(`/${locale}`) ? pathname.substring(`/${locale}`.length) : pathname;
+    
     startTransition(() => {
-      router.replace(pathname, { locale: nextLocale });
+      router.replace(`/${nextLocale}${newPath || '/'}`);
     });
   };
 

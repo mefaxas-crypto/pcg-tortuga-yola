@@ -1,7 +1,7 @@
 
 'use client';
 
-import { usePathname } from 'next-intl/client';
+import { usePathname } from 'next/navigation';
 import {
   SidebarContent,
   SidebarFooter,
@@ -24,7 +24,7 @@ import {
   PackagePlus,
   ClipboardList,
 } from 'lucide-react';
-import Link from 'next-intl/link';
+import { Link } from 'next-intl';
 import { useTranslations } from 'next-intl';
 
 export function SidebarNav() {
