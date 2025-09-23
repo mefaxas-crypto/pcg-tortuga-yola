@@ -113,6 +113,12 @@ export function PurchaseOrderForm() {
       }
 
       const inventoryIds = inventorySpecs.map(item => item.id);
+      // This is the critical guard. Firestore throws an error if `in` array is empty.
+      if (inventoryIds.length === 0) {
+        replace([]);
+        return;
+      }
+
       const stockQuery = query(
         collection(db, 'inventoryStock'),
         where('outletId', '==', selectedOutlet.id),
