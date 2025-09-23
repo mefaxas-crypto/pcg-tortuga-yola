@@ -61,7 +61,7 @@ export function SidebarNav() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname === '/' : true) && !pathname.startsWith('/settings')}
+                isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname.length <= 3 : true) && !pathname.startsWith('/settings')}
                 icon={<item.icon />}
                 tooltip={item.label}
               >

@@ -24,7 +24,7 @@ import { ReceivePoDialog } from './ReceivePoDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CancelPoDialog } from './CancelPoDialog';
 import { useOutletContext } from '@/context/OutletContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-intl/client';
 
 type PurchaseOrdersTableProps = {
     status: 'active' | 'history';

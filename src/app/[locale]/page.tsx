@@ -14,6 +14,8 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardStats } from '../dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
+import { Link } from 'next-intl';
+
 
 export default function Home() {
   const { selectedOutlet } = useOutletContext();

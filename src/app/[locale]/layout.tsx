@@ -28,11 +28,13 @@ type Props = {
   params: {locale: string};
 };
 
-export default function LocaleLayout({children, params: {locale}}: Props) {
-  const messages = useMessages();
+const locales = ['en', 'es', 'fr'];
 
-  // Validate that the locale parameter is valid
-  if (!['en', 'es', 'fr'].includes(locale)) notFound();
+export default function LocaleLayout({children, params: {locale}}: Props) {
+  if (!locales.includes(locale)) {
+    notFound();
+  }
+  const messages = useMessages();
 
   return (
     <html

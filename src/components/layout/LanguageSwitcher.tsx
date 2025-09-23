@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Languages } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 
 export function LanguageSwitcher() {
   const router = useRouter();
