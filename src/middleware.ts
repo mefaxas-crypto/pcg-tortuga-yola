@@ -1,3 +1,4 @@
+
 import createMiddleware from 'next-intl/middleware';
  
 export default createMiddleware({
@@ -5,20 +6,10 @@ export default createMiddleware({
   locales: ['en', 'es', 'fr'],
  
   // Used when no locale matches
-  defaultLocale: 'en',
-
-  // The `localePrefix` option is used to prefix paths with a locale
-  // when the user visits the root of the website.
-  // This is important for SEO and for the language switcher to work correctly.
-  localePrefix: 'always'
+  defaultLocale: 'en'
 });
  
 export const config = {
   // Match only internationalized pathnames
-  matcher: [
-    // Match all pathnames except for
-    // - … if they start with `/api`, `/_next` or `/_vercel`
-    // - … the ones containing a dot (e.g. `favicon.ico`)
-    '/((?!api|_next|_vercel|.*\\..*).*)',
-  ]
+  matcher: ['/', '/(fr|es|en)/:path*']
 };

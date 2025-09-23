@@ -29,10 +29,10 @@ type Props = {
 };
 
 export default function LocaleLayout({children, params: {locale}}: Props) {
+  const messages = useMessages();
+
   // Validate that the locale parameter is valid
   if (!['en', 'es', 'fr'].includes(locale)) notFound();
-
-  const messages = useMessages();
 
   return (
     <html

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,7 +18,7 @@ import {
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { placeholderImages } from '@/lib/placeholder-images.json';
 import { LogOut, Settings, User } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'next-intl';
 import { OutletSelector } from './OutletSelector';
 import { LanguageSwitcher } from './LanguageSwitcher';
 

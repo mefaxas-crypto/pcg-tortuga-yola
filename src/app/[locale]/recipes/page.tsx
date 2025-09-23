@@ -14,7 +14,7 @@ import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RecipesTable } from './components/RecipesTable';
 import type { Recipe } from '@/lib/types';
-import Link from 'next/link';
+import { Link } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ProductionForm } from './components/ProductionForm';
 import { ButcheringForm } from './components/ButcheringForm';
