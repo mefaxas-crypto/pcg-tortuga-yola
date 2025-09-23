@@ -93,6 +93,7 @@ export function PurchaseOrderForm() {
 
   useEffect(() => {
     if (!supplierId) {
+      replace([]);
       setInventoryItems([]);
       return;
     }
@@ -106,7 +107,7 @@ export function PurchaseOrderForm() {
       setInventoryItems(inv.sort((a,b) => a.name.localeCompare(b.name)));
     });
     return () => unsubscribe();
-  }, [supplierId]);
+  }, [supplierId, replace]);
 
   useEffect(() => {
     const poItems = inventoryItems.map(item => ({
@@ -239,7 +240,7 @@ export function PurchaseOrderForm() {
             )}
             
             <div className="flex justify-end">
-                <Button type="submit" disabled={loading || fields.length === 0}>
+                <Button type="submit" disabled={loading || !supplierId || fields.length === 0}>
                     {loading ? 'Saving...' : 'Create Purchase Order'}
                     <Save className="ml-2 h-4 w-4" />
                 </Button>
