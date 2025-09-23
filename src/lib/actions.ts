@@ -22,6 +22,7 @@ import type {
   AddAllergenData,
   AddIngredientCategoryData,
   AddMenuData,
+  AddOutletData,
   AddPurchaseOrderData,
   AddRecipeData,
   AddSaleData,
@@ -32,6 +33,7 @@ import type {
   InventoryItem,
   LogProductionData,
   Menu,
+  Outlet,
   PhysicalCountItem,
   ProductionLog,
   PurchaseOrder,
@@ -1087,15 +1089,15 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         if (hasNewPrice) {
           // Weighted-Average Cost Calculation
           const currentPurchaseUnits = invItem.quantity;
-          const currentTotalValue = currentPurchaseUnits * invItem.purchasePrice;
+          const currentTotalValue = (currentPurchaseUnits / invItem.purchaseQuantity) * invItem.purchasePrice;
 
           const receivedPurchaseUnits = receivedItem.received;
-          const receivedValue = receivedPurchaseUnits * receivedItem.purchasePrice;
+          const receivedValue = (receivedPurchaseUnits / invItem.purchaseQuantity) * receivedItem.purchasePrice;
           
           const newTotalPurchaseUnits = currentPurchaseUnits + receivedPurchaseUnits;
 
           if (newTotalPurchaseUnits > 0) {
-            const newAveragePrice = (currentTotalValue + receivedValue) / newTotalPurchaseUnits;
+            const newAveragePrice = ((currentTotalValue + receivedValue) / newTotalPurchaseUnits) * invItem.purchaseQuantity;
             updateData.purchasePrice = newAveragePrice;
 
             // Recalculate unitCost based on the new average purchase price
@@ -1132,5 +1134,41 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
     console.error('Error receiving purchase order:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to receive purchase order: ${errorMessage}`);
+  }
+}
+
+// Outlet Actions
+export async function addOutlet(data: AddOutletData) {
+  try {
+    const docRef = await addDoc(collection(db, 'outlets'), data);
+    revalidatePath('/settings/outlets');
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error("Error adding outlet:", error);
+    throw new Error("Failed to add outlet.");
+  }
+}
+
+export async function editOutlet(id: string, data: Partial<Outlet>) {
+  try {
+    await updateDoc(doc(db, 'outlets', id), data);
+    revalidatePath('/settings/outlets');
+    return { success: true };
+  } catch (error) {
+    console.error("Error editing outlet:", error);
+    throw new Error("Failed to edit outlet.");
+  }
+}
+
+export async function deleteOutlet(id: string) {
+  try {
+    // In a real app, you would also need to handle cleanup of associated
+    // inventory stock records for this outlet.
+    await deleteDoc(doc(db, 'outlets', id));
+    revalidatePath('/settings/outlets');
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting outlet:", error);
+    throw new Error("Failed to delete outlet. Make sure all associated stock is cleared first.");
   }
 }

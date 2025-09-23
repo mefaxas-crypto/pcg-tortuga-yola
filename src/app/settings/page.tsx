@@ -2,7 +2,7 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Settings, Shapes, UtensilsCrossed } from 'lucide-react';
+import { List, Settings, Shapes, UtensilsCrossed, Store } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -10,6 +10,22 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Store />
+              Outlet Management
+            </CardTitle>
+            <CardDescription>
+              Define and manage your kitchen locations, like "Tortuga Bay" or "La Yola".
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/settings/outlets">Manage Outlets</Link>
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -65,7 +81,7 @@ export default function SettingsPage() {
                 General Settings
             </CardTitle>
             <CardDescription>
-              Manage your outlets and other application preferences.
+              Manage other application preferences.
             </CardDescription>
           </CardHeader>
           <CardContent>

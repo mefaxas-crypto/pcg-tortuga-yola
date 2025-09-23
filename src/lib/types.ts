@@ -4,6 +4,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -266,3 +267,11 @@ export type ReceivePurchaseOrderData = {
   items: ReceivingItem[];
   notes?: string;
 };
+
+export type Outlet = {
+  id: string;
+  name: string;
+  address?: string;
+};
+
+export type AddOutletData = Omit<Outlet, 'id'>;
