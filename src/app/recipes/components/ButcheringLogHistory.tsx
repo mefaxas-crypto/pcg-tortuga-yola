@@ -24,6 +24,7 @@ import {
   query,
   orderBy,
   limit,
+  where,
 } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
@@ -32,14 +33,23 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { UndoButcheringLogDialog } from './UndoButcheringLogDialog';
+import { useOutletContext } from '@/context/OutletContext';
 
 export function ButcheringLogHistory() {
   const [logs, setLogs] = useState<ButcheringLog[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const { selectedOutlet } = useOutletContext();
 
   useEffect(() => {
+    if (!selectedOutlet) {
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const q = query(
       collection(db, 'butcheringLogs'),
+      where('outletId', '==', selectedOutlet.id),
       orderBy('logDate', 'desc'),
       limit(20)
     );
@@ -65,14 +75,14 @@ export function ButcheringLogHistory() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Butchering History</CardTitle>
         <CardDescription>
-          A log of the most recent butchering events. You can undo a log to reverse the inventory changes.
+          A log of the most recent butchering events for the selected outlet. You can undo a log to reverse the inventory changes.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -146,7 +156,7 @@ export function ButcheringLogHistory() {
           </Table>
           {!loading && (!logs || logs.length === 0) && (
             <div className="py-12 text-center text-muted-foreground">
-              No butchering logged yet.
+              No butchering logged yet for this outlet.
             </div>
           )}
         </ScrollArea>

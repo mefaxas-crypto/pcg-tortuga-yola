@@ -40,6 +40,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Flame, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useOutletContext } from '@/context/OutletContext';
 
 const formSchema = z.object({
   items: z
@@ -62,6 +63,7 @@ export function ProductionForm() {
   const [subRecipes, setSubRecipes] = useState<Recipe[]>([]);
   const { toast } = useToast();
   const [isPopoverOpen, setPopoverOpen] = useState(false);
+  const { selectedOutlet } = useOutletContext();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -110,13 +112,21 @@ export function ProductionForm() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!selectedOutlet) {
+      toast({
+        variant: 'destructive',
+        title: 'No Outlet Selected',
+        description: 'Please select an outlet before logging production.',
+      });
+      return;
+    }
     setLoading(true);
 
     try {
-      await logProduction(values);
+      await logProduction(values, selectedOutlet.id);
       toast({
         title: 'Production Logged!',
-        description: `Inventory has been updated for all produced items.`,
+        description: `Inventory has been updated for all produced items at ${selectedOutlet.name}.`,
       });
       form.reset({ items: [] });
     } catch (error) {
@@ -197,6 +207,7 @@ export function ProductionForm() {
                   type="button"
                   variant="outline"
                   className="w-full md:w-[300px] justify-between"
+                  disabled={!selectedOutlet}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Sub-Recipe to Log
@@ -233,7 +244,7 @@ export function ProductionForm() {
 
           <Button
             type="submit"
-            disabled={loading || fields.length === 0}
+            disabled={loading || fields.length === 0 || !selectedOutlet}
           >
             {loading ? 'Processing...' : 'Log All Production'}
             <Flame className="ml-2 h-4 w-4" />

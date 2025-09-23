@@ -3,6 +3,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -1003,7 +1004,7 @@ export async function logButchering(data: ButcheringData, outletId: string) {
                   });
               } else if (readData.stockRef) { // New stock
                   transaction.set(readData.stockRef, {
-                    inventoryId: yieldedItemSpec.id,
+                    inventoryId: readData.itemData.itemId,
                     outletId,
                     quantity: quantityToAddInPurchaseUnit,
                     status: getStatus(quantityToAddInPurchaseUnit, yieldedItemSpec.minStock),
