@@ -1,6 +1,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -293,3 +294,23 @@ export type Outlet = {
 };
 
 export type AddOutletData = Omit<Outlet, 'id'>;
+
+
+export type VarianceLogItem = {
+    itemId: string;
+    itemName: string;
+    theoreticalQuantity: number;
+    physicalQuantity: number;
+    variance: number;
+    unit: Unit;
+    varianceValue?: number;
+};
+
+export type VarianceLog = {
+    id: string;
+    logDate: Date;
+    outletId: string;
+    items: VarianceLogItem[];
+    user: string;
+    totalVarianceValue?: number;
+};

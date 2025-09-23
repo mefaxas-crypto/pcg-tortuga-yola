@@ -5,6 +5,7 @@
 
 
 
+
 'use server';
 
 import {
@@ -47,6 +48,7 @@ import type {
   Recipe,
   ReceivePurchaseOrderData,
   Supplier,
+  VarianceLogItem,
 } from './types';
 import {revalidatePath} from 'next/cache';
 import { Unit, convert, getBaseUnit } from './conversions';
@@ -331,7 +333,9 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[], outlet
             // Perform all reads first
             const itemSnaps = await Promise.all(itemRefs.map(ref => transaction.get(ref)));
             
-            const variances = [];
+            const variances: VarianceLogItem[] = [];
+            let totalVarianceValue = 0;
+
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
                 const itemSnap = itemSnaps[i];
@@ -365,26 +369,34 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[], outlet
                     quantity: newQuantity,
                     status: newStatus,
                 });
+                
+                const varianceQuantity = item.physicalQuantity - item.theoreticalQuantity;
+                const costPerPurchaseUnit = invItem.purchasePrice / (invItem.purchaseQuantity || 1);
+                const varianceValue = varianceQuantity * costPerPurchaseUnit;
 
                 variances.push({
                     itemId: item.id,
                     itemName: item.name,
                     theoreticalQuantity: item.theoreticalQuantity,
                     physicalQuantity: item.physicalQuantity,
-                    variance: item.physicalQuantity - item.theoreticalQuantity,
+                    variance: varianceQuantity,
                     unit: item.unit,
+                    varianceValue: isFinite(varianceValue) ? varianceValue : 0,
                 });
+                totalVarianceValue += isFinite(varianceValue) ? varianceValue : 0;
             }
             // Log the variances.
              transaction.set(varianceLogRef, {
                 logDate: serverTimestamp(),
                 outletId: outletId,
                 items: variances,
-                user: 'Chef John Doe' // Placeholder
+                user: 'Chef John Doe', // Placeholder
+                totalVarianceValue: totalVarianceValue,
             });
 
         });
         revalidatePath('/inventory');
+        revalidatePath('/reports');
         revalidatePath('/'); // For dashboard stats
     } catch (e) {
         console.error('Error updating physical inventory:', e);
