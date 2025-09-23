@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import {
@@ -587,12 +588,13 @@ export async function logSale(saleData: AddSaleData) {
       // --- READ PHASE ---
       const recipeRef = doc(db, 'recipes', saleData.recipeId);
       const recipeSnap = await transaction.get(recipeRef);
+
       if (!recipeSnap.exists()) {
-        throw `Recipe with ID ${saleData.recipeId} not found!`;
+        throw new Error(`Recipe with ID ${saleData.recipeId} not found!`);
       }
       const recipe = recipeSnap.data() as Recipe;
 
-      const readPromises = recipe.ingredients.map(async (recipeIngredient) => {
+      const ingredientsDataPromises = recipe.ingredients.map(async (recipeIngredient) => {
         const invItemRef = doc(db, 'inventory', recipeIngredient.itemId);
         
         const stockQuery = query(
@@ -600,25 +602,36 @@ export async function logSale(saleData: AddSaleData) {
           where('inventoryId', '==', recipeIngredient.itemId),
           where('outletId', '==', saleData.outletId)
         );
+        // Execute this query outside the transaction's `transaction.get`
         const stockSnaps = await getDocs(stockQuery);
         if (stockSnaps.empty) {
           console.warn(`Stock record for ingredient ${recipeIngredient.name} (ID: ${recipeIngredient.itemId}) not found at outlet ${saleData.outletId}. Cannot deplete stock.`);
-          return null;
+          return null; // Skip this ingredient
         }
         const stockDocRef = stockSnaps.docs[0].ref;
 
+        // Now read the documents within the transaction
+        const invItemSnap = await transaction.get(invItemRef);
+        const stockDocSnap = await transaction.get(stockDocRef);
+        
         return {
           recipeIngredient,
           invItemRef,
           stockDocRef,
-          invItemSnap: await transaction.get(invItemRef),
-          stockDocSnap: await transaction.get(stockDocRef)
+          invItemSnap,
+          stockDocSnap
         };
       });
       
-      const ingredientsData = (await Promise.all(readPromises)).filter(Boolean);
+      const ingredientsData = (await Promise.all(ingredientsDataPromises)).filter(Boolean);
       
       // --- WRITE PHASE ---
+      const saleRef = doc(collection(db, 'sales'));
+      transaction.set(saleRef, {
+        ...saleData,
+        saleDate: serverTimestamp(),
+      });
+
       for (const data of ingredientsData) {
         if (!data || !data.invItemSnap.exists() || !data.stockDocSnap.exists()) {
           console.warn(`Missing data for an ingredient, skipping depletion.`);
@@ -648,12 +661,6 @@ export async function logSale(saleData: AddSaleData) {
             status: newStatus
         });
       }
-      
-      const saleRef = doc(collection(db, 'sales'));
-      transaction.set(saleRef, {
-        ...saleData,
-        saleDate: serverTimestamp(),
-      });
     });
 
     revalidatePath('/sales');
@@ -680,48 +687,43 @@ export async function logProduction(data: LogProductionData, outletId: string) {
       const subRecipeSnaps = await Promise.all(subRecipeRefs.map((ref) => transaction.get(ref)));
       
       const inventoryRefsToFetch = new Map<string, DocumentReference>();
-      const stockRefsToFetch = new Map<string, DocumentReference>();
-      const stockItemsToCreate = new Map<string, { inventoryId: string, outletId: string }>();
-
+      
       for(const subRecipeSnap of subRecipeSnaps) {
         if (!subRecipeSnap.exists()) throw new Error(`Sub-recipe with ID ${subRecipeSnap.id} not found.`);
         const subRecipe = subRecipeSnap.data() as Recipe;
 
         // --- Refs for the produced sub-recipe itself ---
         const subRecipeInvQuery = query(collection(db, 'inventory'), where('materialCode', '==', subRecipe.internalCode));
-        const subRecipeInvDocs = await getDocs(subRecipeInvQuery);
+        const subRecipeInvDocs = await getDocs(subRecipeInvQuery); // Read outside transaction
         if (subRecipeInvDocs.empty) throw new Error(`Inventory item for sub-recipe ${subRecipe.name} not found.`);
         const subRecipeInvRef = subRecipeInvDocs.docs[0].ref;
         inventoryRefsToFetch.set(subRecipeInvRef.id, subRecipeInvRef);
-
-        const subRecipeStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', subRecipeInvRef.id), where('outletId', '==', outletId));
-        const subRecipeStockDocs = await getDocs(subRecipeStockQuery);
-        if (subRecipeStockDocs.empty) {
-          // Will need to create this stock record
-          stockItemsToCreate.set(subRecipeInvRef.id, { inventoryId: subRecipeInvRef.id, outletId });
-        } else {
-          stockRefsToFetch.set(subRecipeStockDocs.docs[0].id, subRecipeStockDocs.docs[0].ref);
-        }
 
         // --- Refs for the ingredients of the sub-recipe ---
         for (const ingredient of subRecipe.ingredients) {
           const invItemId = ingredient.itemId;
           inventoryRefsToFetch.set(invItemId, doc(db, 'inventory', invItemId));
-          
-          const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', invItemId), where('outletId', '==', outletId));
-          const stockDocs = await getDocs(stockQuery);
-          if (stockDocs.empty) {
-            throw new Error(`Ingredient ${ingredient.name} is out of stock or does not exist at this outlet.`);
-          }
-          stockRefsToFetch.set(stockDocs.docs[0].id, stockDocs.docs[0].ref);
         }
       }
 
       const invSnaps = await Promise.all(Array.from(inventoryRefsToFetch.values()).map(ref => transaction.get(ref)));
       const invSnapMap = new Map(invSnaps.map(snap => [snap.id, snap]));
 
-      const stockSnaps = await Promise.all(Array.from(stockRefsToFetch.values()).map(ref => transaction.get(ref)));
-      const stockSnapMap = new Map(stockSnaps.map(snap => [snap.id, snap]));
+      const stockReadPromises: Promise<{ ref: DocumentReference, snap: any }>[] = [];
+      for (const invId of inventoryRefsToFetch.keys()) {
+          const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', invId), where('outletId', '==', outletId));
+          stockReadPromises.push(getDocs(stockQuery).then(docs => ({ ref: docs.empty ? doc(collection(db, 'inventoryStock')) : docs.docs[0].ref, snap: docs.empty ? null : docs.docs[0] })));
+      }
+      const stockRefsAndSnaps = await Promise.all(stockReadPromises);
+      
+      const stockDocMap = new Map<string, { ref: DocumentReference, snap: any }>();
+      for (const { ref, snap } of stockRefsAndSnaps) {
+          const invId = snap ? snap.data().inventoryId : inventoryRefsToFetch.get(ref.id)?.id;
+          if (invId) {
+             const stockSnap = snap ? await transaction.get(ref) : null;
+             stockDocMap.set(invId, { ref, snap: stockSnap });
+          }
+      }
 
       // --- WRITE PHASE ---
       for (let i = 0; i < data.items.length; i++) {
@@ -734,9 +736,9 @@ export async function logProduction(data: LogProductionData, outletId: string) {
           if (!invItemSnap || !invItemSnap.exists()) throw new Error(`Ingredient ${ingredient.name} not found.`);
           const invItem = invItemSnap.data() as InventoryItem;
 
-          const stockDoc = Array.from(stockSnapMap.values()).find(snap => snap?.data()?.inventoryId === ingredient.itemId);
-          if (!stockDoc || !stockDoc.exists()) throw new Error(`Stock for ingredient ${ingredient.name} not found at this outlet.`);
-          const stockData = stockDoc.data() as InventoryStockItem;
+          const stockDocData = stockDocMap.get(ingredient.itemId);
+          if (!stockDocData || !stockDocData.snap || !stockDocData.snap.exists()) throw new Error(`Stock for ingredient ${ingredient.name} not found at this outlet.`);
+          const stockData = stockDocData.snap.data() as InventoryStockItem;
 
           const totalIngredientNeededInRecipeUnit = ingredient.quantity * itemToProduce.quantityProduced;
           const neededInBaseUnit = convert(totalIngredientNeededInRecipeUnit, ingredient.unit as Unit, invItem.recipeUnit as Unit);
@@ -750,7 +752,7 @@ export async function logProduction(data: LogProductionData, outletId: string) {
           }
 
           const newQuantity = (stockData.quantity ?? 0) - quantityToDeplete;
-          transaction.update(stockDoc.ref, {
+          transaction.update(stockDocData.ref, {
             quantity: newQuantity,
             status: getStatus(newQuantity, invItem.minStock),
           });
@@ -763,23 +765,19 @@ export async function logProduction(data: LogProductionData, outletId: string) {
 
         const totalYieldQuantity = itemToProduce.quantityProduced * (subRecipe.yield || 1);
         
-        if (stockItemsToCreate.has(subRecipeInvSnap.id)) {
-            // Create new stock record
-            const newStockRef = doc(collection(db, 'inventoryStock'));
-            transaction.set(newStockRef, {
+        const producedStockDocData = stockDocMap.get(subRecipeInvSnap.id);
+        if(producedStockDocData && producedStockDocData.snap) { // Update existing
+            const newQuantity = (producedStockDocData.snap.data()?.quantity ?? 0) + totalYieldQuantity;
+            transaction.update(producedStockDocData.ref, {
+              quantity: newQuantity,
+              status: getStatus(newQuantity, producedInvItem.minStock),
+            });
+        } else if (producedStockDocData) { // Create new
+            transaction.set(producedStockDocData.ref, {
                 inventoryId: subRecipeInvSnap.id,
                 outletId: outletId,
                 quantity: totalYieldQuantity,
                 status: getStatus(totalYieldQuantity, producedInvItem.minStock),
-            });
-        } else {
-            // Update existing stock record
-            const producedStockDoc = Array.from(stockSnapMap.values()).find(snap => snap?.data()?.inventoryId === subRecipeInvSnap.id);
-            if (!producedStockDoc || !producedStockDoc.exists()) throw new Error(`Stock for produced item ${subRecipe.name} not found.`);
-            const newQuantity = (producedStockDoc.data()?.quantity ?? 0) + totalYieldQuantity;
-            transaction.update(producedStockDoc.ref, {
-              quantity: newQuantity,
-              status: getStatus(newQuantity, producedInvItem.minStock),
             });
         }
       }
@@ -965,7 +963,7 @@ export async function logButchering(data: ButcheringData, outletId: string) {
               itemData: item,
               specSnap: await transaction.get(specRef),
               stockSnap: stockDocs.empty ? null : await transaction.get(stockDocs.docs[0].ref),
-              stockRef: stockDocs.empty ? null : stockDocs.docs[0].ref,
+              stockRef: stockDocs.empty ? doc(collection(db, 'inventoryStock')) : stockDocs.docs[0].ref,
             };
           }));
 
@@ -998,9 +996,8 @@ export async function logButchering(data: ButcheringData, outletId: string) {
                       quantity: newQuantity,
                       status: getStatus(newQuantity, yieldedItemSpec.minStock),
                   });
-              } else { // New stock
-                  const newStockRef = doc(collection(db, 'inventoryStock'));
-                  transaction.set(newStockRef, {
+              } else if (readData.stockRef) { // New stock
+                  transaction.set(readData.stockRef, {
                     inventoryId: yieldedItemSpec.id,
                     outletId,
                     quantity: quantityToAddInPurchaseUnit,
@@ -1220,35 +1217,58 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         const specRef = doc(db, 'inventory', item.itemId);
         const stockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', item.itemId), where('outletId', '==', outletId));
         const stockDocs = await getDocs(stockQuery);
-        if (stockDocs.empty) return null;
+        if (stockDocs.empty) {
+            console.warn(`Stock record for item ${item.name} not found at outlet ${outletId}. It will be created.`);
+            return {
+              receivedItem: item,
+              specSnap: await transaction.get(specRef),
+              stockSnap: null,
+              stockRef: doc(collection(db, 'inventoryStock'))
+            };
+        };
         const stockRef = stockDocs.docs[0].ref;
         return {
           receivedItem: item,
           specSnap: await transaction.get(specRef),
           stockSnap: await transaction.get(stockRef),
+          stockRef: stockRef,
         };
       }));
       
       const validItemReads = itemReads.filter(Boolean) as NonNullable<typeof itemReads[0]>[];
 
       // --- WRITES ---
-      for (const { receivedItem, specSnap, stockSnap } of validItemReads) {
-        if (!specSnap.exists() || !stockSnap.exists()) {
-          console.warn(`Inventory spec or stock for "${receivedItem.name}" not found. Cannot update stock.`);
+      for (const { receivedItem, specSnap, stockSnap, stockRef } of validItemReads) {
+        if (!specSnap.exists()) {
+          console.warn(`Inventory spec for "${receivedItem.name}" not found. Cannot update stock.`);
           continue;
         }
 
         const invItemSpec = specSnap.data() as InventoryItem;
-        const invItemStock = stockSnap.data() as InventoryStockItem;
-        const invStockRef = stockSnap.ref;
         
-        const newQuantity = (invItemStock.quantity ?? 0) + receivedItem.received;
+        let currentQuantity = 0;
+        if(stockSnap && stockSnap.exists()){
+            const invItemStock = stockSnap.data() as InventoryStockItem;
+            currentQuantity = invItemStock.quantity ?? 0;
+        }
+        
+        const newQuantity = currentQuantity + receivedItem.received;
         const newStatus = getStatus(newQuantity, invItemSpec.minStock);
 
-        transaction.update(invStockRef, {
-          quantity: newQuantity,
-          status: newStatus,
-        });
+        if(stockSnap) { // If stock document exists, update it
+             transaction.update(stockRef, {
+                quantity: newQuantity,
+                status: newStatus,
+            });
+        } else { // Otherwise create it
+            transaction.set(stockRef, {
+                inventoryId: receivedItem.itemId,
+                outletId: outletId,
+                quantity: newQuantity,
+                status: newStatus
+            });
+        }
+
 
         const hasNewPrice = receivedItem.purchasePrice !== invItemSpec.purchasePrice;
         if (hasNewPrice) {
