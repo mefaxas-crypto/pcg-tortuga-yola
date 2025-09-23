@@ -19,6 +19,7 @@ import { placeholderImages } from '@/lib/placeholder-images.json';
 import { LogOut, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { OutletSelector } from './OutletSelector';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 export function Header() {
   const userImage = placeholderImages.find(p => p.id === 'user-avatar');
@@ -30,6 +31,8 @@ export function Header() {
       <OutletSelector />
 
       <div className="flex-1" />
+      
+      <LanguageSwitcher />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

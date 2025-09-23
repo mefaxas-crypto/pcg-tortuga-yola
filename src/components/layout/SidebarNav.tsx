@@ -1,7 +1,7 @@
 
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from 'next-intl/client';
 import {
   SidebarContent,
   SidebarFooter,
@@ -24,21 +24,23 @@ import {
   PackagePlus,
   ClipboardList,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next-intl/link';
+import { useTranslations } from 'next-intl';
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const t = useTranslations('SidebarNav');
 
   const menuItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/inventory', label: 'Inventory', icon: Warehouse },
-    { href: '/suppliers', label: 'Suppliers', icon: Truck },
-    { href: '/recipes', label: 'Recipes', icon: BookOpen },
-    { href: '/menus', label: 'Menus', icon: ClipboardList },
-    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus },
-    { href: '/sales', label: 'Sales', icon: ShoppingCart },
-    { href: '/reports', label: 'Reports', icon: BarChart3 },
-    { href: '/ai-tools', label: 'AI Tools', icon: Bot },
+    { href: '/', label: t('Dashboard'), icon: LayoutDashboard },
+    { href: '/inventory', label: t('Inventory'), icon: Warehouse },
+    { href: '/suppliers', label: t('Suppliers'), icon: Truck },
+    { href: '/recipes', label: t('Recipes'), icon: BookOpen },
+    { href: '/menus', label: t('Menus'), icon: ClipboardList },
+    { href: '/purchasing', label: t('Purchasing'), icon: PackagePlus },
+    { href: '/sales', label: t('Sales'), icon: ShoppingCart },
+    { href: '/reports', label: t('Reports'), icon: BarChart3 },
+    { href: '/ai-tools', label: t('AITools'), icon: Bot },
   ];
 
   return (
@@ -79,10 +81,10 @@ export function SidebarNav() {
                 asChild
                 isActive={pathname.startsWith('/settings')}
                 icon={<Settings />}
-                tooltip="Settings"
+                tooltip={t('Settings')}
               >
                 <Link href="/settings">
-                  Settings
+                  {t('Settings')}
                 </Link>
               </SidebarMenuButton>
           </SidebarMenuItem>

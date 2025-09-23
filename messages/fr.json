@@ -1,0 +1,14 @@
+{
+  "SidebarNav": {
+    "Dashboard": "Tableau de bord",
+    "Inventory": "Inventaire",
+    "Suppliers": "Fournisseurs",
+    "Recipes": "Recettes",
+    "Menus": "Menus",
+    "Purchasing": "Achats",
+    "Sales": "Ventes",
+    "Reports": "Rapports",
+    "AITools": "Outils d'IA",
+    "Settings": "Paramètres"
+  }
+}
