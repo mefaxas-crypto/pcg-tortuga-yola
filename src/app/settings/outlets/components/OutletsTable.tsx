@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -18,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
 import type { Outlet } from '@/lib/types';
@@ -35,7 +34,7 @@ export function OutletsTable({ onEdit }: OutletsTableProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'outlets'));
+    const q = query(collection(db, 'outlets'), orderBy('name', 'asc'));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -43,7 +42,7 @@ export function OutletsTable({ onEdit }: OutletsTableProps) {
         querySnapshot.forEach((doc) => {
           data.push({ id: doc.id, ...doc.data() } as Outlet);
         });
-        setOutlets(data.sort((a, b) => a.name.localeCompare(b.name)));
+        setOutlets(data);
         setLoading(false);
       },
       (error) => {

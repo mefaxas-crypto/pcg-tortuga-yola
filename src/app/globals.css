@@ -3,114 +3,92 @@
 @tailwind utilities;
 
 @layer base {
-  :root, .theme-layola {
-    --background: 45 33% 96%; /* Sand White */
-    --foreground: 210 100% 20%; /* Pioneer Blue */
-
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 210 100% 20%; /* Pioneer Blue */
-
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 210 100% 20%; /* Pioneer Blue */
-
-    --primary: 45 100% 59%; /* Villa Yellow */
-    --primary-foreground: 34 50% 15%; /* Dark brown for contrast on yellow */
-
-    --secondary: 0 0% 40%; /* Foundation Stone */
-    --secondary-foreground: 45 33% 96%; /* Sand White */
-
-    --muted: 0 0% 89.8%; /* Lighter gray for muted backgrounds */
-    --muted-foreground: 0 0% 40%; /* Foundation Stone */
-
-    --accent: 45 33% 94%; /* Very light beige for accents */
-    --accent-foreground: 210 100% 25%; /* Slightly lighter Pioneer Blue */
+  :root, .theme-bamboo {
+    --background: 40 10% 98%; /* Very light, warm gray */
+    --foreground: 90 40% 8%;  /* Off-Black with a hint of green */
     
-    --destructive: 355 71% 57%; /* Error Red */
-    --destructive-foreground: 0 0% 10%; /* Near Black for contrast on red */
+    --card: 40 10% 100%;
+    --card-foreground: 90 40% 8%;
 
-    --border: 0 0% 85%; /* Darker gray border */
-    --input: 0 0% 92%; /* Darker gray for input background */
-    --ring: 45 100% 59%;
+    --popover: 40 10% 100%;
+    --popover-foreground: 90 40% 8%;
+
+    --primary: 130 26% 45%; /* Sage Green */
+    --primary-foreground: 130 20% 98%;
+
+    --secondary: 28 65% 65%; /* Muted Gold */
+    --secondary-foreground: 28 80% 10%;
+
+    --muted: 100 10% 94%;
+    --muted-foreground: 90 20% 40%;
+    
+    --accent: 100 10% 97%;
+    --accent-foreground: 130 26% 35%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 86% 97%;
+    
+    --border: 130 15% 90%;
+    --input: 130 15% 94%;
+    --ring: 130 26% 45%;
 
     --radius: 0.5rem;
 
-    /* Custom Sidebar colors for light theme */
-    --sidebar-background: 210 100% 20%; /* Pioneer Blue */
-    --sidebar-foreground: 45 33% 96%; /* Sand White */
-    --sidebar-primary: 45 100% 59%; /* Villa Yellow */
-    --sidebar-primary-foreground: 34 50% 15%; /* Dark brown */
-    --sidebar-accent: 210 100% 25%; /* Lighter Pioneer Blue */
-    --sidebar-accent-foreground: 45 33% 96%; /* Sand White */
-    --sidebar-border: 210 100% 25%; /* Lighter Pioneer Blue for borders */
-    --sidebar-ring: 45 100% 59%; /* Villa Yellow */
+    /* Custom Sidebar colors */
+    --sidebar-background: 90 40% 12%; /* Off-Black */
+    --sidebar-foreground: 130 20% 95%; /* Light Sage/White */
+    --sidebar-primary: 28 65% 70%; /* Muted Gold */
+    --sidebar-primary-foreground: 28 80% 10%; /* Dark Gold for text on primary */
+    --sidebar-accent: 90 40% 20%; /* Slightly lighter Off-Black */
+    --sidebar-accent-foreground: 130 20% 95%; /* Light Sage/White */
+    --sidebar-border: 90 40% 18%; /* Lighter Off-Black for borders */
+    --sidebar-ring: 28 65% 70%; /* Muted Gold */
 
-    --chart-1: 45 100% 59%;   /* Villa Yellow */
-    --chart-2: 173 70% 56%;  /* Caribbean Turquoise */
-    --chart-3: 180 100% 25%; /* Ojos Lagoon Green */
-    --chart-4: 39 88% 49%;   /* La Yola Gold */
-    --chart-5: 28 75% 31%;   /* Nautical Wood Brown */
+    --chart-1: 130 26% 45%;   /* Sage Green */
+    --chart-2: 28 65% 65%;   /* Muted Gold */
+    --chart-3: 130, 20%, 60%; /* Lighter Sage */
+    --chart-4: 28, 50%, 50%;    /* Darker Gold */
+    --chart-5: 130, 30%, 30%;   /* Deep Forest Green */
   }
 
-  .theme-bamboo {
-    --sidebar-background: 90 40% 30%; /* Bamboo Green */
-    --sidebar-foreground: 90 20% 95%; /* Light Green/White */
-    --sidebar-primary: 45 100% 59%; /* Villa Yellow */
-    --sidebar-primary-foreground: 90 50% 15%; /* Dark Green */
-    --sidebar-accent: 90 40% 35%; /* Slightly Lighter Green */
-    --sidebar-accent-foreground: 90 20% 95%; /* Light Green/White */
-    --sidebar-border: 90 40% 35%; /* Lighter Green for borders */
-    --sidebar-ring: 45 100% 59%; /* Villa Yellow */
-  }
+  .dark, .dark.theme-bamboo {
+    --background: 90 40% 8%; /* Off-Black */
+    --foreground: 130 15% 96%; /* Off-White Sage */
+    
+    --card: 90 30% 12%;
+    --card-foreground: 130 15% 96%;
 
-  .dark, .dark.theme-layola {
-    --background: 210 50% 8%; /* Near-black with a hint of blue */
-    --foreground: 45 33% 96%; /* #F8F7F2 - Sand White */
+    --popover: 90 40% 5%;
+    --popover-foreground: 130 15% 96%;
+    
+    --primary: 130 26% 50%; /* Sage Green */
+    --primary-foreground: 130 20% 98%;
 
-    --card: 210 100% 15%; /* #003366 - Pioneer Blue */
-    --card-foreground: 45 33% 96%; /* #F8F7F2 - Sand White */
+    --secondary: 28 65% 70%; /* Muted Gold */
+    --secondary-foreground: 28, 80%, 10%;
 
-    --popover: 210 100% 12%;
-    --popover-foreground: 45 33% 96%;
+    --muted: 90 20% 20%;
+    --muted-foreground: 130 10% 60%;
 
-    --primary: 45 100% 59%; /* #FFC72C - Villa Yellow */
-    --primary-foreground: 34 50% 15%; /* A dark brown for contrast */
+    --accent: 90 30% 15%;
+    --accent-foreground: 130 15% 96%;
+    
+    --destructive: 0 63% 40%;
+    --destructive-foreground: 0 86% 97%;
 
-    --secondary: 173 70% 56%; /* #40E0D0 - Caribbean Turquoise */
-    --secondary-foreground: 210 100% 10%;
-
-    --muted: 210 20% 35%; /* #6D6D6D - Foundation Stone */
-    --muted-foreground: 0 0% 60%; /* Lighter gray for better readability */
-
-    --accent: 45 33% 94%;
-    --accent-foreground: 34 50% 15%;
-
-    --destructive: 355 71% 57%; /* #DC3545 - Error Red */
-    --destructive-foreground: 0 0% 10%;
-
-    --border: 45 33% 96%; /* Light gray border */
-    --input: 210 20% 25%;
-    --ring: 45 100% 59%;
-
+    --border: 90 20% 25%;
+    --input: 90 20% 18%;
+    --ring: 130 26% 50%;
+    
     /* Custom Sidebar colors for dark theme */
-    --sidebar-background: 210 100% 10%; /* Darker Pioneer Blue */
-    --sidebar-foreground: 45 33% 90%;
-    --sidebar-primary: 45 100% 59%;
-    --sidebar-primary-foreground: 34 50% 15%;
-    --sidebar-accent: 210 100% 15%;
-    --sidebar-accent-foreground: 45 33% 96%;
-    --sidebar-border: 210 100% 15%;
-    --sidebar-ring: 45 100% 59%;
-  }
-
-  .dark.theme-bamboo {
-    --sidebar-background: 90 40% 15%; /* Dark Bamboo Green */
-    --sidebar-foreground: 90 20% 95%;
-    --sidebar-primary: 45 100% 59%;
-    --sidebar-primary-foreground: 90 50% 15%;
-    --sidebar-accent: 90 40% 20%;
-    --sidebar-accent-foreground: 90 20% 95%;
-    --sidebar-border: 90 40% 20%;
-    --sidebar-ring: 45 100% 59%;
+    --sidebar-background: 90 40% 8%; /* Off-Black */
+    --sidebar-foreground: 130 20% 95%;
+    --sidebar-primary: 28 65% 70%; /* Muted Gold */
+    --sidebar-primary-foreground: 28 80% 10%;
+    --sidebar-accent: 90 40% 15%;
+    --sidebar-accent-foreground: 130 20% 95%;
+    --sidebar-border: 90 40% 15%;
+    --sidebar-ring: 28 65% 70%; /* Muted Gold */
   }
 }
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -18,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
@@ -36,7 +35,7 @@ export function TemplatesTable({ onEdit }: TemplatesTableProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const qTemplates = query(collection(db, 'butcheryTemplates'));
+    const qTemplates = query(collection(db, 'butcheryTemplates'), orderBy('name', 'asc'));
     const unsubscribeTemplates = onSnapshot(
       qTemplates,
       (querySnapshot) => {
@@ -44,7 +43,7 @@ export function TemplatesTable({ onEdit }: TemplatesTableProps) {
         querySnapshot.forEach((doc) => {
           data.push({ id: doc.id, ...doc.data() } as ButcheryTemplate);
         });
-        setTemplates(data.sort((a, b) => a.name.localeCompare(b.name)));
+        setTemplates(data);
         setLoading(false);
       },
       (error) => {

@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
 import type { Allergen } from '@/lib/types';
@@ -30,7 +30,7 @@ export function AllergensTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'allergens'));
+    const q = query(collection(db, 'allergens'), orderBy('name', 'asc'));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -38,7 +38,7 @@ export function AllergensTable() {
         querySnapshot.forEach((doc) => {
           allergensData.push({ id: doc.id, ...doc.data() } as Allergen);
         });
-        setAllergens(allergensData.sort((a, b) => a.name.localeCompare(b.name)));
+        setAllergens(allergensData);
         setLoading(false);
       },
       (error) => {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -18,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
 import type { IngredientCategory } from '@/lib/types';
@@ -31,7 +30,7 @@ export function CategoriesTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'ingredientCategories'));
+    const q = query(collection(db, 'ingredientCategories'), orderBy('name', 'asc'));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -40,7 +39,7 @@ export function CategoriesTable() {
           categoriesData.push({ id: doc.id, ...doc.data() } as IngredientCategory);
         });
         // Filter out "Sub-recipe" as it's a system category and should not be managed here.
-        setCategories(categoriesData.filter(c => c.name !== 'Sub-recipe').sort((a, b) => a.name.localeCompare(b.name)));
+        setCategories(categoriesData.filter(c => c.name !== 'Sub-recipe'));
         setLoading(false);
       },
       (error) => {

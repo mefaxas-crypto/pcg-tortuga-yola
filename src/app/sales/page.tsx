@@ -1,10 +1,7 @@
-
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SalesForm } from './components/SalesForm';
 import { RecentSales } from './components/RecentSales';
-import { Suspense } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SalesPage() {
   return (
@@ -33,9 +30,7 @@ export default function SalesPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Suspense fallback={<Skeleton className='h-96' />}>
-                    <RecentSales />
-                  </Suspense>
+                  <RecentSales />
                 </CardContent>
             </Card>
         </div>

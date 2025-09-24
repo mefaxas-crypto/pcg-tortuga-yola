@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -28,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
@@ -49,7 +48,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
 
   // Effect to fetch master inventory specifications
   useEffect(() => {
-    const q = query(collection(db, 'inventory'));
+    const q = query(collection(db, 'inventory'), orderBy('name', 'asc'));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -57,7 +56,7 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
         querySnapshot.forEach((doc) => {
           items.push({ id: doc.id, ...doc.data() } as InventoryItem);
         });
-        setInventorySpecs(items.sort((a, b) => a.name.localeCompare(b.name)));
+        setInventorySpecs(items);
       },
       (error) => {
         console.error('Error fetching inventory specs:', error);

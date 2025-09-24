@@ -18,13 +18,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
 import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-intl/client';
 
 export function MenusTable() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export function MenusTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'menus'));
+    const q = query(collection(db, 'menus'), orderBy('name', 'asc'));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -40,7 +40,7 @@ export function MenusTable() {
         querySnapshot.forEach((doc) => {
           menusData.push({ id: doc.id, ...doc.data() } as Menu);
         });
-        setMenus(menusData.sort((a, b) => a.name.localeCompare(b.name)));
+        setMenus(menusData);
         setLoading(false);
       },
       (error) => {

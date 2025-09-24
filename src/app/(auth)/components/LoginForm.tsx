@@ -9,22 +9,26 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { ChromeIcon } from 'lucide-react';
 import { useState } from 'react';
 
 export function LoginForm() {
   const { signInWithGoogle } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    setError(null);
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError('Failed to sign in with Google. Please try again.');
-      console.error(err);
+      toast({
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description:
+          err instanceof Error ? err.message : 'An unknown error occurred. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
@@ -48,9 +52,6 @@ export function LoginForm() {
             <ChromeIcon className="mr-2 h-4 w-4" />
             {loading ? 'Signing in...' : 'Sign in with Google'}
           </Button>
-          {error && (
-            <p className="text-center text-sm text-destructive">{error}</p>
-          )}
         </CardContent>
       </Card>
     </div>
