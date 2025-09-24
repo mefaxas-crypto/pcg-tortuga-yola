@@ -5,6 +5,8 @@ import PageHeader from '@/components/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesAndProfitability } from './components/SalesAndProfitability';
 import { VarianceAnalysis } from './components/VarianceAnalysis';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReportsPage() {
   return (
@@ -16,10 +18,14 @@ export default function ReportsPage() {
           <TabsTrigger value="variance">Variance Analysis</TabsTrigger>
         </TabsList>
         <TabsContent value="sales">
-            <SalesAndProfitability />
+            <Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
+              <SalesAndProfitability />
+            </Suspense>
         </TabsContent>
         <TabsContent value="variance">
-            <VarianceAnalysis />
+            <Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
+              <VarianceAnalysis />
+            </Suspense>
         </TabsContent>
       </Tabs>
     </div>

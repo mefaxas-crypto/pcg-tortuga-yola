@@ -54,11 +54,15 @@ export function SalesAndProfitability() {
     }
     setLoading(true);
 
+    // Set time to end of day for the 'to' date
+    const toDate = new Date(date.to);
+    toDate.setHours(23, 59, 59, 999);
+
     const q = query(
         collection(db, 'sales'),
         where('outletId', '==', selectedOutlet.id),
         where('saleDate', '>=', Timestamp.fromDate(date.from)),
-        where('saleDate', '<=', Timestamp.fromDate(date.to)),
+        where('saleDate', '<=', Timestamp.fromDate(toDate)),
         orderBy('saleDate', 'desc')
     );
 

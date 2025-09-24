@@ -34,44 +34,58 @@ export function VarianceAnalysis() {
     }
     setLoading(true);
 
+    const toDate = new Date(date.to);
+    toDate.setHours(23, 59, 59, 999);
+
     const salesQuery = query(
         collection(db, 'sales'),
         where('outletId', '==', selectedOutlet.id),
         where('saleDate', '>=', Timestamp.fromDate(date.from)),
-        where('saleDate', '<=', Timestamp.fromDate(date.to))
+        where('saleDate', '<=', Timestamp.fromDate(toDate))
     );
 
      const varianceQuery = query(
         collection(db, 'varianceLogs'),
         where('outletId', '==', selectedOutlet.id),
         where('logDate', '>=', Timestamp.fromDate(date.from)),
-        where('logDate', '<=', Timestamp.fromDate(date.to)),
+        where('logDate', '<=', Timestamp.fromDate(toDate)),
         orderBy('logDate', 'desc')
     );
 
+    let salesData: Sale[] = [];
+    let varianceData: VarianceLog[] = [];
+
     const unsubSales = onSnapshot(salesQuery, (snapshot) => {
-        const salesData: Sale[] = [];
-        snapshot.forEach((doc) => salesData.push(doc.data() as Sale));
+        salesData = snapshot.docs.map(doc => doc.data() as Sale);
         setSales(salesData);
+        checkLoadingState();
     }, (err) => console.error("Error fetching sales data:", err));
 
     const unsubVariance = onSnapshot(varianceQuery, (snapshot) => {
-        const varianceData: VarianceLog[] = [];
-        snapshot.forEach((doc) => {
+        varianceData = snapshot.docs.map(doc => {
             const data = doc.data();
-            varianceData.push({
+            return {
                 ...data,
                 id: doc.id,
                 logDate: (data.logDate as Timestamp).toDate()
-            } as VarianceLog);
+            } as VarianceLog;
         });
         setVarianceLogs(varianceData);
+        checkLoadingState();
     }, (err) => console.error("Error fetching variance logs:", err));
 
+    let salesLoaded = false;
+    let varianceLoaded = false;
+    const checkLoadingState = () => {
+        if(salesLoaded && varianceLoaded) {
+            setLoading(false);
+        }
+    }
+    
+    const salesPromise = new Promise<void>(resolve => onSnapshot(salesQuery, () => { salesLoaded = true; resolve(); }));
+    const variancePromise = new Promise<void>(resolve => onSnapshot(varianceQuery, () => { varianceLoaded = true; resolve(); }));
 
-    Promise.all([new Promise(res => onSnapshot(salesQuery, res)), new Promise(res => onSnapshot(varianceQuery, res))])
-        .then(() => setLoading(false))
-        .catch(() => setLoading(false));
+    Promise.all([salesPromise, variancePromise]).then(() => setLoading(false));
 
     return () => {
         unsubSales();

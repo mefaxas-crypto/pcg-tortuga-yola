@@ -4,20 +4,23 @@ This file tracks our development progress to ensure we build the app logically, 
 
 ## PHASE 1: CORE DATA MODELS (THE FOUNDATION)
 
-*   [x] Create "Suppliers" page.
-*   [x] Display a basic table.
-*   [x] Implement the "Add New Supplier" form (Name, Contact, Phone, Email) and save the data.
-*   [x] Implement Edit & Delete functionality for suppliers.
+*   **1.1 Managing Suppliers:** We need to know who we're buying from.
+    *   [x] Create "Suppliers" page.
+    *   [x] Display a basic table.
+    *   [x] Implement the "Add New Supplier" form (Name, Contact, Phone, Email) and save the data.
+    *   [x] Implement Edit & Delete functionality for suppliers.
 
-*   [x] "Inventory" page exists.
-*   [x] Overhaul the "Add New Ingredient" functionality to include all the detailed fields (SKU, units, costs, Min/Max levels, etc.).
-*   [x] Implement Edit & Delete functionality for ingredients.
-*   [x] Implement Physical Stock Takes & Variance Reporting.
-*   **Note on Stock Levels:** The system has been upgraded to use a more professional Min/Max stock level system instead of a single par level. This allows for better cost and storage control.
+*   **1.2 Managing Raw Ingredients:** This is the heart of the system.
+    *   [x] "Inventory" page exists.
+    *   [x] Overhaul the "Add New Ingredient" functionality to include all the detailed fields (SKU, units, costs, Min/Max levels, etc.).
+    *   [x] Implement Edit & Delete functionality for ingredients.
+    *   [x] Implement Physical Stock Takes & Variance Reporting.
+    *   **Note on Stock Levels:** The system has been upgraded to use a more professional Min/Max stock level system instead of a single par level. This allows for better cost and storage control.
 
-*   [x] Create a dedicated "Allergens" data model and management UI (in "Settings").
-*   [x] Create a dedicated "Ingredient Categories" data model and management UI (in "Settings").
-*   [x] Update the "Add New Ingredient" form to use these new data models (e.g., a multi-select dropdown).
+*   **1.3 Managing Foundational Data:** Simple but necessary lists for ingredients and recipes.
+    *   [x] Create a dedicated "Allergens" data model and management UI (in "Settings").
+    *   [x] Create a dedicated "Ingredient Categories" data model and management UI (in "Settings").
+    *   [x] Update the "Add New Ingredient" form to use these new data models (e.g., a multi-select dropdown).
 
 ## PHASE 2: LINKING DATA & CREATING VALUE
 
@@ -50,7 +53,7 @@ This file tracks our development progress to ensure we build the app logically, 
 ## PHASE 3: PROFESSIONAL & ENTERPRISE FEATURES
 
 *   **3.1 Advanced Reporting & Analytics:**
-    *   [ ] Build UI for "Reports" page to display meaningful data.
+    *   [x] Build UI for "Reports" page to display meaningful data.
     *   [ ] Implement Actual vs. Theoretical Food Cost reporting.
     *   [ ] Implement historical variance analysis to identify trends.
     *   [ ] Add Profit & Loss reporting by menu item and category.
@@ -91,3 +94,4 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
     *   [x] **(Existing)** Implement "Waste Prediction" tool.
     *   [x] **(Existing)** Implement "Intelligent Recipe Suggestions" tool.
+
