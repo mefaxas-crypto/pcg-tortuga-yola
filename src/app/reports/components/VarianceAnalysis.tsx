@@ -54,12 +54,26 @@ export function VarianceAnalysis() {
 
     let salesData: Sale[] = [];
     let varianceData: VarianceLog[] = [];
+    
+    let salesLoaded = false;
+    let varianceLoaded = false;
+
+    const checkLoadingState = () => {
+        if (salesLoaded && varianceLoaded) {
+            setLoading(false);
+        }
+    }
 
     const unsubSales = onSnapshot(salesQuery, (snapshot) => {
         salesData = snapshot.docs.map(doc => doc.data() as Sale);
         setSales(salesData);
+        salesLoaded = true;
         checkLoadingState();
-    }, (err) => console.error("Error fetching sales data:", err));
+    }, (err) => {
+        console.error("Error fetching sales data:", err);
+        salesLoaded = true;
+        checkLoadingState();
+    });
 
     const unsubVariance = onSnapshot(varianceQuery, (snapshot) => {
         varianceData = snapshot.docs.map(doc => {
@@ -71,21 +85,13 @@ export function VarianceAnalysis() {
             } as VarianceLog;
         });
         setVarianceLogs(varianceData);
+        varianceLoaded = true;
         checkLoadingState();
-    }, (err) => console.error("Error fetching variance logs:", err));
-
-    let salesLoaded = false;
-    let varianceLoaded = false;
-    const checkLoadingState = () => {
-        if(salesLoaded && varianceLoaded) {
-            setLoading(false);
-        }
-    }
-    
-    const salesPromise = new Promise<void>(resolve => onSnapshot(salesQuery, () => { salesLoaded = true; resolve(); }));
-    const variancePromise = new Promise<void>(resolve => onSnapshot(varianceQuery, () => { varianceLoaded = true; resolve(); }));
-
-    Promise.all([salesPromise, variancePromise]).then(() => setLoading(false));
+    }, (err) => {
+        console.error("Error fetching variance logs:", err);
+        varianceLoaded = true;
+        checkLoadingState();
+    });
 
     return () => {
         unsubSales();

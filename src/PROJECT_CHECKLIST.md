@@ -54,7 +54,7 @@ This file tracks our development progress to ensure we build the app logically, 
 
 *   **3.1 Advanced Reporting & Analytics:**
     *   [x] Build UI for "Reports" page to display meaningful data.
-    *   [ ] Implement Actual vs. Theoretical Food Cost reporting.
+    *   [x] Implement Actual vs. Theoretical Food Cost reporting.
     *   [ ] Implement historical variance analysis to identify trends.
     *   [ ] Add Profit & Loss reporting by menu item and category.
 
