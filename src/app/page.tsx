@@ -13,11 +13,33 @@ import { LowStockItems } from './dashboard/components/LowStockItems';
 import { Suspense } from 'react';
 import { DashboardStats } from './dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
+import { useAuth } from '@/context/AuthContext';
+import { LoginForm } from './(auth)/components/LoginForm';
 
 
 export default function Home() {
   const { selectedOutlet } = useOutletContext();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Dashboard" />
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[400px]">
+          <div className="flex flex-col items-center gap-1 text-center">
+            <h3 className="text-2xl mt-4 font-bold tracking-tight">
+              Loading...
+            </h3>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
+  if (!user) {
+    return <LoginForm />
+  }
+
   if (!selectedOutlet) {
     return (
        <div className="flex flex-col gap-6">
@@ -63,5 +85,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

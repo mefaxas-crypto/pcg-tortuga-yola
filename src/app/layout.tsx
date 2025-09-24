@@ -1,6 +1,4 @@
 
-import {notFound} from 'next/navigation';
-import {NextIntlClientProvider} from 'next-intl';
 import {Inter, Playfair_Display} from 'next/font/google';
 
 import {cn} from '@/lib/utils';
@@ -10,6 +8,8 @@ import {Sidebar, SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
 import {SidebarNav} from '@/components/layout/SidebarNav';
 import {Header} from '@/components/layout/Header';
 import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,26 +25,14 @@ const playfairDisplay = Playfair_Display({
 
 type Props = {
   children: React.ReactNode;
-  params: {locale: string};
 };
 
-const locales = ['en', 'es', 'fr'];
 
-export default async function RootLayout({children, params: {locale}}: Props) {
-  if (!locales.includes(locale)) {
-    notFound();
-  }
-
-  let messages;
-  try {
-    messages = (await import(`../messages/${locale}.json`)).default;
-  } catch {
-    notFound();
-  }
+export default async function RootLayout({children}: Props) {
 
   return (
     <html
-      lang={locale}
+      lang="en"
       className={`${inter.variable} ${playfairDisplay.variable}`}
     >
       <head>
@@ -55,7 +43,7 @@ export default async function RootLayout({children, params: {locale}}: Props) {
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen')}>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <AuthProvider>
           <OutletProvider>
             <SidebarProvider>
               <Sidebar>
@@ -68,10 +56,9 @@ export default async function RootLayout({children, params: {locale}}: Props) {
               <Toaster />
             </SidebarProvider>
           </OutletProvider>
-        </NextIntlClientProvider>
+        </AuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
 }
-
-    
