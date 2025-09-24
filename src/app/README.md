@@ -28,12 +28,24 @@ Built on a modern, serverless architecture, it offers a robust, scalable, and re
 - **Styling**: Tailwind CSS with CSS Variables for theming.
 - **Internationalization**: `next-intl` for multi-language support.
 
+## Project Structure Overview
+
+-   `/src/app` - Main application directory using the Next.js App Router.
+    -   `/src/app/[locale]` - Contains all pages and layouts for internationalization.
+    -   `/src/app/components` - Shared components used across multiple pages.
+-   `/src/ai` - Contains all Genkit-related code, including flows and prompts.
+-   `/src/components` - UI components, primarily from ShadCN UI, forming the design system.
+-   `/src/context` - Global React Context providers (e.g., `AuthContext`, `OutletContext`).
+-   `/src/hooks` - Custom React hooks.
+-   `/src/lib` - Core application logic, including Firebase configuration (`firebase.ts`), server actions (`actions.ts`), type definitions (`types.ts`), and utility functions.
+-   `/src/messages` - Translation files for `next-intl`.
+
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v20 or later)
-- npm or yarn
+-   Node.js (v20 or later)
+-   An active Google Firebase project.
 
 ### Running the Development Server
 
@@ -43,13 +55,21 @@ Built on a modern, serverless architecture, it offers a robust, scalable, and re
     ```
 
 2.  **Set up Firebase**:
-    - Ensure you have a Firebase project created.
-    - The Firebase configuration is located in `src/lib/firebase.ts`. This project is pre-configured, but you can swap it with your own project details if needed.
-    - The Firestore security rules are located in `firestore.rules` and are deployed automatically.
+    -   The Firebase configuration is located in `src/lib/firebase.ts`. This project is pre-configured with a sample project ID. You should replace it with your own Firebase project's configuration details.
+    -   **Important**: This project uses Firebase Authentication and Firestore. Ensure both are enabled in your Firebase project console.
+    -   The Firestore security rules are located in `firestore.rules` and are deployed automatically when changes are made.
 
 3.  **Run the App**:
     ```bash
     npm run dev
     ```
+    This command starts the Next.js development server, typically on `http://localhost:9002`.
 
-The application will be available at `http://localhost:9002`.
+4.  **Run the Genkit AI Server (in a separate terminal)**:
+    For AI features to work, you need to run the Genkit development server.
+    ```bash
+    npm run genkit:watch
+    ```
+    This will start the Genkit server and watch for any changes in your AI flow files.
+
+The application should now be fully running and accessible in your browser.
