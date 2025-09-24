@@ -9,10 +9,26 @@ import type { Sale, VarianceLog } from '@/lib/types';
 import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useEffect, useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
-import { addDays } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+
+const chartConfig = {
+  variance: {
+    label: 'Variance',
+  },
+  positive: {
+    label: 'Positive Variance',
+    color: 'hsl(var(--chart-2))',
+  },
+  negative: {
+    label: 'Negative Variance',
+    color: 'hsl(var(--chart-1))',
+  },
+} satisfies ChartConfig;
 
 
 export function VarianceAnalysis() {
@@ -100,8 +116,8 @@ export function VarianceAnalysis() {
 
   }, [selectedOutlet, date]);
 
-  const { theoreticalCost, actualCost, varianceAmount, variancePercentage } = useMemo(() => {
-    if (!sales || !varianceLogs) return { theoreticalCost: 0, actualCost: 0, varianceAmount: 0, variancePercentage: 0 };
+  const { theoreticalCost, actualCost, varianceAmount, variancePercentage, dailyVariance } = useMemo(() => {
+    if (!sales || !varianceLogs) return { theoreticalCost: 0, actualCost: 0, varianceAmount: 0, variancePercentage: 0, dailyVariance: [] };
 
     const theoreticalCost = sales.reduce((acc, sale) => acc + sale.totalCost, 0);
     const totalVarianceValue = varianceLogs.reduce((sum, log) => sum + (log.totalVarianceValue || 0), 0);
@@ -110,7 +126,21 @@ export function VarianceAnalysis() {
     const varianceAmount = actualCost - theoreticalCost;
     const variancePercentage = theoreticalCost > 0 ? (varianceAmount / theoreticalCost) * 100 : 0;
     
-    return { theoreticalCost, actualCost, varianceAmount, variancePercentage };
+    const daily: {[key: string]: number} = {};
+    for (const log of varianceLogs) {
+        const day = format(log.logDate, 'yyyy-MM-dd');
+        if (!daily[day]) {
+            daily[day] = 0;
+        }
+        daily[day] += log.totalVarianceValue || 0;
+    }
+    const dailyVarianceData = Object.keys(daily).map(day => ({
+        date: day,
+        variance: daily[day],
+    })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+
+    return { theoreticalCost, actualCost, varianceAmount, variancePercentage, dailyVariance: dailyVarianceData };
   }, [sales, varianceLogs]);
 
 
@@ -170,6 +200,39 @@ export function VarianceAnalysis() {
                 </CardContent>
             </Card>
         </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Daily Variance Trend</CardTitle>
+                <CardDescription>Daily total variance from physical counts. Negative is good (gain), positive is bad (loss).</CardDescription>
+            </CardHeader>
+            <CardContent className='h-[300px]'>
+                <ChartContainer config={chartConfig} className="w-full h-full">
+                    <BarChart data={dailyVariance}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                            dataKey="date"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => format(new Date(value), "MMM d")}
+                        />
+                         <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} />}
+                        />
+                        <Bar
+                            dataKey="variance"
+                            radius={8}
+                        >
+                             {dailyVariance.map((entry) => (
+                                <div key={entry.date} style={{ backgroundColor: entry.variance < 0 ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))' }} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ChartContainer>
+            </CardContent>
+        </Card>
 
         <Card>
             <CardHeader>

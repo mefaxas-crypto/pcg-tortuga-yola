@@ -56,7 +56,7 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Build UI for "Reports" page to display meaningful data.
     *   [x] Implement Actual vs. Theoretical Food Cost reporting.
     *   [x] Add Profit & Loss reporting by menu item and category.
-    *   [ ] Implement historical variance analysis to identify trends.
+    *   [x] Implement historical variance analysis to identify trends.
 
 *   **3.2 User Roles & Permissions:**
     *   [ ] Implement a user authentication system.
