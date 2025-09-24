@@ -31,6 +31,7 @@ import type {
   InventoryFormData,
   InventoryItem,
   InventoryStockItem,
+  InventoryTransferData,
   LogProductionData,
   Menu,
   Outlet,
@@ -1420,5 +1421,82 @@ export async function deleteOutlet(id: string) {
   } catch (error) {
     console.error("Error deleting outlet:", error);
     throw new Error("Failed to delete outlet. Make sure all associated stock is cleared first.");
+  }
+}
+
+export async function transferInventory(data: InventoryTransferData) {
+  try {
+    await runTransaction(db, async (transaction) => {
+      // --- READS ---
+      // Get item spec
+      const itemRef = doc(db, 'inventory', data.itemId);
+      const itemSnap = await transaction.get(itemRef);
+      if (!itemSnap.exists()) throw new Error('Inventory item not found.');
+      const itemData = itemSnap.data() as InventoryItem;
+
+      // Get outlets info
+      const fromOutletRef = doc(db, 'outlets', data.fromOutletId);
+      const toOutletRef = doc(db, 'outlets', data.toOutletId);
+      const fromOutletSnap = await transaction.get(fromOutletRef);
+      const toOutletSnap = await transaction.get(toOutletRef);
+      if (!fromOutletSnap.exists() || !toOutletSnap.exists()) throw new Error('One or both outlets not found.');
+
+      // Get stock documents
+      const fromStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', data.itemId), where('outletId', '==', data.fromOutletId));
+      const fromStockDocs = await getDocs(fromStockQuery);
+      if (fromStockDocs.empty) throw new Error(`Stock for ${itemData.name} not found at source outlet.`);
+      const fromStockRef = fromStockDocs.docs[0].ref;
+      const fromStockSnap = await transaction.get(fromStockRef);
+      const fromStock = fromStockSnap.data() as InventoryStockItem;
+
+      if ((fromStock.quantity ?? 0) < data.quantity) {
+        throw new Error(`Not enough stock to transfer. Available: ${fromStock.quantity}, Requested: ${data.quantity}`);
+      }
+      
+      const toStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', data.itemId), where('outletId', '==', data.toOutletId));
+      const toStockDocs = await getDocs(toStockQuery);
+      if (toStockDocs.empty) throw new Error(`Stock for ${itemData.name} not found at destination outlet.`);
+      const toStockRef = toStockDocs.docs[0].ref;
+      const toStockSnap = await transaction.get(toStockRef);
+      const toStock = toStockSnap.data() as InventoryStockItem;
+
+      // --- WRITES ---
+      // Decrement source
+      const newFromQuantity = fromStock.quantity - data.quantity;
+      transaction.update(fromStockRef, {
+        quantity: newFromQuantity,
+        status: getStatus(newFromQuantity, itemData.minStock)
+      });
+      
+      // Increment destination
+      const newToQuantity = (toStock.quantity ?? 0) + data.quantity;
+      transaction.update(toStockRef, {
+        quantity: newToQuantity,
+        status: getStatus(newToQuantity, itemData.minStock)
+      });
+
+      // Log transfer
+      const transferLogRef = doc(collection(db, 'inventoryTransfers'));
+      transaction.set(transferLogRef, {
+        transferDate: serverTimestamp(),
+        user: 'Chef John Doe', // Placeholder
+        itemId: data.itemId,
+        itemName: itemData.name,
+        quantity: data.quantity,
+        unit: itemData.unit,
+        fromOutletId: data.fromOutletId,
+        fromOutletName: fromOutletSnap.data().name,
+        toOutletId: data.toOutletId,
+        toOutletName: toOutletSnap.data().name,
+        notes: data.notes || '',
+      });
+    });
+
+    revalidatePath('/inventory');
+    return { success: true };
+  } catch (error) {
+    console.error("Error transferring inventory:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to transfer inventory: ${errorMessage}`);
   }
 }

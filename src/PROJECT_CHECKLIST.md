@@ -45,7 +45,7 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Create "Outlets" data model and management UI (e.g., "Hotel", "Restaurant").
     *   [x] **Strategy:** Refactor inventory to separate shared "Item Specifications" (in `/inventory`) from outlet-specific "Stock Levels" (in a new `/inventoryStock` collection).
     *   [x] Scope all data (sales, inventory views, purchasing) to a specific outlet, likely via a global state/context.
-    *   [ ] Implement inventory transfers between outlets.
+    *   [x] Implement inventory transfers between outlets.
 
 ## PHASE 3: PROFESSIONAL & ENTERPRISE FEATURES
 

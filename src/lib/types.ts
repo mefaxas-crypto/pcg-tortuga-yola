@@ -3,6 +3,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -316,4 +317,27 @@ export type VarianceLog = {
     items: VarianceLogItem[];
     user: string;
     totalVarianceValue?: number;
+};
+
+export type InventoryTransfer = {
+  id: string;
+  transferDate: Date;
+  user: string;
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  unit: Unit;
+  fromOutletId: string;
+  fromOutletName: string;
+  toOutletId: string;
+  toOutletName: string;
+  notes?: string;
+};
+
+export type InventoryTransferData = {
+  itemId: string;
+  quantity: number;
+  fromOutletId: string;
+  toOutletId: string;
+  notes?: string;
 };
