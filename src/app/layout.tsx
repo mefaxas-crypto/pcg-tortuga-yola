@@ -1,4 +1,6 @@
 
+import {notFound} from 'next/navigation';
+import {NextIntlClientProvider} from 'next-intl';
 import {Inter, Playfair_Display} from 'next/font/google';
 
 import {cn} from '@/lib/utils';
@@ -23,13 +25,26 @@ const playfairDisplay = Playfair_Display({
 
 type Props = {
   children: React.ReactNode;
+  params: {locale: string};
 };
 
-export default async function RootLayout({children}: Props) {
+const locales = ['en', 'es', 'fr'];
+
+export default async function RootLayout({children, params: {locale}}: Props) {
+  if (!locales.includes(locale)) {
+    notFound();
+  }
+
+  let messages;
+  try {
+    messages = (await import(`../messages/${locale}.json`)).default;
+  } catch {
+    notFound();
+  }
 
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${inter.variable} ${playfairDisplay.variable}`}
     >
       <head>
@@ -40,6 +55,7 @@ export default async function RootLayout({children}: Props) {
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen')}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <OutletProvider>
             <SidebarProvider>
               <Sidebar>
@@ -52,7 +68,10 @@ export default async function RootLayout({children}: Props) {
               <Toaster />
             </SidebarProvider>
           </OutletProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
 }
+
+    
