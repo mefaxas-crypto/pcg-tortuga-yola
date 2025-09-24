@@ -22,7 +22,7 @@ type AggregatedSale = {
   totalRevenue: number;
   totalCost: number;
   totalProfit: number;
-  foodCost: number;
+  foodCostPercentage: number;
 }
 
 const chartConfig = {
@@ -118,7 +118,7 @@ export function SalesAndProfitability() {
     return { ...totals, totalProfit, foodCostPercentage, salesByDay };
   }, [sales]);
 
-  const aggregatedSales = useMemo(() => {
+  const aggregatedSales = useMemo((): AggregatedSale[] => {
     if (!sales) return [];
 
     const map = new Map<string, AggregatedSale>();
@@ -136,16 +136,16 @@ export function SalesAndProfitability() {
                 totalRevenue: sale.totalRevenue,
                 totalCost: sale.totalCost,
                 totalProfit: 0, // will calculate next
-                foodCost: 0, // will calculate next
+                foodCostPercentage: 0, // will calculate next
             });
         }
     });
 
     return Array.from(map.values()).map(item => {
         item.totalProfit = item.totalRevenue - item.totalCost;
-        item.foodCost = item.totalRevenue > 0 ? (item.totalCost / item.totalRevenue) * 100 : 0;
+        item.foodCostPercentage = item.totalRevenue > 0 ? (item.totalCost / item.totalRevenue) * 100 : 0;
         return item;
-    });
+    }).sort((a,b) => b.totalRevenue - a.totalRevenue);
 
   }, [sales]);
 
@@ -235,47 +235,38 @@ export function SalesAndProfitability() {
             </CardContent>
         </Card>
         
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-            <Card>
-                <CardHeader><CardTitle>Top 5 by Revenue</CardTitle></CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow><TableHead>Item</TableHead><TableHead className='text-right'>Revenue</TableHead></TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {topByRevenue.map(item => <TableRow key={item.recipeId}><TableCell>{item.recipeName}</TableCell><TableCell className='text-right'>{formatCurrency(item.totalRevenue)}</TableCell></TableRow>)}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>Top 5 by Profit</CardTitle></CardHeader>
-                <CardContent>
-                     <Table>
-                        <TableHeader>
-                            <TableRow><TableHead>Item</TableHead><TableHead className='text-right'>Profit</TableHead></TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {topByProfit.map(item => <TableRow key={item.recipeId}><TableCell>{item.recipeName}</TableCell><TableCell className='text-right'>{formatCurrency(item.totalProfit)}</TableCell></TableRow>)}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>Top 5 by Quantity</CardTitle></CardHeader>
-                <CardContent>
-                     <Table>
-                        <TableHeader>
-                            <TableRow><TableHead>Item</TableHead><TableHead className='text-right'>Sold</TableHead></TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {topByQuantity.map(item => <TableRow key={item.recipeId}><TableCell>{item.recipeName}</TableCell><TableCell className='text-right'>{item.totalQuantity}</TableCell></TableRow>)}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Item Profit & Loss</CardTitle>
+                <CardDescription>Detailed performance of each menu item sold in this period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Item</TableHead>
+                            <TableHead className='text-right'>Units Sold</TableHead>
+                            <TableHead className='text-right'>Revenue</TableHead>
+                            <TableHead className='text-right'>Cost</TableHead>
+                            <TableHead className='text-right'>Profit</TableHead>
+                            <TableHead className='text-right'>FC %</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {aggregatedSales.map(item => (
+                            <TableRow key={item.recipeId}>
+                                <TableCell>{item.recipeName}</TableCell>
+                                <TableCell className='text-right'>{item.totalQuantity}</TableCell>
+                                <TableCell className='text-right'>{formatCurrency(item.totalRevenue)}</TableCell>
+                                <TableCell className='text-right'>{formatCurrency(item.totalCost)}</TableCell>
+                                <TableCell className='text-right font-medium text-primary'>{formatCurrency(item.totalProfit)}</TableCell>
+                                <TableCell className='text-right'>{item.foodCostPercentage.toFixed(1)}%</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
     </>
     )
   }
