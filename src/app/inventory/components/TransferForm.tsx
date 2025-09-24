@@ -10,11 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { transferInventory } from '@/lib/actions';
-import { allUnits, Unit } from '@/lib/conversions';
 import { db } from '@/lib/firebase';
-import type { InventoryItem, InventoryStockItem, Outlet } from '@/lib/types';
+import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { Check, ChevronsUpDown, Send } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';

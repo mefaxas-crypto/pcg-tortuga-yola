@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { db } from '@/lib/firebase';
 import type { InventoryTransfer } from '@/lib/types';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,7 +25,7 @@ export function TransferHistory() {
         data.push({
           id: doc.id,
           ...docData,
-          transferDate: (docData.transferDate as any)?.toDate(),
+          transferDate: (docData.transferDate as Timestamp)?.toDate(),
         } as InventoryTransfer);
       });
       setTransfers(data);

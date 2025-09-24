@@ -149,11 +149,6 @@ export function SalesAndProfitability() {
 
   }, [sales]);
 
-  const topByRevenue = [...aggregatedSales].sort((a,b) => b.totalRevenue - a.totalRevenue).slice(0, 5);
-  const topByProfit = [...aggregatedSales].sort((a,b) => b.totalProfit - a.totalProfit).slice(0, 5);
-  const topByQuantity = [...aggregatedSales].sort((a,b) => b.totalQuantity - a.totalQuantity).slice(0, 5);
-
-
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
   const renderContent = () => {
