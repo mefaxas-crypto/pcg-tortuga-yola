@@ -2,6 +2,7 @@
 
 
 
+
 import type { Unit } from './conversions';
 
 export type InventoryItem = {
@@ -258,6 +259,7 @@ export type PurchaseOrder = {
     receivedAt?: Date;
     user?: string;
     notes?: string;
+    receivedDocumentUrl?: string;
 };
 
 export type AddPurchaseOrderData = Omit<PurchaseOrder, 'id' | 'poNumber' | 'createdAt' | 'outletId'> & {
@@ -285,6 +287,7 @@ export type ReceivePurchaseOrderData = {
   poId: string;
   items: ReceivingItem[];
   notes?: string;
+  document?: File | null;
 };
 
 export type Outlet = {

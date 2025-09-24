@@ -605,6 +605,14 @@ export async function logSale(saleData: AddSaleData) {
       }
       const recipe = recipeSnap.data() as Recipe;
 
+      if (!recipe.ingredients || recipe.ingredients.length === 0) {
+        console.warn(`Recipe "${recipe.name}" has no ingredients. No stock will be depleted.`);
+        // Just log the sale and return.
+        const saleRef = doc(collection(db, 'sales'));
+        transaction.set(saleRef, { ...saleData, saleDate: serverTimestamp() });
+        return;
+      }
+      
       const ingredientsDataPromises = recipe.ingredients.map(async (recipeIngredient) => {
         const invItemRef = doc(db, 'inventory', recipeIngredient.itemId);
         
@@ -1251,7 +1259,8 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
       const poRef = doc(db, 'purchaseOrders', data.poId);
       const poSnap = await transaction.get(poRef);
       if (!poSnap.exists()) throw new Error("Purchase Order not found.");
-      const outletId = poSnap.data().outletId;
+      const po = poSnap.data() as PurchaseOrder;
+      const outletId = po.outletId;
       if (!outletId) throw new Error("PO is not associated with an outlet.");
 
       const receivedItems = data.items.filter((item) => item.received > 0);
@@ -1316,12 +1325,24 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
       }
 
       const isPartiallyReceived = data.items.some(item => item.received < item.ordered);
-      const newStatus: PurchaseOrder['status'] = isPartiallyReceived ? 'Partially Received' : 'Received';
+      const isFullyReceived = data.items.every(item => item.received >= item.ordered);
+      
+      let newStatus: PurchaseOrder['status'] = po.status;
+      if (isFullyReceived) {
+        newStatus = 'Received';
+      } else if (isPartiallyReceived || po.status === 'Partially Received') {
+        newStatus = 'Partially Received';
+      }
+
+      // In a real app, we'd handle file uploads to Firebase Storage here.
+      // For now, we just save a placeholder name.
+      const documentUrl = data.document ? `documents/${data.poId}/${data.document.name}` : '';
 
       transaction.update(poRef, {
         status: newStatus,
         receivedAt: serverTimestamp(),
         notes: data.notes || '',
+        receivedDocumentUrl: documentUrl
       });
     });
 

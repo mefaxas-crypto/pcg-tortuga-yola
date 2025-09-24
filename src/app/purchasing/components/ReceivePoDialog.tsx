@@ -25,6 +25,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import type { PurchaseOrder } from '@/lib/types';
 import { useForm } from 'react-hook-form';
@@ -58,6 +59,7 @@ const formSchema = z.object({
   poId: z.string(),
   items: z.array(receivingItemSchema),
   notes: z.string().optional(),
+  document: z.instanceof(File).optional().nullable(),
 });
 
 type ReceivePoDialogProps = {
@@ -84,6 +86,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
         received: item.orderQuantity, // Default to receiving what was ordered
       })),
       notes: '',
+      document: null,
     },
   });
 
@@ -127,7 +130,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="max-h-[60vh] overflow-y-auto rounded-md border">
+              <div className="max-h-[50vh] overflow-y-auto rounded-md border">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background">
                     <TableRow>
@@ -184,21 +187,36 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
                   </TableBody>
                 </Table>
               </div>
-               <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Receiving Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="e.g., One case was damaged, credited on invoice #123."
-                          {...field}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Receiving Notes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="e.g., One case was damaged, credited on invoice #123."
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="document"
+                    render={({ field: { onChange, value, ...rest } }) => (
+                      <FormItem>
+                        <FormLabel>Attach Invoice/Document (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...rest} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              </div>
               <DialogFooter>
                 <Button
                   type="button"
