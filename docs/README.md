@@ -39,6 +39,12 @@ Built on a modern, serverless architecture, it offers a robust, scalable, and re
 -   `/src/hooks` - Custom React hooks.
 -   `/src/lib` - Core application logic, including Firebase configuration (`firebase.ts`), server actions (`actions.ts`), type definitions (`types.ts`), and utility functions.
 -   `/src/messages` - Translation files for `next-intl`.
+-   `/docs` - Contains all project documentation.
+    - `README.md` - This file. High-level project overview.
+    - `blueprint.md` - In-depth technical documentation for developers.
+    - `userguide.md` - Step-by-step guide for end-users.
+    - `PROJECT_CHECKLIST.md` - The feature implementation checklist.
+
 
 ## Getting Started
 

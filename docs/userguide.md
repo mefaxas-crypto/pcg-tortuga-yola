@@ -107,7 +107,7 @@ This is for making batches of items that are ingredients in other recipes (e.g.,
 This is for breaking down a large item (like a whole fish) into usable cuts.
 
 1.  First, ensure you have inventory items for both the primary cut (e.g., "Whole Salmon") and the yielded cuts (e.g., "Salmon Fillet," "Salmon Trim").
-2.  (Optional but Recommended) Go to **Settings -> Butchering Templates** to define the expected yields from a primary cut.
+2.  (Optional but Recommended) Go to **Settings -> Butchering Templates** to create templates for common butchering tasks.
 3.  Navigate to **Recipes & Production** -> **Butchering Log**.
 4.  Select the **Primary Item** ("Whole Salmon") and the **Quantity Used**.
 5.  If a template exists, the yielded items will appear. Enter the actual **Weight / Qty** for each yielded cut.
