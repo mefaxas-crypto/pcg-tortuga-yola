@@ -60,6 +60,7 @@ export function MenusTable() {
   }
 
   const calculateTotals = (items: Menu['items']) => {
+    if (!items) return { totalCost: 0, totalRevenue: 0, totalProfit: 0 };
     const totalCost = items.reduce((acc, item) => acc + (item.totalCost || 0), 0);
     const totalRevenue = items.reduce((acc, item) => acc + (item.sellingPrice || 0), 0);
     const totalProfit = totalRevenue - totalCost;
@@ -120,7 +121,7 @@ export function MenusTable() {
                       <TableCell className="font-medium">
                         {menu.name}
                       </TableCell>
-                      <TableCell>{menu.items.length}</TableCell>
+                      <TableCell>{menu.items?.length || 0}</TableCell>
                       <TableCell className="text-right hidden sm:table-cell">
                         {formatCurrency(totalCost)}
                       </TableCell>

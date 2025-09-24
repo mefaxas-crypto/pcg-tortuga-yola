@@ -126,7 +126,7 @@ export default function PurchaseOrderPage() {
                         <p>{po.supplierName}</p>
                     </div>
                 </div>
-                 <div>
+                 <div className='text-right'>
                     <h3 className="font-semibold mb-2">Details</h3>
                     <div className="text-muted-foreground">
                         <p>Date: {po.createdAt ? format(po.createdAt, 'PPP p') : 'N/A'}</p>

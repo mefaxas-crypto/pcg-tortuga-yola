@@ -1,3 +1,4 @@
+
 import PageHeader from '@/components/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RecipeSuggestions } from '../recipes/components/RecipeSuggestions';

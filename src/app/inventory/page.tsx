@@ -3,7 +3,7 @@
 
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Replace } from 'lucide-react';
 import { InventoryTable } from './components/InventoryTable';
 import { useState } from 'react';
 import { InventoryItemFormSheet } from './components/InventoryItemFormSheet';
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PhysicalCountTable } from './components/PhysicalCountTable';
 import { TransferForm } from './components/TransferForm';
 import { TransferHistory } from './components/TransferHistory';
+
 
 export default function InventoryPage() {
   const [sheetState, setSheetState] = useState<{
@@ -39,7 +40,7 @@ export default function InventoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Inventory">
-        <Button onClick={handleAdd} className='rounded-full'>
+        <Button onClick={handleAdd}>
           <Plus className="mr-2 h-4 w-4" />
           Add New Ingredient
         </Button>
@@ -57,13 +58,9 @@ export default function InventoryPage() {
         <TabsContent value="count">
             <PhysicalCountTable />
         </TabsContent>
-        <TabsContent value="transfers" className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-1">
-                <TransferForm />
-            </div>
-            <div className="lg:col-span-2">
-                <TransferHistory />
-            </div>
+        <TabsContent value="transfers" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <TransferForm />
+            <TransferHistory />
         </TabsContent>
       </Tabs>
 
