@@ -1,13 +1,7 @@
-# PCG Kitchen Manager
+# pcg-tortuga-yola
 
-Welcome to the PCG Kitchen Manager application.
-
-This is a comprehensive, enterprise-ready application designed to streamline and optimize all aspects of professional kitchen operations.
+This repository contains the source code for the PCG Kitchen Manager application.
 
 ## Documentation
 
-All documentation for this project, including the user guide, technical blueprint, and setup instructions, can be found in the `/docs` directory.
-
-- **[README](/docs/README.md)**: Project overview and setup instructions.
-- **[User Guide](/docs/userguide.md)**: A complete guide for end-users.
-- **[Technical Blueprint](/docs/blueprint.md)**: In-depth technical documentation for developers.
+All project documentation, including setup instructions, user guides, and technical blueprints, can be found in the `/docs` directory.
