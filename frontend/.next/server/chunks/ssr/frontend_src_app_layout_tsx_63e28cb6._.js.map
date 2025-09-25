@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/user/studio/frontend/src/app/layout.tsx"],"sourcesContent":["/**\n * This is the root layout component for your Next.js app.\n *\n * It is required by Next.js and is used to render the `html` and `body` tags.\n * The main application layout is defined in `src/app/[locale]/layout.tsx`.\n *\n * @see https://nextjs.org/docs/app/building-your-application/routing/layout-and-template\n */\nimport './globals.css';\n\ntype Props = {\n  children: React.ReactNode;\n};\n\nexport default function RootLayout({children}: Props) {\n  return children;\n}\n"],"names":[],"mappings":"AAAA;;;;;;;CAOC;;;;;AAOc,SAAS,WAAW,EAAC,QAAQ,EAAQ;IAClD,OAAO;AACT","debugId":null}}]
+}
