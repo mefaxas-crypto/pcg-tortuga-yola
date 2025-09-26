@@ -68,9 +68,6 @@ export function VarianceAnalysis() {
         orderBy('logDate', 'desc')
     );
 
-    let salesData: Sale[] = [];
-    let varianceData: VarianceLog[] = [];
-    
     let salesLoaded = false;
     let varianceLoaded = false;
 
@@ -81,8 +78,7 @@ export function VarianceAnalysis() {
     }
 
     const unsubSales = onSnapshot(salesQuery, (snapshot) => {
-        salesData = snapshot.docs.map(doc => doc.data() as Sale);
-        setSales(salesData);
+        setSales(snapshot.docs.map(doc => doc.data() as Sale));
         salesLoaded = true;
         checkLoadingState();
     }, (err) => {
@@ -92,15 +88,14 @@ export function VarianceAnalysis() {
     });
 
     const unsubVariance = onSnapshot(varianceQuery, (snapshot) => {
-        varianceData = snapshot.docs.map(doc => {
+        setVarianceLogs(snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 ...data,
                 id: doc.id,
                 logDate: (data.logDate as Timestamp).toDate()
             } as VarianceLog;
-        });
-        setVarianceLogs(varianceData);
+        }));
         varianceLoaded = true;
         checkLoadingState();
     }, (err) => {
@@ -153,6 +148,20 @@ export function VarianceAnalysis() {
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
       );
+    }
+    if (!selectedOutlet) {
+        return (
+             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[200px]">
+                <div className="flex flex-col items-center gap-1 text-center">
+                <h3 className="text-2xl mt-4 font-bold tracking-tight">
+                    No Outlet Selected
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                    Please select an outlet from the header to view reports.
+                </p>
+                </div>
+            </div>
+        )
     }
     if (!varianceLogs || varianceLogs.length === 0) {
         return (
