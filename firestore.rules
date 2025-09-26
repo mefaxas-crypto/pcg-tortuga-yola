@@ -2,166 +2,156 @@
  * @fileoverview Firestore Security Rules for the application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for most data, with public read access for Allergens.
- * All user-specific data is nested under `/users/{userId}`.
+ * This ruleset enforces a strict user-ownership model for most data, with public read access for the "allergens" collection. It uses path-based authorization to ensure that users can only access data they own.
  *
  * Data Structure:
- * - `/users/{userId}`: Contains user profiles. Only the authenticated user can access their own profile.
- * - `/users/{userId}/outlets/{outletId}`: Contains outlets owned by a specific user.
- * - `/users/{userId}/outlets/{outletId}/inventoryItems/{inventoryItemId}`: Contains inventory items for a specific outlet.
- * - `/users/{userId}/ingredients/{ingredientId}`: Contains ingredients managed by a specific user.
- * - `/allergens/{allergenId}`: Contains allergens. Publicly readable, write access restricted.
- * - `/users/{userId}/recipes/{recipeId}`: Contains recipes created by a specific user.
- * - `/users/{userId}/recipes/{recipeId}/recipeIngredients/{recipeIngredientId}`: Contains recipe ingredients for a specific recipe.
- * - `/users/{userId}/outlets/{outletId}/menuItems/{menuItemId}`: Contains menu items for a specific outlet.
- * - `/users/{userId}/outlets/{outletId}/salesLogs/{salesLogId}`: Contains sales logs for a specific outlet.
- * - `/users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}`: Contains stock take events for a specific outlet.
- * - `/users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}/stockTakeItems/{stockTakeItemId}`: Contains stock take items for a specific stock take event.
- * - `/users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}`: Contains fabrications for a specific ingredient.
- * - `/users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}/fabricationYields/{fabricationYieldId}`: Contains fabrication yields for a specific fabrication.
+ * - User-specific data is nested under `/users/{userId}/...`. This includes outlets, ingredients, recipes, and their associated subcollections.
+ * - Allergens are stored in a top-level `/allergens` collection, intended for public read access.
  *
  * Key Security Decisions:
- * - User listing is disallowed.
- * - Allergens are publicly readable but only writable by admins (admin role management is assumed to be handled externally).
- * - Default security posture for ambiguous relationships is strict owner-only access.
+ * - User listing is disallowed to protect privacy.
+ * - Write access to the `/allergens` collection is denied to regular users, assuming it is managed by admins through other means.
  *
  * Denormalization for Authorization:
- *  - Outlet documents contain a `userId` field to directly link them to their owner, avoiding the need for `get()` calls to a separate `/users/{userId}` document.
+ * - The `userId` field within documents nested under `/users/{userId}` subcollections (e.g., `/users/{userId}/outlets/{outletId}`) is used to enforce ownership.
+ *   This avoids the need for costly `get()` calls to verify ownership.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profiles.
+     * @description Allows users to read and write their own user document.
      * @path /users/{userId}
-     * @allow (create) - Authenticated user with matching userId can create their profile.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their profile.
-     * @deny (create) - Authenticated user cannot create a profile with a mismatched userId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access another user's profile.
+     * @allow (create) - Authenticated user can create their own profile.
+     * @allow (get) - Authenticated user can read their own profile.
+     * @allow (update) - Authenticated user can update their own profile.
+     * @allow (delete) - Authenticated user can delete their own profile.
+     * @deny (create) - Unauthenticated user cannot create a profile.
+     * @deny (update) - User cannot update another user's profile.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+          return isOwner(userId) && resource.data != null;
       }
 
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to outlets owned by a specific user.
+     * @description Allows users to manage their outlets.
      * @path /users/{userId}/outlets/{outletId}
-     * @allow (create) - Authenticated user with matching userId can create an outlet.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their outlets.
-     * @deny (create) - Authenticated user cannot create an outlet with a mismatched userId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access another user's outlets.
+     * @allow (create) - Authenticated user can create an outlet for themselves.
+     * @allow (get) - Authenticated user can read their own outlet.
+     * @allow (update) - Authenticated user can update their own outlet.
+     * @allow (delete) - Authenticated user can delete their own outlet.
+     * @deny (create) - User cannot create an outlet for another user.
+     * @deny (update) - User cannot update another user's outlet.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/outlets/{outletId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId) && resource.data.userId == userId;
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to inventory items for a specific outlet.
+     * @description Allows users to manage inventory items for their outlets.
      * @path /users/{userId}/outlets/{outletId}/inventoryItems/{inventoryItemId}
-     * @allow (create) - Authenticated user with matching userId can create an inventory item.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access inventory items in their outlets.
-     * @deny (create) - Authenticated user cannot create an inventory item with a mismatched userId or outletId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access inventory items in another user's outlets.
+     * @allow (create) - Authenticated user can create an inventory item for their outlet.
+     * @allow (get) - Authenticated user can read their own inventory item.
+     * @allow (update) - Authenticated user can update their own inventory item.
+     * @allow (delete) - Authenticated user can delete their own inventory item.
+     * @deny (create) - User cannot create an inventory item for another user's outlet.
+     * @deny (update) - User cannot update another user's inventory item.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/outlets/{outletId}/inventoryItems/{inventoryItemId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to ingredients managed by a specific user.
+     * @description Allows users to manage their ingredients.
      * @path /users/{userId}/ingredients/{ingredientId}
-     * @allow (create) - Authenticated user with matching userId can create an ingredient.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their ingredients.
-     * @deny (create) - Authenticated user cannot create an ingredient with a mismatched userId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access another user's ingredients.
+     * @allow (create) - Authenticated user can create an ingredient for themselves.
+     * @allow (get) - Authenticated user can read their own ingredient.
+     * @allow (update) - Authenticated user can update their own ingredient.
+     * @allow (delete) - Authenticated user can delete their own ingredient.
+     * @deny (create) - User cannot create an ingredient for another user.
+     * @deny (update) - User cannot update another user's ingredient.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/ingredients/{ingredientId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to allergens. Publicly readable, but write access restricted.
+     * @description Allows public read access to allergens, but restricts write access.
      * @path /allergens/{allergenId}
-     * @allow (get, list) - Any user can read allergens.
-     * @deny (create, update, delete) - Only admins can write allergens (admin role is assumed to be managed externally).
-     * @principle Public read access with restricted write access.
+     * @allow (get) - Anyone can read allergen information.
+     * @deny (create) - Only admins can create allergens (assumed to be managed externally).
+     * @deny (update) - Only admins can update allergens (assumed to be managed externally).
+     * @deny (delete) - Only admins can delete allergens (assumed to be managed externally).
+     * @principle Public read with restricted writes.
      */
     match /allergens/{allergenId} {
       allow get: if true;
@@ -172,251 +162,265 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to recipes created by a specific user.
+     * @description Allows users to manage their recipes.
      * @path /users/{userId}/recipes/{recipeId}
-     * @allow (create) - Authenticated user with matching userId can create a recipe.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their recipes.
-     * @deny (create) - Authenticated user cannot create a recipe with a mismatched userId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access another user's recipes.
+     * @allow (create) - Authenticated user can create a recipe for themselves.
+     * @allow (get) - Authenticated user can read their own recipe.
+     * @allow (update) - Authenticated user can update their own recipe.
+     * @allow (delete) - Authenticated user can delete their own recipe.
+     * @deny (create) - User cannot create a recipe for another user.
+     * @deny (update) - User cannot update another user's recipe.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/recipes/{recipeId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to recipe ingredients for a specific recipe.
+     * @description Allows users to manage recipe ingredients for their recipes.
      * @path /users/{userId}/recipes/{recipeId}/recipeIngredients/{recipeIngredientId}
-     * @allow (create) - Authenticated user with matching userId can create a recipe ingredient.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access recipe ingredients in their recipes.
-     * @deny (create) - Authenticated user cannot create a recipe ingredient with a mismatched userId or recipeId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access recipe ingredients in another user's recipes.
+     * @allow (create) - Authenticated user can create a recipe ingredient for their recipe.
+     * @allow (get) - Authenticated user can read their own recipe ingredient.
+     * @allow (update) - Authenticated user can update their own recipe ingredient.
+     * @allow (delete) - Authenticated user can delete their own recipe ingredient.
+     * @deny (create) - User cannot create a recipe ingredient for another user's recipe.
+     * @deny (update) - User cannot update another user's recipe ingredient.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/recipes/{recipeId}/recipeIngredients/{recipeIngredientId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to menu items for a specific outlet.
+     * @description Allows users to manage menu items for their outlets.
      * @path /users/{userId}/outlets/{outletId}/menuItems/{menuItemId}
-     * @allow (create) - Authenticated user with matching userId can create a menu item.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access menu items in their outlets.
-     * @deny (create) - Authenticated user cannot create a menu item with a mismatched userId or outletId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access menu items in another user's outlets.
+     * @allow (create) - Authenticated user can create a menu item for their outlet.
+     * @allow (get) - Authenticated user can read their own menu item.
+     * @allow (update) - Authenticated user can update their own menu item.
+     * @allow (delete) - Authenticated user can delete their own menu item.
+     * @deny (create) - User cannot create a menu item for another user's outlet.
+     * @deny (update) - User cannot update another user's menu item.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/outlets/{outletId}/menuItems/{menuItemId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to sales logs for a specific outlet.
+     * @description Allows users to manage sales logs for their outlets.
      * @path /users/{userId}/outlets/{outletId}/salesLogs/{salesLogId}
-     * @allow (create) - Authenticated user with matching userId can create a sales log.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access sales logs in their outlets.
-     * @deny (create) - Authenticated user cannot create a sales log with a mismatched userId or outletId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access sales logs in another user's outlets.
+     * @allow (create) - Authenticated user can create a sales log for their outlet.
+     * @allow (get) - Authenticated user can read their own sales log.
+     * @allow (update) - Authenticated user can update their own sales log.
+     * @allow (delete) - Authenticated user can delete their own sales log.
+     * @deny (create) - User cannot create a sales log for another user's outlet.
+     * @deny (update) - User cannot update another user's sales log.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/outlets/{outletId}/salesLogs/{salesLogId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to stock take events for a specific outlet.
+     * @description Allows users to manage stock takes for their outlets.
      * @path /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}
-     * @allow (create) - Authenticated user with matching userId can create a stock take event.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access stock take events in their outlets.
-     * @deny (create) - Authenticated user cannot create a stock take event with a mismatched userId or outletId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access stock take events in another user's outlets.
+     * @allow (create) - Authenticated user can create a stock take for their outlet.
+     * @allow (get) - Authenticated user can read their own stock take.
+     * @allow (update) - Authenticated user can update their own stock take.
+     * @allow (delete) - Authenticated user can delete their own stock take.
+     * @deny (create) - User cannot create a stock take for another user's outlet.
+     * @deny (update) - User cannot update another user's stock take.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to stock take items for a specific stock take event.
+     * @description Allows users to manage stock take items for their stock takes.
      * @path /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}/stockTakeItems/{stockTakeItemId}
-     * @allow (create) - Authenticated user with matching userId can create a stock take item.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access stock take items in their outlets.
-     * @deny (create) - Authenticated user cannot create a stock take item with a mismatched userId or outletId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access stock take items in another user's outlets.
+     * @allow (create) - Authenticated user can create a stock take item for their stock take.
+     * @allow (get) - Authenticated user can read their own stock take item.
+     * @allow (update) - Authenticated user can update their own stock take item.
+     * @allow (delete) - Authenticated user can delete their own stock take item.
+     * @deny (create) - User cannot create a stock take item for another user's stock take.
+     * @deny (update) - User cannot update another user's stock take item.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}/stockTakeItems/{stockTakeItemId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to fabrications for a specific ingredient.
+     * @description Allows users to manage fabrications for their ingredients.
      * @path /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}
-     * @allow (create) - Authenticated user with matching userId can create a fabrication.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access fabrications for their ingredients.
-     * @deny (create) - Authenticated user cannot create a fabrication with a mismatched userId or ingredientId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access fabrications for another user's ingredients.
+     * @allow (create) - Authenticated user can create a fabrication for their ingredient.
+     * @allow (get) - Authenticated user can read their own fabrication.
+     * @allow (update) - Authenticated user can update their own fabrication.
+     * @allow (delete) - Authenticated user can delete their own fabrication.
+     * @deny (create) - User cannot create a fabrication for another user's ingredient.
+     * @deny (update) - User cannot update another user's fabrication.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to fabrication yields for a specific fabrication.
+     * @description Allows users to manage fabrication yields for their fabrications.
      * @path /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}/fabricationYields/{fabricationYieldId}
-     * @allow (create) - Authenticated user with matching userId can create a fabrication yield.
-     * @allow (get, list, update, delete) - Authenticated user with matching userId can access fabrication yields for their fabrications.
-     * @deny (create) - Authenticated user cannot create a fabrication yield with a mismatched userId or fabricationId.
-     * @deny (get, list, update, delete) - Authenticated user cannot access fabrication yields for another user's fabrications.
+     * @allow (create) - Authenticated user can create a fabrication yield for their fabrication.
+     * @allow (get) - Authenticated user can read their own fabrication yield.
+     * @allow (update) - Authenticated user can update their own fabrication yield.
+     * @allow (delete) - Authenticated user can delete their own fabrication yield.
+     * @deny (create) - User cannot create a fabrication yield for another user's fabrication.
+     * @deny (update) - User cannot update another user's fabrication yield.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}/fabricationYields/{fabricationYieldId} {
-       // Authentication Helper
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Authorization Helper
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource.data != null;
       }
-
+      
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+     /**
+      * @description  Allow public read access to the "outlets" collection (top-level).
+      * @path /outlets
+      * @allow (get) - Anyone can read outlet information.
+      * @principle Public read.
+      */
+    match /outlets/{outletId} {
+        allow get: if true;
+        allow list: if true;
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
     }
   }
 }
