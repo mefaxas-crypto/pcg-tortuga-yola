@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Inter, Playfair_Display } from 'next/font/google';
@@ -80,14 +81,16 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: Props) {
   return (
-    <FirebaseClientProvider>
-      <AuthProvider>
-        <OutletProvider>
-          <ThemedLayout>
-              {children}
-          </ThemedLayout>
-        </OutletProvider>
-      </AuthProvider>
-    </FirebaseClientProvider>
+    <>
+      {/* <FirebaseClientProvider>
+        <AuthProvider>
+          <OutletProvider> */}
+            <ThemedLayout>
+                {children}
+            </ThemedLayout>
+          {/* </OutletProvider>
+        </AuthProvider>
+      </FirebaseClientProvider> */}
+    </>
   );
 }
