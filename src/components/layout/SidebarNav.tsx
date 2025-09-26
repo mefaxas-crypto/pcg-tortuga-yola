@@ -34,7 +34,7 @@ import { FirebaseError } from 'firebase/app';
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { user, signInWithGoogle, loading: authLoading } = useAuth();
+  const { user, appUser, signInWithGoogle, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [signInLoading, setSignInLoading] = useState(false);
 
@@ -58,17 +58,19 @@ export function SidebarNav() {
     }
   };
 
-  const menuItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/inventory', label: 'Inventory', icon: Warehouse },
-    { href: '/suppliers', label: 'Suppliers', icon: Truck },
-    { href: '/recipes', label: 'Recipes', icon: BookOpen },
-    { href: '/menus', label: 'Menus', icon: ClipboardList },
-    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus },
-    { href: '/sales', label: 'Sales', icon: ShoppingCart },
-    { href: '/reports', label: 'Reports', icon: BarChart3 },
-    { href: '/ai-tools', label: 'AI Tools', icon: Bot },
+  const allMenuItems = [
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'Chef', 'User'] },
+    { href: '/inventory', label: 'Inventory', icon: Warehouse, roles: ['Admin', 'Manager', 'Chef', 'User'] },
+    { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['Admin', 'Manager', 'Chef'] },
+    { href: '/recipes', label: 'Recipes', icon: BookOpen, roles: ['Admin', 'Chef'] },
+    { href: '/menus', label: 'Menus', icon: ClipboardList, roles: ['Admin', 'Chef'] },
+    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus, roles: ['Admin', 'Manager', 'Chef', 'User'] },
+    { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['Admin', 'Manager', 'Chef', 'User'] },
+    { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['Admin', 'Manager'] },
+    { href: '/ai-tools', label: 'AI Tools', icon: Bot, roles: ['Admin', 'Manager', 'Chef'] },
   ];
+  
+  const accessibleMenuItems = allMenuItems.filter(item => appUser && item.roles.includes(appUser.role));
   
   const isLoading = authLoading || signInLoading;
 
@@ -87,7 +89,7 @@ export function SidebarNav() {
       <SidebarContent>
         {user ? (
             <SidebarMenu>
-            {menuItems.map((item) => (
+            {accessibleMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                     asChild

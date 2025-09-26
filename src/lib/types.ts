@@ -104,4 +104,3 @@ export type AddOutletData = z.infer<typeof outletSchema>;
 export type AddAllergenData = z.infer<typeof allergenSchema>;
 export type AddIngredientCategoryData = z.infer<typeof ingredientCategorySchema>;
 export type AppUser = z.infer<typeof appUserSchema>;
-

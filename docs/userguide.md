@@ -6,8 +6,8 @@ Welcome to the PCG Kitchen Manager! This guide will walk you through the core fe
 
 ### 1.1. Logging In
 
--   Upon visiting the app, you will be prompted to sign in with your Google account. Click the **"Sign in with Google"** button in the sidebar.
--   This application uses role-based access control. Your assigned role (e.g., Admin, Manager, Chef) will determine which features you can see and use.
+-   Upon visiting the app, you will see the main application sidebar. Click the **"Sign in with Google"** button.
+-   This application uses role-based access control. Your assigned role will determine which features you can see and use.
 -   New users will have a **"Pending"** status and must be approved by an Admin before they can access the application.
 
 ### 1.2. Selecting an Outlet
@@ -28,11 +28,10 @@ Before you can effectively use the system, an Admin user should set up the found
 
 ## 2. User Roles & Permissions
 
-- **Admin**: Can manage users, settings, and all data across all outlets. This is the highest permission level.
-- **Manager**: Can manage all aspects of their assigned outlets, including inventory, purchasing, sales, reports, and approving actions from Supervisors.
-- **Supervisor**: Can perform daily operations like receiving purchase orders and logging counts. These actions may require manager approval in a future update.
-- **Chef**: Can manage recipes and menus, and log production or butchering.
-- **User**: Has basic, view-only access or limited data entry permissions (e.g., logging sales).
+- **Admin**: The superuser. Has unrestricted access to everything, including user and system settings.
+- **Manager**: Can do everything an Admin can do *except* manage users and core application settings. They can create ingredients, manage suppliers, handle all purchasing, run reports, and approve actions. They *cannot* manage recipes or menus.
+- **Chef**: Can manage recipes, menus, and create ingredients. Has access to most operational features.
+- **User**: Standard operator role for daily tasks: logging sales, physical counts, creating POs, and logging production.
 - **Pending**: A new user who has signed up but cannot access any part of the application until their role is changed by an Admin.
 
 ## 3. Core Workflow: Inventory to Sales

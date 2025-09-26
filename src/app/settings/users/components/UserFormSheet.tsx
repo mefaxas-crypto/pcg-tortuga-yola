@@ -47,11 +47,11 @@ type UserFormSheetProps = {
 };
 
 const roleDescriptions: Record<AppUser['role'], string> = {
-    Admin: 'Can manage users, settings, and all data across all outlets.',
-    Manager: 'Can manage all aspects of their assigned outlets, including inventory, purchasing, and approving actions.',
-    Supervisor: 'Can perform daily operations like receiving purchase orders, which may require manager approval.',
-    Chef: 'Can manage recipes and menus, and log production or butchering.',
-    User: 'Has basic, view-only access or limited data entry permissions.',
+    Admin: 'Superuser with unrestricted access to all features, including user management and system settings.',
+    Manager: 'Can manage all operational aspects like inventory, purchasing, and reports, but cannot manage recipes, menus or users.',
+    Chef: 'Can manage recipes, menus, and create ingredients. Has access to most operational features.',
+    User: 'Standard operator role for daily tasks: logging sales, physical counts, creating POs, and logging production.',
+    Supervisor: 'This role is being phased out in favor of the more distinct Manager and Chef roles.',
     Pending: 'New user who cannot access any part of the application until their role is changed by an Admin.',
 }
 
@@ -134,7 +134,7 @@ export function UserFormSheet({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {UserRoles.map(role => (
+                      {UserRoles.filter(r => r !== 'Supervisor').map(role => (
                         <SelectItem key={role} value={role}>{role}</SelectItem>
                       ))}
                     </SelectContent>
