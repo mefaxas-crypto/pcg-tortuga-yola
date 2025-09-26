@@ -27,10 +27,13 @@ import { addOutlet, editOutlet } from '@/lib/actions';
 import { useEffect, useState } from 'react';
 import type { Outlet } from '@/lib/types';
 import { useOutletContext } from '@/context/OutletContext';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
-const formSchema = z.object({
+const outletSchema = z.object({
   name: z.string().min(2, 'Outlet name must be at least 2 characters.'),
   address: z.string().optional(),
+  theme: z.string().optional(),
 });
 
 type OutletFormSheetProps = {
@@ -39,6 +42,12 @@ type OutletFormSheetProps = {
   outlet?: Outlet;
   onClose: () => void;
 };
+
+const themes = [
+  { name: 'Bamboo', class: 'theme-bamboo', color: 'bg-[#8F9988]' },
+  { name: 'Default', class: '', color: 'bg-primary' },
+];
+
 
 export function OutletFormSheet({
   open,
@@ -49,28 +58,36 @@ export function OutletFormSheet({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { setSelectedOutlet } = useOutletContext();
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof outletSchema>>({
+    resolver: zodResolver(outletSchema),
     defaultValues: {
       name: '',
       address: '',
+      theme: 'theme-bamboo'
     },
   });
+  
+  const activeTheme = form.watch('theme');
 
   useEffect(() => {
     if (open) {
         if (mode === 'edit' && outlet) {
-            form.reset(outlet);
+            form.reset({
+              name: outlet.name,
+              address: outlet.address || '',
+              theme: outlet.theme || 'theme-bamboo',
+            });
         } else {
             form.reset({
                 name: '',
                 address: '',
+                theme: 'theme-bamboo',
             });
         }
     }
   }, [outlet, mode, form, open]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof outletSchema>) {
     setLoading(true);
     try {
         if (mode === 'edit' && outlet) {
@@ -110,15 +127,15 @@ export function OutletFormSheet({
           </SheetTitle>
           <SheetDescription>
             {mode === 'add'
-              ? "Enter the details of the new location. Click save when you're done."
-              : "Update the details for this location. Click save when you're done."
+              ? "Enter the details and choose a theme for the new location. Click save when you're done."
+              : "Update the details and theme for this location. Click save when you're done."
             }
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="grid gap-4 py-4"
+            className="grid gap-6 py-4"
           >
             <FormField
               control={form.control}
@@ -146,6 +163,38 @@ export function OutletFormSheet({
                 </FormItem>
               )}
             />
+            <Separator />
+             <FormField
+              control={form.control}
+              name="theme"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Color Theme</FormLabel>
+                   <div className="grid grid-cols-3 gap-2 pt-2">
+                    {themes.map((theme) => (
+                      <div key={theme.name} className="flex flex-col items-center gap-2">
+                        <Button
+                          type='button'
+                          variant={'outline'}
+                          className={cn(
+                            'h-12 w-full flex items-center justify-center',
+                            activeTheme === theme.class && 'border-primary border-2'
+                          )}
+                          onClick={() => field.onChange(theme.class)}
+                        >
+                          <div
+                            className={cn('h-6 w-6 rounded-full', theme.color)}
+                          />
+                        </Button>
+                        <span className="text-xs text-muted-foreground">{theme.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <SheetFooter className="mt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel

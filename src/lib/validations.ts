@@ -175,12 +175,13 @@ export const receivePoSchema = z.object({
     received: z.coerce.number().min(0, "Cannot be negative."),
   })),
   notes: z.string().optional(),
-  document: z.instanceof(File).optional().nullable(),
+  document: z.any().optional().nullable(),
 });
 
 export const outletSchema = z.object({
   name: z.string().min(2, 'Outlet name must be at least 2 characters.'),
   address: z.string().optional(),
+  theme: z.string().optional(),
 });
 
 export const transferInventorySchema = z.object({

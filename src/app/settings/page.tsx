@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { List, Shapes, UtensilsCrossed, Store, Palette } from 'lucide-react';
 import Link from 'next/link';
-import { ThemeSwitcher } from './components/ThemeSwitcher';
 
 export default function SettingsPage() {
   return (
@@ -88,7 +87,13 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-             <ThemeSwitcher />
+             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[88px]">
+                <div className="flex flex-col items-center gap-1 text-center">
+                    <p className="text-sm text-muted-foreground">
+                        User & role management coming soon.
+                    </p>
+                </div>
+            </div>
           </CardContent>
         </Card>
       </div>

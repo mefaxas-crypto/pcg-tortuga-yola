@@ -1,14 +1,17 @@
 
+'use client';
+
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { cn } from '@/lib/utils';
-import { OutletProvider } from '@/context/OutletContext';
+import { OutletProvider, useOutletContext } from '@/context/OutletContext';
 import { Toaster } from '@/components/ui/toaster';
 import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
 import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
+import { useEffect } from 'react';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -26,7 +29,18 @@ type Props = {
   children: React.ReactNode;
 };
 
-export default async function RootLayout({ children }: Props) {
+function ThemedLayout({ children }: { children: React.ReactNode }) {
+  const { selectedOutlet } = useOutletContext();
+
+  useEffect(() => {
+    // Remove all theme classes and add the current one
+    document.documentElement.classList.remove('theme-bamboo');
+    const theme = selectedOutlet?.theme || 'theme-bamboo';
+    if(theme) {
+      document.documentElement.classList.add(theme);
+    }
+  }, [selectedOutlet]);
+
   return (
     <html
       lang="en"
@@ -40,22 +54,31 @@ export default async function RootLayout({ children }: Props) {
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen')}>
-          <AuthProvider>
-            <OutletProvider>
-              <SidebarProvider>
-                <Sidebar>
-                  <SidebarNav />
-                </Sidebar>
-                <SidebarInset>
-                  <Header />
-                  <main className="p-4 lg:p-6 max-w-7xl mx-auto">{children}</main>
-                </SidebarInset>
-                <Toaster />
-              </SidebarProvider>
-            </OutletProvider>
-          </AuthProvider>
+        <SidebarProvider>
+          <Sidebar>
+            <SidebarNav />
+          </Sidebar>
+          <SidebarInset>
+            <Header />
+            <main className="p-4 lg:p-6 max-w-7xl mx-auto">{children}</main>
+          </SidebarInset>
+          <Toaster />
+        </SidebarProvider>
         <SpeedInsights />
       </body>
     </html>
+  );
+}
+
+
+export default function RootLayout({ children }: Props) {
+  return (
+    <AuthProvider>
+      <OutletProvider>
+        <ThemedLayout>
+            {children}
+        </ThemedLayout>
+      </OutletProvider>
+    </AuthProvider>
   );
 }
