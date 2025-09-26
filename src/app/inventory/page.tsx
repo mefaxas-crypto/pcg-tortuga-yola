@@ -10,9 +10,6 @@ import { InventoryItemFormSheet } from './components/InventoryItemFormSheet';
 import type { InventoryItem } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PhysicalCountTable } from './components/PhysicalCountTable';
-import { TransferForm } from './components/TransferForm';
-import { TransferHistory } from './components/TransferHistory';
-
 
 export default function InventoryPage() {
   const [sheetState, setSheetState] = useState<{
@@ -40,27 +37,22 @@ export default function InventoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Inventory">
-        <Button onClick={handleAdd}>
+        <Button onClick={handleAdd} className='rounded-full'>
           <Plus className="mr-2 h-4 w-4" />
           Add New Ingredient
         </Button>
       </PageHeader>
       
       <Tabs defaultValue="list">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="list">Inventory List</TabsTrigger>
             <TabsTrigger value="count">Physical Count</TabsTrigger>
-            <TabsTrigger value="transfers">Transfers</TabsTrigger>
         </TabsList>
         <TabsContent value="list">
             <InventoryTable onEdit={handleEdit} />
         </TabsContent>
         <TabsContent value="count">
             <PhysicalCountTable />
-        </TabsContent>
-        <TabsContent value="transfers" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <TransferForm />
-            <TransferHistory />
         </TabsContent>
       </Tabs>
 

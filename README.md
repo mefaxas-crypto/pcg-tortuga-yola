@@ -26,19 +26,15 @@ Built on a modern, serverless architecture, it offers a robust, scalable, and re
 - **Database & Auth**: Google Firebase (Firestore & Firebase Authentication)
 - **Generative AI**: Google Genkit (with Gemini models)
 - **Styling**: Tailwind CSS with CSS Variables for theming.
-- **Internationalization**: `next-intl` for multi-language support.
 
 ## Project Structure Overview
 
--   `/src/app` - Main application directory using the Next.js App Router.
-    -   `/src/app/[locale]` - Contains all pages and layouts for internationalization.
-    -   `/src/app/components` - Shared components used across multiple pages.
+-   `/src/app` - Main application directory using the Next.js App Router, containing all pages and layouts.
 -   `/src/ai` - Contains all Genkit-related code, including flows and prompts.
 -   `/src/components` - UI components, primarily from ShadCN UI, forming the design system.
 -   `/src/context` - Global React Context providers (e.g., `AuthContext`, `OutletContext`).
 -   `/src/hooks` - Custom React hooks.
 -   `/src/lib` - Core application logic, including Firebase configuration (`firebase.ts`), server actions (`actions.ts`), type definitions (`types.ts`), and utility functions.
--   `/src/messages` - Translation files for `next-intl`.
 -   `/docs` - Contains all project documentation.
     - `README.md` - High-level project overview.
     - `blueprint.md` - In-depth technical documentation for developers.

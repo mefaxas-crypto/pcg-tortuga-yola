@@ -66,9 +66,9 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] **Approval Workflow:** Implement a two-step approval process. Critical actions (like PO receiving) by a Supervisor will enter a "Pending Approval" state until confirmed by a Manager or Admin.
 
 *   **3.3 Multi-language Support:**
-    *   [x] Implement i18n (internationalization) routing and file structure.
-    *   [x] Add a language switcher to the UI.
-    *   [x] Use AI to translate UI text into Spanish, French, and English.
+    *   [ ] Implement i18n (internationalization) routing and file structure.
+    *   [ ] Add a language switcher to the UI.
+    *   [ ] Use AI to translate UI text into Spanish, French, and English.
 
 *   **3.4 Mobile & Tablet UI/UX Polish:**
     *   [x] Review and optimize all pages for a seamless experience on smaller screens.
