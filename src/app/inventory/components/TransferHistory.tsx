@@ -11,12 +11,21 @@ import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight } from 'lucide-react';
+import { useOutletContext } from '@/context/OutletContext';
 
 export function TransferHistory() {
   const [transfers, setTransfers] = useState<InventoryTransfer[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const { selectedOutlet } = useOutletContext();
 
   useEffect(() => {
+    if (!selectedOutlet) {
+      setTransfers([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     const q = query(collection(db, 'inventoryTransfers'), orderBy('transferDate', 'desc'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: InventoryTransfer[] = [];
@@ -36,7 +45,7 @@ export function TransferHistory() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
 
   return (
      <Card>
