@@ -1,8 +1,6 @@
 
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { getMessages } from 'next-intl/server';
-import { NextIntlClientProvider } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { OutletProvider } from '@/context/OutletContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -26,15 +24,12 @@ const playfairDisplay = Playfair_Display({
 
 type Props = {
   children: React.ReactNode;
-  params: { locale: string };
 };
 
-export default async function RootLayout({ children, params: { locale } }: Props) {
-  const messages = await getMessages();
-
+export default async function RootLayout({ children }: Props) {
   return (
     <html
-      lang={locale}
+      lang="en"
       className={`${inter.variable} ${playfairDisplay.variable}`}
     >
       <head>
@@ -45,7 +40,6 @@ export default async function RootLayout({ children, params: { locale } }: Props
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen')}>
-        <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             <OutletProvider>
               <SidebarProvider>
@@ -60,7 +54,6 @@ export default async function RootLayout({ children, params: { locale } }: Props
               </SidebarProvider>
             </OutletProvider>
           </AuthProvider>
-        </NextIntlClientProvider>
         <SpeedInsights />
       </body>
     </html>
