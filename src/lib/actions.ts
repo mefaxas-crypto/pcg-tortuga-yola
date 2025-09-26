@@ -14,7 +14,7 @@ import {
   getDoc,
   increment,
 } from 'firebase/firestore';
-import { firestore } from '@/firebase-server'; // Server-side Firebase admin instance
+import { firestore } from '@/firebase/firebase-server'; // Server-side Firebase admin instance
 import {
   setDocumentNonBlocking,
   updateDocumentNonBlocking,
@@ -669,3 +669,6 @@ export async function transferInventory(values: z.infer<typeof transferInventory
     }
     revalidatePath('/inventory');
 }
+
+
+    
