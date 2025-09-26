@@ -23,11 +23,35 @@ import {
   UtensilsCrossed,
   PackagePlus,
   ClipboardList,
+  ChromeIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '../ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user, signInWithGoogle, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [signInLoading, setSignInLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setSignInLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description:
+          err instanceof Error ? err.message : 'An unknown error occurred. Please try again.',
+      });
+    } finally {
+      setSignInLoading(false);
+    }
+  };
 
   const menuItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -40,6 +64,8 @@ export function SidebarNav() {
     { href: '/reports', label: 'Reports', icon: BarChart3 },
     { href: '/ai-tools', label: 'AI Tools', icon: Bot },
   ];
+  
+  const isLoading = authLoading || signInLoading;
 
   return (
     <>
@@ -54,40 +80,59 @@ export function SidebarNav() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
-                icon={<item.icon />}
-                tooltip={item.label}
-              >
-                <Link href={item.href}>
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {user ? (
+            <SidebarMenu>
+            {menuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
+                    icon={<item.icon />}
+                    tooltip={item.label}
+                >
+                    <Link href={item.href}>
+                    {item.label}
+                    </Link>
+                </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
+            </SidebarMenu>
+        ) : (
+            <div className='p-4'>
+                <p className='text-sm text-sidebar-foreground/80 mb-4'>
+                    Please sign in to access the application.
+                </p>
+                 <Button
+                    variant="secondary"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className='w-full'
+                >
+                    <ChromeIcon className="mr-2 h-4 w-4" />
+                    {isLoading ? 'Signing in...' : 'Sign in with Google'}
+                </Button>
+            </div>
+        )}
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarSeparator />
-        <SidebarMenu>
-          <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith('/settings')}
-                icon={<Settings />}
-                tooltip={'Settings'}
-              >
-                <Link href="/settings">
-                  {'Settings'}
-                </Link>
-              </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      {user && (
+        <SidebarFooter>
+            <SidebarSeparator />
+            <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith('/settings')}
+                    icon={<Settings />}
+                    tooltip={'Settings'}
+                >
+                    <Link href="/settings">
+                    {'Settings'}
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarFooter>
+      )}
     </>
   );
 }
