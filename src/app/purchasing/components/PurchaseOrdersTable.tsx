@@ -11,9 +11,8 @@ import {
   } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy, where } from 'firebase/firestore';
+import { useState } from 'react';
 import type { PurchaseOrder } from '@/lib/types';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,8 @@ import { ReceivePoDialog } from './ReceivePoDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CancelPoDialog } from './CancelPoDialog';
 import { useOutletContext } from '@/context/OutletContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-intl/client';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type PurchaseOrdersTableProps = {
     status: 'active' | 'history';
@@ -35,46 +35,24 @@ const historyStatuses: PurchaseOrder['status'][] = ['Received', 'Cancelled'];
 
 export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     const router = useRouter();
+    const { firestore } = useFirebase();
     const { selectedOutlet } = useOutletContext();
-    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[] | null>(null);
-    const [loading, setLoading] = useState(true);
     const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
 
-    useEffect(() => {
-        if (!selectedOutlet) {
-            setPurchaseOrders([]);
-            setLoading(false);
-            return;
-        }
-        setLoading(true);
-
+    const purchaseOrdersQuery = useMemoFirebase(() => {
+        if (!selectedOutlet) return null;
+        
         const statusesToQuery = status === 'active' ? activeStatuses : historyStatuses;
-        const q = query(
-            collection(db, 'purchaseOrders'), 
+        return query(
+            collection(firestore, 'purchaseOrders'),
             where('outletId', '==', selectedOutlet.id),
             where('status', 'in', statusesToQuery),
             orderBy('createdAt', 'desc')
         );
-        
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const pos: PurchaseOrder[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                pos.push({ 
-                    id: doc.id, 
-                    ...data,
-                    createdAt: data.createdAt?.toDate() // convert Firestore Timestamp to JS Date
-                } as PurchaseOrder);
-            });
-            setPurchaseOrders(pos);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching purchase orders: ", error);
-            setLoading(false);
-        });
+    }, [status, selectedOutlet, firestore]);
+    
+    const { data: purchaseOrders, isLoading: loading } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 
-        return () => unsubscribe();
-    }, [status, selectedOutlet]);
 
     const getStatusBadge = (status: PurchaseOrder['status']) => {
         switch (status) {
