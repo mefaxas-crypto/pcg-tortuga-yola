@@ -35,7 +35,7 @@ export default function SettingsPage() {
     },
     { 
       role: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'], 
-      href: '/settings/categories', _
+      href: '/settings/categories',
       icon: Shapes, 
       title: 'Category Management', 
       description: 'Manage the categories for your inventory items.' 
