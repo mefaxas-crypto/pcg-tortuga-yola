@@ -1,4 +1,6 @@
+
 import { Inter, Playfair_Display } from 'next/font/google';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 import { cn } from '@/lib/utils';
 import { OutletProvider } from '@/context/OutletContext';
@@ -6,9 +8,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
-import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import './globals.css';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -58,4 +59,3 @@ export default async function RootLayout({ children }: Props) {
       </body>
     </html>
   );
-}

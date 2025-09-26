@@ -3,7 +3,7 @@
 
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
-import { MenuForm } from '../../components/MenuForm';
+import { MenuForm } from '../components/MenuForm';
 
 export default function NewMenuPage() {
 
