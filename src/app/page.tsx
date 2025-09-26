@@ -47,10 +47,10 @@ export default function Home() {
            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[400px]">
               <div className="flex flex-col items-center gap-1 text-center">
               <h3 className="text-2xl mt-4 font-bold tracking-tight">
-                  No Outlet Selected
+                  Loading Outlet Information...
               </h3>
               <p className="text-sm text-muted-foreground">
-                  Please select an outlet from the header to view the dashboard.
+                  Please wait while we prepare the dashboard.
               </p>
               </div>
           </div>

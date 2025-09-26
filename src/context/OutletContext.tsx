@@ -33,13 +33,15 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
         const sortedOutlets = data.sort((a, b) => a.name.localeCompare(b.name));
         setOutlets(sortedOutlets);
 
-        // Find and set "Restaurante Bamboo" as the default outlet.
-        const bambooOutlet = sortedOutlets.find(o => o.name === "Restaurante Bamboo");
-        if (bambooOutlet) {
-          setSelectedOutlet(bambooOutlet);
-        } else if (sortedOutlets.length > 0) {
-          // Fallback to the first outlet if Bamboo is not found
-          setSelectedOutlet(sortedOutlets[0]);
+        if (!selectedOutlet) {
+            // Find and set "Restaurante Bamboo" as the default outlet.
+            const bambooOutlet = sortedOutlets.find(o => o.name === "Restaurante Bamboo");
+            if (bambooOutlet) {
+              setSelectedOutlet(bambooOutlet);
+            } else if (sortedOutlets.length > 0) {
+              // Fallback to the first outlet if Bamboo is not found
+              setSelectedOutlet(sortedOutlets[0]);
+            }
         }
       },
       (error) => {
@@ -47,6 +49,7 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
       }
     );
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firestore]);
 
 
