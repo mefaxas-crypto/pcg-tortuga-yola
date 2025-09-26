@@ -24,7 +24,6 @@ export function RecentSales() {
 
   useEffect(() => {
     if (!selectedOutlet) {
-      setSales([]);
       setLoading(false);
       return;
     }

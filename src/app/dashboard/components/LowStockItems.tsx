@@ -36,8 +36,6 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
 
   useEffect(() => {
     if (!selectedOutlet) {
-        setLowStockItemSpecs([]);
-        setLowStockLevels([]);
         setLoading(false);
         return;
     }

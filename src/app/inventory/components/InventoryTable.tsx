@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -68,7 +69,6 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
   // Effect to fetch stock levels for the selected outlet
   useEffect(() => {
     if (!selectedOutlet) {
-      setStockLevels([]);
       setLoading(false);
       return;
     };
