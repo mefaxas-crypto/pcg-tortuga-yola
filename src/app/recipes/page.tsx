@@ -20,10 +20,14 @@ import { ProductionForm } from './components/ProductionForm';
 import { ButcheringForm } from './components/ButcheringForm';
 import { ProductionLogHistory } from './components/ProductionLogHistory';
 import { ButcheringLogHistory } from './components/ButcheringLogHistory';
+import { useAuth } from '@/context/AuthContext';
 
 
 export default function RecipesPage() {
   const router = useRouter();
+  const { appUser } = useAuth();
+  
+  const canManageProduction = appUser && ['Admin', 'Chef', 'Cook'].includes(appUser.role);
 
   const handleEdit = (recipe: Recipe) => {
     router.push(`/recipes/${recipe.id}/edit`);
@@ -58,7 +62,13 @@ export default function RecipesPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ProductionForm />
+                  {canManageProduction ? (
+                    <ProductionForm />
+                  ) : (
+                    <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">
+                      You do not have permission to log sub-recipe production.
+                    </div>
+                  )}
                 </CardContent>
             </Card>
             <ProductionLogHistory />
@@ -72,7 +82,13 @@ export default function RecipesPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ButcheringForm />
+                  {canManageProduction ? (
+                    <ButcheringForm />
+                  ) : (
+                     <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">
+                      You do not have permission to log butchering.
+                    </div>
+                  )}
                 </CardContent>
             </Card>
             <ButcheringLogHistory />

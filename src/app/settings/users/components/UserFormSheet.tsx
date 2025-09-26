@@ -49,10 +49,11 @@ type UserFormSheetProps = {
 const roleDescriptions: Record<AppUser['role'], string> = {
     Admin: 'Superuser with unrestricted access to all features, including user management and system settings.',
     Manager: 'Can manage all operational aspects like inventory, purchasing, and reports, but cannot manage recipes, menus or users.',
-    Chef: 'Can manage recipes, menus, and create ingredients. Has access to most operational features.',
-    User: 'Standard operator role for daily tasks: logging sales, physical counts, creating POs, and logging production.',
-    Supervisor: 'This role is being phased out in favor of the more distinct Manager and Chef roles.',
+    Chef: 'Can manage recipes, menus, and create ingredients. Has access to most operational features, including production logs.',
+    Clerk: 'Admin staff role. Can log sales, manage suppliers, create ingredients, and handle purchasing. Cannot manage production or recipes.',
+    Cook: 'Kitchen staff role. Can log sub-recipe production, log butchering, and perform physical counts. Cannot log sales or manage recipes.',
     Pending: 'New user who cannot access any part of the application until their role is changed by an Admin.',
+    Supervisor: 'This role is deprecated and should not be used.',
 }
 
 export function UserFormSheet({
@@ -65,7 +66,7 @@ export function UserFormSheet({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      role: 'User',
+      role: 'Cook',
     },
   });
 

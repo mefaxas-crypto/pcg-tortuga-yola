@@ -59,13 +59,13 @@ export function SidebarNav() {
   };
 
   const allMenuItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'Chef', 'User'] },
-    { href: '/inventory', label: 'Inventory', icon: Warehouse, roles: ['Admin', 'Manager', 'Chef', 'User'] },
-    { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['Admin', 'Manager', 'Chef'] },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'] },
+    { href: '/inventory', label: 'Inventory', icon: Warehouse, roles: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'] },
+    { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['Admin', 'Manager', 'Chef', 'Clerk'] },
     { href: '/recipes', label: 'Recipes', icon: BookOpen, roles: ['Admin', 'Chef'] },
     { href: '/menus', label: 'Menus', icon: ClipboardList, roles: ['Admin', 'Chef'] },
-    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus, roles: ['Admin', 'Manager', 'Chef', 'User'] },
-    { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['Admin', 'Manager', 'Chef', 'User'] },
+    { href: '/purchasing', label: 'Purchasing', icon: PackagePlus, roles: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'] },
+    { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['Admin', 'Manager', 'Chef', 'Clerk'] },
     { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['Admin', 'Manager'] },
     { href: '/ai-tools', label: 'AI Tools', icon: Bot, roles: ['Admin', 'Manager', 'Chef'] },
   ];

@@ -34,7 +34,7 @@ export default function SettingsPage() {
       description: 'Manage the list of allergens used in recipes.'
     },
     { 
-      role: ['Admin', 'Manager', 'Chef'], 
+      role: ['Admin', 'Manager', 'Chef', 'Clerk'], 
       href: '/settings/categories', 
       icon: Shapes, 
       title: 'Category Management', 

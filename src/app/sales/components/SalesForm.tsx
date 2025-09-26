@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useOutletContext } from '@/context/OutletContext';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   menuId: z.string().min(1, 'Please select a menu.'),
@@ -41,6 +42,9 @@ export function SalesForm() {
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const { toast } = useToast();
   const { selectedOutlet } = useOutletContext();
+  const { appUser } = useAuth();
+  
+  const canLogSales = appUser && ['Admin', 'Manager', 'Chef', 'Clerk'].includes(appUser.role);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -133,6 +137,15 @@ export function SalesForm() {
       setLoading(false);
     }
   }
+  
+  if (!canLogSales) {
+    return (
+      <div className="text-center text-muted-foreground p-4 border border-dashed rounded-md">
+        You do not have permission to log sales.
+      </div>
+    );
+  }
+
 
   return (
     <Form {...form}>

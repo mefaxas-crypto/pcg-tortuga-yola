@@ -195,7 +195,7 @@ export const transferInventorySchema = z.object({
     path: ["toOutletId"],
 });
 
-export const UserRoles = ['Admin', 'Manager', 'Supervisor', 'Chef', 'User', 'Pending'] as const;
+export const UserRoles = ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook', 'Pending'] as const;
 
 export const appUserSchema = z.object({
   uid: z.string(),
