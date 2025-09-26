@@ -59,11 +59,11 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Implement historical variance analysis to identify trends.
 
 *   **3.2 User Roles & Permissions:**
-    *   [x] Implement a user authentication system.
-    *   [x] Define roles (Admin, Chef, Purchasing Manager, Supervisor).
+    *   [x] Implement a user authentication system using Firebase Auth.
+    *   [x] Define roles (Admin, Manager, Chef, Clerk, Cook, Pending) in Firestore.
     *   [x] Restrict access to pages and actions based on user role.
     *   [x] Track which user performs critical actions (e.g., receiving POs, logging sales, updating inventory).
-    *   [x] **Approval Workflow:** Implement a two-step approval process. Critical actions (like PO receiving) by a Supervisor will enter a "Pending Approval" state until confirmed by a Manager or Admin.
+    *   [ ] **Approval Workflow:** Implement a two-step approval process. Critical actions (like PO receiving) by a Supervisor will enter a "Pending Approval" state until confirmed by a Manager or Admin.
 
 *   **3.3 Multi-language Support:**
     *   [ ] Implement i18n (internationalization) routing and file structure.
@@ -78,19 +78,19 @@ This file tracks our development progress to ensure we build the app logically, 
 ## PHASE 4: WORLD-CLASS AI INTEGRATION
 
 *   **4.1 AI-Powered Purchasing Agent:**
-    *   [x] Implement AI-driven demand forecasting based on sales history, seasonality, and **hotel occupancy forecasts**.
-    *   [x] Create a tool in the ingredient form to generate **dynamically adjusted Min/Max stock levels**.
-    *   [x] Generate optimized purchase orders to minimize waste and stockouts.
-    *   [x] Track and analyze supplier price fluctuations over time to recommend cost-effective choices.
-    *   [x] Display AI-suggested Min/Max levels directly on the **Create Purchase Order form** for easy comparison at the moment of ordering.
+    *   [ ] Implement AI-driven demand forecasting based on sales history, seasonality, and **hotel occupancy forecasts**.
+    *   [ ] Create a tool in the ingredient form to generate **dynamically adjusted Min/Max stock levels**.
+    *   [ ] Generate optimized purchase orders to minimize waste and stockouts.
+    *   [ ] Track and analyze supplier price fluctuations over time to recommend cost-effective choices.
+    *   [ ] Display AI-suggested Min/Max levels directly on the **Create Purchase Order form** for easy comparison at the moment of ordering.
 
 *   **4.2 Dynamic Menu Engineering:**
-    *   [x] Implement AI-driven suggestions for menu pricing and item placement to maximize profitability.
-    *   [x] Generate compelling, professional menu descriptions for new or existing items.
-    *   [x] Create entire themed menus based on high-level concepts and inventory analysis.
+    *   [ ] Implement AI-driven suggestions for menu pricing and item placement to maximize profitability.
+    *   [ ] Generate compelling, professional menu descriptions for new or existing items.
+    *   [ ] Create entire themed menus based on high-level concepts and inventory analysis.
 
 *   **4.3 Advanced Operational Intelligence:**
-    *   [x] Automatically generate daily prep lists for kitchen staff based on sales forecasts.
-    *   [x] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
+    *   [ ] Automatically generate daily prep lists for kitchen staff based on sales forecasts.
+    *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
     *   [x] **(Existing)** Implement "Waste Prediction" tool.
     *   [x] **(Existing)** Implement "Intelligent Recipe Suggestions" tool.

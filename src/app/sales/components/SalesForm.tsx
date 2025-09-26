@@ -114,7 +114,8 @@ export function SalesForm() {
             totalRevenue: selectedItem.sellingPrice * values.quantity,
             totalCost: selectedItem.totalCost * values.quantity,
             saleDate: new Date(), // This will be replaced by serverTimestamp in action
-        }, user.uid);
+            userId: user.uid,
+        });
 
       toast({
         title: 'Sale Logged!',
@@ -218,5 +219,3 @@ export function SalesForm() {
     </Form>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 # PCG Kitchen Manager - User Guide
 
 Welcome to the PCG Kitchen Manager! This guide will walk you through the core features and processes of the application.
@@ -29,11 +28,11 @@ Before you can effectively use the system, an Admin user should set up the found
 
 ## 2. User Roles & Permissions
 
-- **Admin**: The superuser. Has unrestricted access to everything, including user and system settings.
+- **Admin**: The superuser. Has unrestricted access to everything, including user and system settings. Can manage users.
 - **Manager**: High-level operator. Can do everything an Admin can do *except* manage users and core application settings. They can create ingredients, manage suppliers, handle all purchasing, run reports. They *cannot* manage recipes or menus.
 - **Chef**: The recipe and menu expert. Can create/edit recipes, menus, and ingredients. Also handles all production and butchering logs.
-- **Clerk**: Administrative staff role. Can log sales, manage suppliers, create ingredients, and handle the full purchasing workflow (creating and receiving POs). They cannot log production or manage recipes/menus.
-- **Cook**: Kitchen staff role. Can log sub-recipe production, log butchering, perform physical inventory counts, and create/receive POs. They cannot log sales or create master ingredients/suppliers.
+- **Clerk**: Administrative staff role, restricted to their assigned outlet. Can log sales, manage suppliers, create ingredients, and handle the full purchasing workflow (creating and receiving POs). They cannot log production or manage recipes/menus.
+- **Cook**: Kitchen staff role, restricted to their assigned outlet. Can log sub-recipe production, log butchering, perform physical inventory counts, and create/receive POs. They cannot log sales or create master ingredients/suppliers.
 - **Pending**: A new user who has signed up but cannot access any part of the application until their role is changed by an Admin.
 
 ## 3. Core Workflow: Inventory to Sales
