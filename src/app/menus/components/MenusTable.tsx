@@ -25,13 +25,22 @@ import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
 import { useRouter } from 'next/navigation';
+import { useOutletContext } from '@/context/OutletContext';
 
 export function MenusTable() {
   const router = useRouter();
   const [menus, setMenus] = useState<Menu[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const { selectedOutlet } = useOutletContext();
 
   useEffect(() => {
+    if (!selectedOutlet) {
+      setMenus([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+
     const q = query(collection(db, 'menus'), orderBy('name', 'asc'));
     const unsubscribe = onSnapshot(
       q,
@@ -50,7 +59,7 @@ export function MenusTable() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

@@ -11,17 +11,32 @@ import {
 } from '@/components/ui/table';
 import { db } from '@/lib/firebase';
 import type { Sale } from '@/lib/types';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useOutletContext } from '@/context/OutletContext';
 
 export function RecentSales() {
   const [sales, setSales] = useState<Sale[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const { selectedOutlet } = useOutletContext();
 
   useEffect(() => {
-    const q = query(collection(db, 'sales'), orderBy('saleDate', 'desc'), limit(15));
+    if (!selectedOutlet) {
+      setSales([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+
+    const q = query(
+      collection(db, 'sales'),
+      where('outletId', '==', selectedOutlet.id),
+      orderBy('saleDate', 'desc'),
+      limit(15)
+    );
+
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const salesData: Sale[] = [];
       querySnapshot.forEach((doc) => {
@@ -40,7 +55,7 @@ export function RecentSales() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
@@ -65,7 +80,7 @@ export function RecentSales() {
   if (!sales || sales.length === 0) {
       return (
         <div className="py-12 text-center text-muted-foreground">
-          No sales logged yet.
+          No sales logged yet for this outlet.
         </div>
       );
   }
