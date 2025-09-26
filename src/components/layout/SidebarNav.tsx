@@ -30,6 +30,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { FirebaseError } from 'firebase/app';
 
 export function SidebarNav() {
   const pathname = usePathname();
@@ -42,6 +43,10 @@ export function SidebarNav() {
     try {
       await signInWithGoogle();
     } catch (err) {
+      // Don't show an error toast if the user simply closed the popup.
+      if (err instanceof FirebaseError && err.code === 'auth/popup-closed-by-user') {
+        return;
+      }
       toast({
         variant: 'destructive',
         title: 'Sign In Failed',
