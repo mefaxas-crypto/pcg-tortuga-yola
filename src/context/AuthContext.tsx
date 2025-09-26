@@ -1,29 +1,11 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import type { User } from 'firebase/auth';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-
-// --- MOCK USER DATA ---
-const mockUser: User = {
-  uid: 'dev-admin-user',
-  email: 'dev@admin.com',
-  displayName: 'Dev Admin',
-  photoURL: '',
-  providerId: 'password',
-  emailVerified: true,
-} as User;
-
-const mockAppUser: AppUser = {
-  uid: 'dev-admin-user',
-  email: 'dev@admin.com',
-  displayName: 'Dev Admin',
-  photoURL: '',
-  role: 'Admin',
-};
-// ----------------------
-
+import { useFirebase } from '@/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -36,13 +18,57 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  
+  const { auth, firestore } = useFirebase();
+  const [user, setUser] = useState<User | null>(null);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        // Fetch app-specific user data from Firestore
+        const userRef = doc(firestore, 'users', firebaseUser.uid);
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+          setAppUser(docSnap.data() as AppUser);
+        } else {
+          // New user, create a document for them with a 'Pending' role
+          const newUser: AppUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: 'Pending',
+          };
+          await setDoc(userRef, { ...newUser, createdAt: serverTimestamp() });
+          setAppUser(newUser);
+        }
+      } else {
+        setUser(null);
+        setAppUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [auth, firestore]);
+
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   const value: AuthContextType = {
-    user: mockUser,
-    loading: false, // Set loading to false
-    appUser: mockAppUser, // Provide the mock app user
-    signInWithGoogle: async () => { console.log('Auth is deactivated.'); }, // Do nothing
-    logout: async () => { console.log('Auth is deactivated.'); }, // Do nothing
+    user,
+    loading,
+    appUser,
+    signInWithGoogle,
+    logout,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

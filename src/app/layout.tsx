@@ -12,6 +12,7 @@ import { Header } from '@/components/layout/Header';
 import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 import { useEffect } from 'react';
+import { FirebaseClientProvider } from '@/firebase';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -79,12 +80,14 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: Props) {
   return (
-    <AuthProvider>
-      <OutletProvider>
-        <ThemedLayout>
-            {children}
-        </ThemedLayout>
-      </OutletProvider>
-    </AuthProvider>
+    <FirebaseClientProvider>
+      <AuthProvider>
+        <OutletProvider>
+          <ThemedLayout>
+              {children}
+          </ThemedLayout>
+        </OutletProvider>
+      </AuthProvider>
+    </FirebaseClientProvider>
   );
 }

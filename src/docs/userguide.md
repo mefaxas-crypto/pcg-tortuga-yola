@@ -7,14 +7,14 @@ Welcome to the PCG Kitchen Manager! This guide will walk you through the core fe
 
 ### 1.1. Logging In
 
--   Upon visiting the app, you will see the main application sidebar. Click the **"Sign in with Google"** button.
+-   Upon visiting the app, you will be prompted to sign in. Click the **"Sign in with Google"** button to authenticate with your Google account.
 -   This application uses role-based access control. Your assigned role will determine which features you can see and use.
--   New users will have a **"Pending"** status and must be approved by an Admin before they can access the application.
+-   **Important**: New users will have a **"Pending"** status and cannot access any features. An existing Admin must go to `Settings -> User Management` to approve your account and assign a role.
 
 ### 1.2. Selecting an Outlet
 
--   After logging in, the first step is to **select a kitchen outlet** from the dropdown menu in the top-left of the header.
--   All data you see on the Dashboard, Inventory, and Purchasing pages is scoped to the selected outlet. You can switch between outlets at any time.
+-   After logging in, the first step is to **select a kitchen outlet** from the dropdown menu in the top-left of the header. "Restaurante Bamboo" is selected by default.
+-   All data you see on the Dashboard, Inventory, and Purchasing pages is scoped to the selected outlet. You can switch between outlets at any time (unless your role restricts you to a single outlet).
 
 ### 1.3. Initial Data Setup (For Admins)
 
