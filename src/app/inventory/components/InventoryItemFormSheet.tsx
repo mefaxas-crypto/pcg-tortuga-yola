@@ -27,7 +27,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem, editInventoryItem } from '@/lib/actions';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Supplier, InventoryItem, Allergen, IngredientCategory } from '@/lib/types';
 import { collection, query } from 'firebase/firestore';
 import {
@@ -43,7 +43,7 @@ import { PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { allUnits } from '@/lib/conversions';
 import { UnitConversionDialog } from './UnitConversionDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'SAP Code is required.'),
@@ -94,13 +94,13 @@ export function InventoryItemFormSheet({
 
   const { toast } = useToast();
 
-  const suppliersQuery = useMemoFirebase(() => query(collection(firestore, 'suppliers')), [firestore]);
+  const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers')) : null, [firestore]);
   const { data: suppliers } = useCollection<Supplier>(suppliersQuery);
 
-  const allergensQuery = useMemoFirebase(() => query(collection(firestore, 'allergens')), [firestore]);
+  const allergensQuery = useMemo(() => firestore ? query(collection(firestore, 'allergens')) : null, [firestore]);
   const { data: allergens } = useCollection<Allergen>(allergensQuery);
 
-  const categoriesQuery = useMemoFirebase(() => query(collection(firestore, 'ingredientCategories')), [firestore]);
+  const categoriesQuery = useMemo(() => firestore ? query(collection(firestore, 'ingredientCategories')) : null, [firestore]);
   const { data: categoriesData } = useCollection<IngredientCategory>(categoriesQuery);
 
   const categories = useMemo(() => {
