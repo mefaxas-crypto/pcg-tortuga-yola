@@ -42,6 +42,7 @@ export function ProductionLogHistory() {
 
   useEffect(() => {
     if (!selectedOutlet) {
+      setLogs([]);
       setLoading(false);
       return;
     }

@@ -42,6 +42,7 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
 
     useEffect(() => {
         if (!selectedOutlet) {
+            setPurchaseOrders([]);
             setLoading(false);
             return;
         }

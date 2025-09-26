@@ -94,11 +94,14 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
     
     return lowStockLevels.map(stock => {
       const spec = lowStockItemSpecs.find(s => s.id === stock.inventoryId);
+      if (!spec) return null; // If spec is not found, return null
       return {
         ...spec,
         ...stock,
       } as InventoryItem & InventoryStockItem;
-    }).sort((a,b) => a.name.localeCompare(b.name));
+    })
+    .filter(Boolean) // Filter out the null values
+    .sort((a,b) => a.name.localeCompare(b.name));
   }, [lowStockItemSpecs, lowStockLevels]);
 
   if (showTable) {
@@ -130,7 +133,7 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
                 {combinedItems.map(item => (
                     <TableRow key={item.id}>
                         <TableCell className='font-medium'>{item.name}</TableCell>
-                        <TableCell className='text-right'>{item.quantity.toFixed(2)} {item.unit}</TableCell>
+                        <TableCell className='text-right'>{item.quantity.toFixed(2)} {item.purchaseUnit}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>

@@ -42,6 +42,7 @@ export function ButcheringLogHistory() {
 
   useEffect(() => {
     if (!selectedOutlet) {
+      setLogs([]);
       setLoading(false);
       return;
     }
