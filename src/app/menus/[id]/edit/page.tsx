@@ -8,11 +8,12 @@ import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MenuForm } from '../../components/MenuForm';
 import { useDoc, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export default function EditMenuPage({ params }: { params: { id: string } }) {
   const { firestore } = useFirebase();
   const { id } = params;
-  const docRef = doc(firestore, 'menus', id);
+  const docRef = useMemo(() => firestore ? doc(firestore, 'menus', id) : null, [firestore, id]);
   const { data: menu, isLoading: loading } = useDoc<Menu>(docRef);
 
   return (

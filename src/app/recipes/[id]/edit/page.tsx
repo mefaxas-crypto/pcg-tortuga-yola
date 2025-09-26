@@ -8,11 +8,12 @@ import type { Recipe } from '@/lib/types';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDoc, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export default function EditRecipePage({ params }: { params: { id: string } }) {
   const { firestore } = useFirebase();
   const { id } = params;
-  const docRef = doc(firestore, 'recipes', id);
+  const docRef = useMemo(() => firestore ? doc(firestore, 'recipes', id) : null, [firestore, id]);
   const { data: recipe, isLoading: loading } = useDoc<Recipe>(docRef);
 
   return (

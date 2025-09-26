@@ -15,12 +15,12 @@ import { FilePenLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
 import { UserFormSheet } from './UserFormSheet';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 
 export function UsersTable() {
@@ -29,7 +29,7 @@ export function UsersTable() {
     open: false,
   });
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('displayName', 'asc')), [firestore]);
+  const usersQuery = useMemo(() => firestore ? query(collection(firestore, 'users'), orderBy('displayName', 'asc')) : null, [firestore]);
   const { data: users, isLoading: loading } = useCollection<AppUser>(usersQuery);
 
   const handleEdit = (user: AppUser) => {

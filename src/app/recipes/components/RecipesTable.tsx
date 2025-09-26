@@ -22,7 +22,8 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Recipe } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteRecipeDialog } from './DeleteRecipeDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 type RecipesTableProps = {
   onEdit: (recipe: Recipe) => void;
@@ -30,7 +31,7 @@ type RecipesTableProps = {
 
 export function RecipesTable({ onEdit }: RecipesTableProps) {
   const { firestore } = useFirebase();
-  const recipesQuery = useMemoFirebase(() => query(collection(firestore, 'recipes'), orderBy('name', 'asc')), [firestore]);
+  const recipesQuery = useMemo(() => firestore ? query(collection(firestore, 'recipes'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: recipes, isLoading: loading } = useCollection<Recipe>(recipesQuery);
 
   return (

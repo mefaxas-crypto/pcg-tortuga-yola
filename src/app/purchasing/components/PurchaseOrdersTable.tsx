@@ -12,7 +12,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { collection, query, orderBy, where } from 'firebase/firestore';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { PurchaseOrder } from '@/lib/types';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CancelPoDialog } from './CancelPoDialog';
 import { useOutletContext } from '@/context/OutletContext';
 import { useRouter } from 'next/navigation';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 type PurchaseOrdersTableProps = {
     status: 'active' | 'history';
@@ -39,17 +39,17 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     const { selectedOutlet } = useOutletContext();
     const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
 
-    const purchaseOrdersQuery = useMemoFirebase(() => {
-        if (!selectedOutlet) return null;
-        
-        const statusesToQuery = status === 'active' ? activeStatuses : historyStatuses;
-        return query(
-            collection(firestore, 'purchaseOrders'),
-            where('outletId', '==', selectedOutlet.id),
-            where('status', 'in', statusesToQuery),
-            orderBy('createdAt', 'desc')
-        );
-    }, [status, selectedOutlet, firestore]);
+    const purchaseOrdersQuery = useMemo(() => {
+            if (!firestore || !selectedOutlet) return null;
+            
+            const statusesToQuery = status === 'active' ? activeStatuses : historyStatuses;
+            return query(
+                collection(firestore, 'purchaseOrders'),
+                where('outletId', '==', selectedOutlet.id),
+                where('status', 'in', statusesToQuery),
+                orderBy('createdAt', 'desc')
+            );
+        }, [firestore, selectedOutlet, status]);
     
     const { data: purchaseOrders, isLoading: loading } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 

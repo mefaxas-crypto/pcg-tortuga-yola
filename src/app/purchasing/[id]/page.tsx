@@ -26,13 +26,14 @@ import { doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { useMemo } from 'react';
 
 export default function PurchaseOrderPage() {
   const router = useRouter();
   const params = useParams();
   const { firestore } = useFirebase();
   const id = params.id as string;
-  const poRef = doc(firestore, 'purchaseOrders', id);
+  const poRef = useMemo(() => firestore ? doc(firestore, 'purchaseOrders', id) : null, [firestore, id]);
   const { data: po, isLoading: loading } = useDoc<PurchaseOrder>(poRef);
   const { selectedOutlet } = useOutletContext();
   

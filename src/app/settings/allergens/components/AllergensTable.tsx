@@ -22,12 +22,13 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Allergen } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteAllergenDialog } from './DeleteAllergenDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 
 export function AllergensTable() {
   const { firestore } = useFirebase();
-  const allergensQuery = useMemoFirebase(() => query(collection(firestore, 'allergens'), orderBy('name', 'asc')), [firestore]);
+  const allergensQuery = useMemo(() => firestore ? query(collection(firestore, 'allergens'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: allergens, isLoading: loading } = useCollection<Allergen>(allergensQuery);
 
   return (

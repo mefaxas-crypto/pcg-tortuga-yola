@@ -31,21 +31,22 @@ import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { UndoButcheringLogDialog } from './UndoButcheringLogDialog';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export function ButcheringLogHistory() {
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const logsQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(
-      collection(firestore, 'butcheringLogs'),
-      where('outletId', '==', selectedOutlet.id),
-      orderBy('logDate', 'desc'),
-      limit(20)
-    );
-  }, [firestore, selectedOutlet]);
+  const logsQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(
+        collection(firestore, 'butcheringLogs'),
+        where('outletId', '==', selectedOutlet.id),
+        orderBy('logDate', 'desc'),
+        limit(20)
+      );
+    }, [firestore, selectedOutlet]);
   const { data: logs, isLoading: loading } = useCollection<ButcheringLog>(logsQuery);
 
   return (

@@ -27,7 +27,7 @@ import {
 import type { InventoryItem, Supplier, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -43,7 +43,7 @@ import { Save, Trash2 } from 'lucide-react';
 import { addPurchaseOrder } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const poItemSchema = z.object({
   itemId: z.string(),
@@ -68,7 +68,7 @@ export function PurchaseOrderForm() {
   const [loading, setLoading] = useState(false);
   const { selectedOutlet } = useOutletContext();
   
-  const suppliersQuery = useMemoFirebase(() => query(collection(firestore, 'suppliers')), [firestore]);
+  const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers')) : null, [firestore]);
   const { data: suppliersData } = useCollection<Supplier>(suppliersQuery);
   const suppliers = (suppliersData || []).sort((a,b) => a.name.localeCompare(b.name));
 
@@ -88,7 +88,7 @@ export function PurchaseOrderForm() {
   const supplierId = form.watch('supplierId');
 
   useEffect(() => {
-    if (!supplierId || !selectedOutlet) {
+    if (!supplierId || !selectedOutlet || !firestore) {
       replace([]);
       return;
     }

@@ -24,17 +24,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
 import { useRouter } from 'next/navigation';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export function MenusTable() {
   const router = useRouter();
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const menusQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(collection(firestore, 'menus'), orderBy('name', 'asc'));
-  }, [firestore, selectedOutlet]);
+  const menusQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(collection(firestore, 'menus'), orderBy('name', 'asc'));
+    }, [firestore, selectedOutlet]);
   
   const { data: menus, isLoading: loading } = useCollection<Menu>(menusQuery);
 

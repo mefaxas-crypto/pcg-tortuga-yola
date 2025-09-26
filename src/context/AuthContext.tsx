@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
@@ -39,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             role: 'Pending',
           };
           // Use the non-blocking write with standardized error handling
-          setDocumentNonBlocking(userRef, { ...newUser, createdAt: serverTimestamp() }, {});
+          setDocumentNonBlocking(userRef, { ...newUser, createdAt: serverTimestamp() }, { source: 'AuthContext.createUser' });
           setAppUser(newUser);
         }
       } else {

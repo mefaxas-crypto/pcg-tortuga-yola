@@ -53,7 +53,7 @@ import { allUnits, Unit, convert } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const yieldItemSchema = z.object({
   itemId: z.string().min(1, 'Item ID is missing.'),
@@ -82,11 +82,11 @@ export function ButcheringForm() {
   const { toast } = useToast();
   const { selectedOutlet } = useOutletContext();
   
-  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
   const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
   const inventory = useMemo(() => (inventoryData || []).sort((a,b) => a.name.localeCompare(b.name)), [inventoryData]);
 
-  const templatesQuery = useMemoFirebase(() => query(collection(firestore, 'butcheryTemplates')), [firestore]);
+  const templatesQuery = useMemo(() => firestore ? query(collection(firestore, 'butcheryTemplates')) : null, [firestore]);
   const { data: butcheryTemplates } = useCollection<ButcheryTemplateType>(templatesQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({

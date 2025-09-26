@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const chartConfig = {
   variance: {
@@ -39,30 +39,30 @@ export function VarianceAnalysis() {
     to: new Date(),
   });
 
-  const salesQuery = useMemoFirebase(() => {
-    if (!selectedOutlet || !date?.from || !date?.to) return null;
-    const toDate = new Date(date.to);
-    toDate.setHours(23, 59, 59, 999);
-    return query(
-        collection(firestore, 'sales'),
-        where('outletId', '==', selectedOutlet.id),
-        where('saleDate', '>=', Timestamp.fromDate(date.from)),
-        where('saleDate', '<=', Timestamp.fromDate(toDate))
-    );
-  }, [firestore, selectedOutlet, date]);
+  const salesQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet || !date?.from || !date?.to) return null;
+      const toDate = new Date(date.to);
+      toDate.setHours(23, 59, 59, 999);
+      return query(
+          collection(firestore, 'sales'),
+          where('outletId', '==', selectedOutlet.id),
+          where('saleDate', '>=', Timestamp.fromDate(date.from)),
+          where('saleDate', '<=', Timestamp.fromDate(toDate))
+      );
+    }, [firestore, selectedOutlet, date]);
 
-  const varianceQuery = useMemoFirebase(() => {
-    if (!selectedOutlet || !date?.from || !date?.to) return null;
-    const toDate = new Date(date.to);
-    toDate.setHours(23, 59, 59, 999);
-    return query(
-        collection(firestore, 'varianceLogs'),
-        where('outletId', '==', selectedOutlet.id),
-        where('logDate', '>=', Timestamp.fromDate(date.from)),
-        where('logDate', '<=', Timestamp.fromDate(toDate)),
-        orderBy('logDate', 'desc')
-    );
-  }, [firestore, selectedOutlet, date]);
+  const varianceQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet || !date?.from || !date?.to) return null;
+      const toDate = new Date(date.to);
+      toDate.setHours(23, 59, 59, 999);
+      return query(
+          collection(firestore, 'varianceLogs'),
+          where('outletId', '==', selectedOutlet.id),
+          where('logDate', '>=', Timestamp.fromDate(date.from)),
+          where('logDate', '<=', Timestamp.fromDate(toDate)),
+          orderBy('logDate', 'desc')
+      );
+    }, [firestore, selectedOutlet, date]);
 
   const { data: sales, isLoading: salesLoading } = useCollection<Sale>(salesQuery);
   const { data: varianceLogs, isLoading: varianceLoading } = useCollection<VarianceLog>(varianceQuery);
@@ -250,5 +250,3 @@ export function VarianceAnalysis() {
     </div>
   )
 }
-
-    

@@ -24,7 +24,7 @@ import { updatePhysicalInventory } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 type PhysicalCountState = {
     [itemId: string]: {
@@ -41,13 +41,13 @@ export function PhysicalCountTable() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { toast } = useToast();
 
-  const inventorySpecsQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const inventorySpecsQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
   const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventorySpecsQuery);
 
-  const stockLevelsQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(collection(firestore, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
-  }, [firestore, selectedOutlet]);
+  const stockLevelsQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(collection(firestore, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
+    }, [firestore, selectedOutlet]);
   const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockLevelsQuery);
   
   const loading = specsLoading || stockLoading;

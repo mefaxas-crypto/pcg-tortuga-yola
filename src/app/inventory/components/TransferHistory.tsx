@@ -10,16 +10,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight } from 'lucide-react';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export function TransferHistory() {
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const transfersQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(collection(firestore, 'inventoryTransfers'), orderBy('transferDate', 'desc'), limit(50));
-  }, [firestore, selectedOutlet]);
+  const transfersQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(collection(firestore, 'inventoryTransfers'), orderBy('transferDate', 'desc'), limit(50));
+    }, [firestore, selectedOutlet]);
   const { data: transfers, isLoading: loading } = useCollection<InventoryTransfer>(transfersQuery);
 
   return (

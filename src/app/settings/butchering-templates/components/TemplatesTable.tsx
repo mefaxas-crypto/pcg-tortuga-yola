@@ -22,7 +22,7 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteTemplateDialog } from './DeleteTemplateDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
 
 
@@ -33,10 +33,10 @@ type TemplatesTableProps = {
 export function TemplatesTable({ onEdit }: TemplatesTableProps) {
   const { firestore } = useFirebase();
 
-  const templatesQuery = useMemoFirebase(() => query(collection(firestore, 'butcheryTemplates'), orderBy('name', 'asc')), [firestore]);
+  const templatesQuery = useMemo(() => firestore ? query(collection(firestore, 'butcheryTemplates'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: templates, isLoading: templatesLoading } = useCollection<ButcheryTemplate>(templatesQuery);
   
-  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
   const { data: inventory, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
 
   const loading = templatesLoading || inventoryLoading;

@@ -20,7 +20,7 @@ import { z } from 'zod';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const formSchema = z.object({
   itemId: z.string().min(1, 'Please select an item to transfer.'),
@@ -41,11 +41,11 @@ export function TransferForm() {
   const { toast } = useToast();
   const { firestore } = useFirebase();
   
-  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
   const { data: inventory } = useCollection<InventoryItem>(inventoryQuery);
   const sortedInventory = useMemo(() => (inventory || []).sort((a,b) => a.name.localeCompare(b.name)), [inventory]);
 
-  const stockQuery = useMemoFirebase(() => query(collection(firestore, 'inventoryStock')), [firestore]);
+  const stockQuery = useMemo(() => firestore ? query(collection(firestore, 'inventoryStock')) : null, [firestore]);
   const { data: stockLevels } = useCollection<InventoryStockItem>(stockQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({

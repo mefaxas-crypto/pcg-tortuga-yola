@@ -45,7 +45,7 @@ import { collection, query } from 'firebase/firestore';
 import { Check, ChevronsUpDown, Percent, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const yieldItemSchema = z.object({
     id: z.string(), // Material code
@@ -77,7 +77,7 @@ export function TemplateFormSheet({
   const [isPrimaryItemPopoverOpen, setPrimaryItemPopoverOpen] = useState(false);
   const [isYieldPopoverOpen, setYieldPopoverOpen] = useState(false);
 
-  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
   const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
   const inventory = useMemo(() => (inventoryData || []).sort((a,b) => a.name.localeCompare(b.name)), [inventoryData]);
   

@@ -13,7 +13,7 @@ import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 type AggregatedSale = {
   recipeId: string;
@@ -45,20 +45,20 @@ export function SalesAndProfitability() {
     to: new Date(),
   });
   
-  const salesQuery = useMemoFirebase(() => {
-    if (!selectedOutlet || !date?.from || !date?.to) return null;
+  const salesQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet || !date?.from || !date?.to) return null;
 
-    const toDate = new Date(date.to);
-    toDate.setHours(23, 59, 59, 999);
+      const toDate = new Date(date.to);
+      toDate.setHours(23, 59, 59, 999);
 
-    return query(
-        collection(firestore, 'sales'),
-        where('outletId', '==', selectedOutlet.id),
-        where('saleDate', '>=', Timestamp.fromDate(date.from)),
-        where('saleDate', '<=', Timestamp.fromDate(toDate)),
-        orderBy('saleDate', 'desc')
-    );
-  }, [firestore, selectedOutlet, date]);
+      return query(
+          collection(firestore, 'sales'),
+          where('outletId', '==', selectedOutlet.id),
+          where('saleDate', '>=', Timestamp.fromDate(date.from)),
+          where('saleDate', '<=', Timestamp.fromDate(toDate)),
+          orderBy('saleDate', 'desc')
+      );
+    }, [firestore, selectedOutlet, date]);
 
   const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
@@ -270,5 +270,3 @@ export function SalesAndProfitability() {
     </div>
   )
 }
-
-    

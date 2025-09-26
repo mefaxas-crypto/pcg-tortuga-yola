@@ -1,9 +1,10 @@
+
 'use client';
 
 import type { Outlet } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 import { useAuth } from './AuthContext';
 
 type OutletContextType = {
@@ -19,8 +20,8 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
   const { appUser } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
 
-  const outletsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'outlets'), orderBy('name', 'asc')),
+  const outletsQuery = useMemo(
+    () => firestore ? query(collection(firestore, 'outlets'), orderBy('name', 'asc')) : null,
     [firestore]
   );
   const { data: outlets, isLoading } = useCollection<Outlet>(outletsQuery);
@@ -44,7 +45,7 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
       const bambooOutlet = outletList.find(o => o.name === "Restaurante Bamboo");
       if (bambooOutlet) {
         setSelectedOutlet(bambooOutlet);
-      } else {
+      } else if (outletList.length > 0) {
         setSelectedOutlet(outletList[0]);
       }
     }

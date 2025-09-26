@@ -14,21 +14,22 @@ import { collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export function RecentSales() {
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const salesQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(
-      collection(firestore, 'sales'),
-      where('outletId', '==', selectedOutlet.id),
-      orderBy('saleDate', 'desc'),
-      limit(15)
-    );
-  }, [firestore, selectedOutlet]);
+  const salesQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(
+        collection(firestore, 'sales'),
+        where('outletId', '==', selectedOutlet.id),
+        orderBy('saleDate', 'desc'),
+        limit(15)
+      );
+    }, [firestore, selectedOutlet]);
   const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
   const formatCurrency = (value: number) => {

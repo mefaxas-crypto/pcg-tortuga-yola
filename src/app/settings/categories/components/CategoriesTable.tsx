@@ -22,13 +22,13 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { IngredientCategory } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteCategoryDialog } from './DeleteCategoryDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
 
 
 export function CategoriesTable() {
   const { firestore } = useFirebase();
-  const categoriesQuery = useMemoFirebase(() => query(collection(firestore, 'ingredientCategories'), orderBy('name', 'asc')), [firestore]);
+  const categoriesQuery = useMemo(() => firestore ? query(collection(firestore, 'ingredientCategories'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: categoriesData, isLoading: loading } = useCollection<IngredientCategory>(categoriesQuery);
 
   const categories = useMemo(() => {

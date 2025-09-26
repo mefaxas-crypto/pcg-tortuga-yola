@@ -1,6 +1,5 @@
 
 export * from './provider';
-export * from './use-memo-firebase';
 export * from './firestore/use-collection';
 export * from './firestore/use-doc';
 export { setDocumentNonBlocking } from './non-blocking-updates';

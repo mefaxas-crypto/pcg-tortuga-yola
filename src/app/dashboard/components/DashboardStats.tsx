@@ -25,7 +25,7 @@ import { useOutletContext } from '@/context/OutletContext';
 import { LowStockItems } from './LowStockItems';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 type DashboardStatsProps = {
     showTopSelling?: boolean;
@@ -41,20 +41,20 @@ export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) 
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const salesQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  const salesQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return query(
-      collection(firestore, 'sales'),
-      where('outletId', '==', selectedOutlet.id),
-      where('saleDate', '>=', Timestamp.fromDate(today)),
-      where('saleDate', '<', Timestamp.fromDate(tomorrow))
-    );
-  }, [firestore, selectedOutlet]);
+      return query(
+        collection(firestore, 'sales'),
+        where('outletId', '==', selectedOutlet.id),
+        where('saleDate', '>=', Timestamp.fromDate(today)),
+        where('saleDate', '<', Timestamp.fromDate(tomorrow))
+      );
+    }, [firestore, selectedOutlet]);
 
   const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 

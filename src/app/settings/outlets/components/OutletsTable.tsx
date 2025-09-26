@@ -22,8 +22,9 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Outlet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteOutletDialog } from './DeleteOutletDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 import { useAuth } from '@/context/AuthContext';
+import { useMemo } from 'react';
 
 
 type OutletsTableProps = {
@@ -34,16 +35,13 @@ export function OutletsTable({ onEdit }: OutletsTableProps) {
   const { firestore } = useFirebase();
   const { user, loading: authLoading } = useAuth(); // Use loading state from useAuth
 
-  const outletsQuery = useMemoFirebase(
-    () =>
-      !authLoading && user
+  const outletsQuery = useMemo(() =>
+      !authLoading && user && firestore
         ? query(
             collection(firestore, 'outlets'),
             orderBy('name', 'asc')
           )
-        : null,
-    [firestore, user, authLoading] // Add authLoading to dependency array
-  );
+        : null, [authLoading, user, firestore]);
 
   const { data: outlets, isLoading: dataLoading } = useCollection<Outlet>(outletsQuery);
 

@@ -28,7 +28,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const formSchema = z.object({
   menuId: z.string().min(1, 'Please select a menu.'),
@@ -44,7 +44,7 @@ export function SalesForm() {
   const { user, appUser } = useAuth();
   const { firestore } = useFirebase();
 
-  const menusQuery = useMemoFirebase(() => query(collection(firestore, 'menus')), [firestore]);
+  const menusQuery = useMemo(() => firestore ? query(collection(firestore, 'menus')) : null, [firestore]);
   const { data: menusData } = useCollection<Menu>(menusQuery);
   const menus = useMemo(() => menusData || [], [menusData]);
   

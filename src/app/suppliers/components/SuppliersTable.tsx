@@ -22,7 +22,8 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Supplier } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteSupplierDialog } from './DeleteSupplierDialog';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 type SuppliersTableProps = {
   onEdit: (supplier: Supplier) => void;
@@ -30,7 +31,7 @@ type SuppliersTableProps = {
 
 export function SuppliersTable({ onEdit }: SuppliersTableProps) {
   const { firestore } = useFirebase();
-  const suppliersQuery = useMemoFirebase(() => query(collection(firestore, 'suppliers'), orderBy('name', 'asc')), [firestore]);
+  const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: suppliers, isLoading: loading } = useCollection<Supplier>(suppliersQuery);
 
   return (

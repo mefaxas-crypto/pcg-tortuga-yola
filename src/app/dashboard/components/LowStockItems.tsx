@@ -22,7 +22,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useOutletContext } from '@/context/OutletContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 type LowStockItemsProps = {
     showTable?: boolean;
@@ -32,23 +32,23 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const lowStockLevelsQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(
-      collection(firestore, 'inventoryStock'),
-      where('outletId', '==', selectedOutlet.id),
-      where('status', 'in', ['Low Stock', 'Out of Stock'])
-    );
-  }, [firestore, selectedOutlet]);
+  const lowStockLevelsQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(
+        collection(firestore, 'inventoryStock'),
+        where('outletId', '==', selectedOutlet.id),
+        where('status', 'in', ['Low Stock', 'Out of Stock'])
+      );
+    }, [firestore, selectedOutlet]);
   
   const { data: lowStockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(lowStockLevelsQuery);
 
   const lowStockItemIds = useMemo(() => lowStockLevels?.map(s => s.inventoryId) || [], [lowStockLevels]);
 
-  const lowStockItemSpecsQuery = useMemoFirebase(() => {
-    if (!lowStockItemIds || lowStockItemIds.length === 0) return null;
-    return query(collection(firestore, 'inventory'), where('__name__', 'in', lowStockItemIds));
-  }, [firestore, lowStockItemIds]);
+  const lowStockItemSpecsQuery = useMemo(() => {
+      if (!firestore || !lowStockItemIds || lowStockItemIds.length === 0) return null;
+      return query(collection(firestore, 'inventory'), where('__name__', 'in', lowStockItemIds));
+    }, [firestore, lowStockItemIds]);
 
   const { data: lowStockItemSpecs, isLoading: specsLoading } = useCollection<InventoryItem>(lowStockItemSpecsQuery);
 

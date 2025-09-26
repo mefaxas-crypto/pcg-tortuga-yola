@@ -31,21 +31,22 @@ import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { UndoProductionLogDialog } from './UndoProductionLogDialog';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 export function ProductionLogHistory() {
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   
-  const logsQuery = useMemoFirebase(() => {
-    if (!selectedOutlet) return null;
-    return query(
-      collection(firestore, 'productionLogs'),
-      where('outletId', '==', selectedOutlet.id),
-      orderBy('logDate', 'desc'),
-      limit(20)
-    );
-  }, [firestore, selectedOutlet]);
+  const logsQuery = useMemo(() => {
+      if (!firestore || !selectedOutlet) return null;
+      return query(
+        collection(firestore, 'productionLogs'),
+        where('outletId', '==', selectedOutlet.id),
+        orderBy('logDate', 'desc'),
+        limit(20)
+      );
+    }, [firestore, selectedOutlet]);
   const { data: logs, isLoading: loading } = useCollection<ProductionLog>(logsQuery);
 
   return (

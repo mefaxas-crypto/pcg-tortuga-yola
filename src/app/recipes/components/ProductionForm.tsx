@@ -34,13 +34,13 @@ import { logProduction } from '@/lib/actions';
 import type { Recipe } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { collection, query, where } from 'firebase/firestore';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Flame, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOutletContext } from '@/context/OutletContext';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase } from '@/firebase';
 
 const formSchema = z.object({
   items: z
@@ -65,7 +65,7 @@ export function ProductionForm() {
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const { selectedOutlet } = useOutletContext();
   
-  const subRecipesQuery = useMemoFirebase(() => query(collection(firestore, 'recipes'), where('isSubRecipe', '==', true)), [firestore]);
+  const subRecipesQuery = useMemo(() => firestore ? query(collection(firestore, 'recipes'), where('isSubRecipe', '==', true)) : null, [firestore]);
   const { data: subRecipesData } = useCollection<Recipe>(subRecipesQuery);
   const subRecipes = (subRecipesData || []).sort((a,b) => a.name.localeCompare(b.name));
 
