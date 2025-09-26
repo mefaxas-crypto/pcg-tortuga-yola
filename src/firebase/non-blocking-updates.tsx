@@ -1,3 +1,4 @@
+
 import {
   writeBatch,
   serverTimestamp as originalServerTimestamp,
@@ -8,8 +9,11 @@ import {
   updateDoc,
   deleteDoc,
   type FieldValue,
+  doc,
+  collection,
 } from 'firebase/firestore';
-import { handleFirebaseError, StandardizedError } from './errors';
+import { handleFirebaseError, StandardizedError, FirestorePermissionError } from './errors';
+import { errorEmitter } from './error-emitter';
 
 interface CommonOptions {
   source?: string; // Optional source for error tracking
@@ -17,48 +21,60 @@ interface CommonOptions {
 
 // --- Non-blocking setDoc ---
 type SetData = { [key: string]: unknown };
-export async function setDocumentNonBlocking(
+export function setDocumentNonBlocking(
   ref: DocumentReference,
   data: SetData,
-  options: CommonOptions = {}
-): Promise<{ error?: StandardizedError }> {
-  try {
-    await setDoc(ref, data);
-    return {};
-  } catch (e) {
-    const error = handleFirebaseError(e as Error, { source: options.source || 'setDocumentNonBlocking' });
-    return { error };
-  }
+  options: { merge?: boolean, source?: string } = {}
+): void {
+  const { merge = false, source = 'setDocumentNonBlocking' } = options;
+  setDoc(ref, data, { merge })
+    .catch((serverError: Error) => {
+      const permissionError = new FirestorePermissionError({
+        path: ref.path,
+        operation: merge ? 'update' : 'create',
+        requestResourceData: data,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      handleFirebaseError(serverError, { source });
+    });
 }
 
 // --- Non-blocking updateDoc ---
 type UpdateData = { [key: string]: unknown | FieldValue };
-export async function updateDocumentNonBlocking(
+export function updateDocumentNonBlocking(
   ref: DocumentReference,
   data: UpdateData,
   options: CommonOptions = {}
-): Promise<{ error?: StandardizedError }> {
-  try {
-    await updateDoc(ref, data);
-    return {};
-  } catch (e) {
-    const error = handleFirebaseError(e as Error, { source: options.source || 'updateDocumentNonBlocking' });
-    return { error };
-  }
+): void {
+    const { source = 'updateDocumentNonBlocking' } = options;
+    updateDoc(ref, data)
+        .catch((serverError: Error) => {
+            const permissionError = new FirestorePermissionError({
+                path: ref.path,
+                operation: 'update',
+                requestResourceData: data,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            handleFirebaseError(serverError, { source });
+        });
 }
 
+
 // --- Non-blocking deleteDoc ---
-export async function deleteDocumentNonBlocking(
+export function deleteDocumentNonBlocking(
   ref: DocumentReference,
   options: CommonOptions = {}
-): Promise<{ error?: StandardizedError }> {
-  try {
-    await deleteDoc(ref);
-    return {};
-  } catch (e) {
-    const error = handleFirebaseError(e as Error, { source: options.source || 'deleteDocumentNonBlocking' });
-    return { error };
-  }
+): void {
+    const { source = 'deleteDocumentNonBlocking' } = options;
+    deleteDoc(ref)
+        .catch((serverError: Error) => {
+            const permissionError = new FirestorePermissionError({
+                path: ref.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            handleFirebaseError(serverError, { source });
+        });
 }
 
 
@@ -102,3 +118,8 @@ export const createBatchedWrite = (firestore: Firestore, options: { source: stri
 
 // --- Server Timestamp ---
 export const serverTimestamp = originalServerTimestamp as () => FieldValue;
+
+// Helper to get a new document reference with a unique ID
+export const newDocumentRef = (firestore: Firestore, collectionPath: string) => {
+    return doc(collection(firestore, collectionPath));
+}
