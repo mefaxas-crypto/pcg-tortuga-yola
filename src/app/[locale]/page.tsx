@@ -9,9 +9,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import PageHeader from '@/components/PageHeader';
-import { LowStockItems } from './dashboard/components/LowStockItems';
+import { LowStockItems } from '../dashboard/components/LowStockItems';
 import { Suspense } from 'react';
-import { DashboardStats } from './dashboard/components/DashboardStats';
+import { DashboardStats } from '../dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/auth/LoginForm';

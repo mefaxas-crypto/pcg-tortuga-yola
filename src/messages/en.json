@@ -1,0 +1,14 @@
+{
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "inventory": "Inventory",
+    "recipes": "Recipes",
+    "menus": "Menus",
+    "purchasing": "Purchasing",
+    "sales": "Sales",
+    "reports": "Reports",
+    "ai_tools": "AI Tools",
+    "settings": "Settings",
+    "suppliers": "Suppliers"
+  }
+}

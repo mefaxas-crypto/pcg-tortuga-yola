@@ -524,7 +524,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           <SelectValue placeholder="Select a category..." />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="fixed">
                         {recipeCategories.map((cat) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}
@@ -552,7 +552,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           <SelectValue placeholder="Select a menu..." />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="fixed">
                         <SelectItem value="none">None</SelectItem>
                         {menus.map((menu) => (
                           <SelectItem key={menu.id} value={menu.id}>
@@ -591,7 +591,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                               <SelectValue placeholder="e.g., portion" />
                           </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent position="fixed">
                              {Object.keys(allUnits).map(key => (
                                 <SelectItem key={key} value={key}>{allUnits[key as keyof typeof allUnits].name}</SelectItem>
                             ))}
@@ -723,7 +723,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                           >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent position="fixed">
                             {availableUnits.map(unit => (
                                 <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
                             ))}
@@ -769,7 +769,7 @@ export function RecipeForm({ mode, recipe }: RecipeFormProps) {
                               placeholder="Search to add ingredient..."
                             />
                           </PopoverAnchor>
-                          <PopoverContent className="w-[--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                          <PopoverContent className="w-[var(--radix-popover-anchor-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                               <CommandList>
                                 <CommandEmpty>No results found.</CommandEmpty>
                                 <CommandGroup heading="Sub-Recipes">

@@ -20,7 +20,9 @@ export function LanguageSwitcher() {
 
   const handleLocaleChange = (nextLocale: string) => {
     startTransition(() => {
-      router.replace(`/${nextLocale}${pathname}`);
+      const pathParts = pathname.split('/');
+      pathParts[1] = nextLocale;
+      router.replace(pathParts.join('/'));
     });
   };
 
