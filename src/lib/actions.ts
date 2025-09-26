@@ -48,6 +48,24 @@ import type {
   ButcheringLog,
   PurchaseOrder,
 } from '@/lib/types';
+import { getAuth } from 'firebase-admin/auth';
+import { cookies } from 'next/headers';
+
+
+// Helper to get the current user's UID from the session cookie
+async function getCurrentUserId() {
+    try {
+        const sessionCookie = cookies().get('__session')?.value;
+        if (!sessionCookie) {
+            throw new Error('User not authenticated.');
+        }
+        const decodedToken = await getAuth().verifySessionCookie(sessionCookie, true);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error("Error verifying session cookie:", error);
+        throw new Error("Authentication failed.");
+    }
+}
 
 
 // Helper to handle server actions and revalidation
@@ -67,6 +85,7 @@ async function handleAction(
 
 // Supplier Actions
 export async function addSupplier(values: z.infer<typeof supplierSchema>) {
+  const userId = await getCurrentUserId();
   const validatedData = supplierSchema.parse(values);
   const suppliersCollection = collection(firestore, 'suppliers');
   const docRef = newDocumentRef(firestore, 'suppliers');
@@ -74,6 +93,7 @@ export async function addSupplier(values: z.infer<typeof supplierSchema>) {
   await handleAction('/suppliers', async () => {
     setDocumentNonBlocking(docRef, {
       ...validatedData,
+      userId,
       createdAt: serverTimestamp(),
     }, { source: 'addSupplier' });
   }, 'Failed to add supplier');
@@ -110,6 +130,7 @@ export async function deleteSupplier(id: string) {
 
 // Inventory Item Actions
 export async function addInventoryItem(values: z.infer<typeof inventoryItemSchema>) {
+  const userId = await getCurrentUserId();
   const validatedData = inventoryItemSchema.parse(values);
   const { quantity, ...itemData } = validatedData;
   
@@ -117,7 +138,7 @@ export async function addInventoryItem(values: z.infer<typeof inventoryItemSchem
 
   const inventoryRef = newDocumentRef(firestore, 'inventory');
   const unitCost = itemData.purchasePrice / itemData.purchaseQuantity;
-  batch.set(inventoryRef, { ...itemData, unitCost });
+  batch.set(inventoryRef, { ...itemData, userId, unitCost });
 
   const outletsSnapshot = await getDocs(collection(firestore, 'outlets'));
   outletsSnapshot.forEach((outletDoc) => {
@@ -127,6 +148,7 @@ export async function addInventoryItem(values: z.infer<typeof inventoryItemSchem
       outletId: outletDoc.id,
       quantity: 0,
       status: 'Out of Stock',
+      userId,
     });
   });
 
@@ -135,7 +157,7 @@ export async function addInventoryItem(values: z.infer<typeof inventoryItemSchem
       throw new Error(`Failed to add inventory item: ${error.message}`);
   }
   revalidatePath('/inventory');
-  return { id: inventoryRef.id, ...itemData, unitCost } as InventoryItem;
+  return { id: inventoryRef.id, ...itemData, unitCost, userId } as InventoryItem;
 }
 
 export async function editInventoryItem(
@@ -170,6 +192,7 @@ export async function deleteInventoryItem(id: string) {
 }
 
 export async function updatePhysicalInventory(items: z.infer<typeof physicalCountItemSchema>[], outletId: string) {
+    const userId = await getCurrentUserId();
     const batch = createBatchedWrite(firestore, { source: 'updatePhysicalInventory' });
     const varianceLogRef = newDocumentRef(firestore, 'varianceLogs');
     const loggedItems: any[] = [];
@@ -193,6 +216,7 @@ export async function updatePhysicalInventory(items: z.infer<typeof physicalCoun
 
     batch.set(varianceLogRef, {
         outletId,
+        userId,
         logDate: serverTimestamp(),
         items: loggedItems,
         totalVarianceValue,
@@ -250,12 +274,14 @@ export async function deleteIngredientCategory(id: string) {
 
 // Recipe Actions
 export async function addRecipe(values: z.infer<typeof recipeSchema>) {
+  const userId = await getCurrentUserId();
   const validatedData = recipeSchema.parse(values);
   const docRef = newDocumentRef(firestore, 'recipes');
   
   return handleAction('/recipes', async () => {
     setDocumentNonBlocking(docRef, {
       ...validatedData,
+      userId,
       createdAt: serverTimestamp(),
     }, { source: 'addRecipe' });
     
@@ -297,9 +323,10 @@ export async function deleteRecipe(id: string) {
 
 // Menu Actions
 export async function addMenu(values: z.infer<typeof menuSchema>) {
+  const userId = await getCurrentUserId();
   const validatedData = menuSchema.parse(values);
   const docRef = newDocumentRef(firestore, 'menus');
-  return handleAction('/menus', () => setDocumentNonBlocking(docRef, validatedData, { source: 'addMenu' }), 'Failed to add menu');
+  return handleAction('/menus', () => setDocumentNonBlocking(docRef, {...validatedData, userId }, { source: 'addMenu' }), 'Failed to add menu');
 }
 
 export async function editMenu(id: string, values: z.infer<typeof menuSchema>) {
@@ -315,10 +342,11 @@ export async function deleteMenu(id: string) {
 
 // Sales Actions
 export async function logSale(values: z.infer<typeof saleSchema>) {
+  const userId = await getCurrentUserId();
   const validatedData = saleSchema.parse(values);
   const batch = createBatchedWrite(firestore, { source: 'logSale' });
   const saleRef = newDocumentRef(firestore, 'sales');
-  batch.set(saleRef, { ...validatedData, saleDate: serverTimestamp() });
+  batch.set(saleRef, { ...validatedData, userId, saleDate: serverTimestamp() });
 
   const recipeRef = doc(firestore, 'recipes', validatedData.recipeId);
   const recipeSnap = await getDoc(recipeRef);
@@ -343,6 +371,7 @@ export async function logSale(values: z.infer<typeof saleSchema>) {
 
 // Production Log Actions
 export async function logProduction(values: z.infer<typeof productionLogSchema>, outletId: string) {
+  const userId = await getCurrentUserId();
   const validatedData = productionLogSchema.parse(values);
   const batch = createBatchedWrite(firestore, { source: 'logProduction' });
   const logRef = newDocumentRef(firestore, 'productionLogs');
@@ -380,6 +409,7 @@ export async function logProduction(values: z.infer<typeof productionLogSchema>,
 
   batch.set(logRef, {
     outletId,
+    userId,
     logDate: serverTimestamp(),
     producedItems,
   });
@@ -435,6 +465,7 @@ export async function undoProductionLog(logId: string) {
 
 // Butchering Log Actions
 export async function logButchering(values: z.infer<typeof butcheringLogSchema>, outletId: string) {
+    const userId = await getCurrentUserId();
     const validatedData = butcheringLogSchema.parse(values);
     const batch = createBatchedWrite(firestore, { source: 'logButchering' });
     const primaryItemStockRef = doc(firestore, `inventoryStock/${validatedData.primaryItemId}_${outletId}`);
@@ -466,6 +497,7 @@ export async function logButchering(values: z.infer<typeof butcheringLogSchema>,
     const logRef = newDocumentRef(firestore, 'butcheringLogs');
     batch.set(logRef, {
         outletId,
+        userId,
         logDate: serverTimestamp(),
         primaryItem: {
         itemId: validatedData.primaryItemId,
@@ -509,9 +541,10 @@ export async function undoButcheringLog(logId: string) {
 
 // Butchery Template Actions
 export async function addButcheryTemplate(values: z.infer<typeof butcheryTemplateSchema>) {
+    const userId = await getCurrentUserId();
     const validatedData = butcheryTemplateSchema.parse(values);
     const docRef = newDocumentRef(firestore, 'butcheryTemplates');
-    return handleAction('/settings/butchering-templates', () => setDocumentNonBlocking(docRef, validatedData, { source: 'addButcheryTemplate' }), 'Failed to add template');
+    return handleAction('/settings/butchering-templates', () => setDocumentNonBlocking(docRef, { ...validatedData, userId }, { source: 'addButcheryTemplate' }), 'Failed to add template');
 }
 export async function updateButcheryTemplate(id: string, values: z.infer<typeof butcheryTemplateSchema>) {
     const validatedData = butcheryTemplateSchema.parse(values);
@@ -525,12 +558,14 @@ export async function deleteButcheryTemplate(id: string) {
 
 // Purchase Order Actions
 export async function addPurchaseOrder(values: z.infer<typeof purchaseOrderSchema>, outletId: string) {
+  const userId = await getCurrentUserId();
   const validatedData = purchaseOrderSchema.parse(values);
   const poNumber = `PO-${Date.now()}`;
   const docRef = newDocumentRef(firestore, 'purchaseOrders');
   return handleAction('/purchasing', () => setDocumentNonBlocking(docRef, {
     ...validatedData,
     outletId,
+    userId,
     poNumber,
     createdAt: serverTimestamp(),
   }, { source: 'addPurchaseOrder' }), 'Failed to create PO.');
@@ -589,10 +624,11 @@ export async function cancelPurchaseOrder(poId: string) {
 
 // Outlet Actions
 export async function addOutlet(values: z.infer<typeof outletSchema>) {
+    const userId = await getCurrentUserId();
     const validatedData = outletSchema.parse(values);
     const batch = createBatchedWrite(firestore, { source: 'addOutlet' });
     const outletRef = newDocumentRef(firestore, 'outlets');
-    batch.set(outletRef, validatedData);
+    batch.set(outletRef, { ...validatedData, userId });
 
     const inventorySnapshot = await getDocs(collection(firestore, 'inventory'));
     inventorySnapshot.forEach(itemDoc => {
@@ -602,6 +638,7 @@ export async function addOutlet(values: z.infer<typeof outletSchema>) {
             outletId: outletRef.id,
             quantity: 0,
             status: 'Out of Stock',
+            userId,
         });
     });
     
@@ -636,6 +673,7 @@ export async function deleteOutlet(id: string) {
 
 // Inventory Transfer Actions
 export async function transferInventory(values: z.infer<typeof transferInventorySchema>) {
+    const userId = await getCurrentUserId();
     const validatedData = transferInventorySchema.parse(values);
     const { fromOutletId, toOutletId, itemId, quantity } = validatedData;
     
@@ -656,6 +694,7 @@ export async function transferInventory(values: z.infer<typeof transferInventory
 
     batch.set(transferLogRef, {
         ...validatedData,
+        userId,
         transferDate: serverTimestamp(),
         fromOutletName,
         toOutletName,
@@ -670,5 +709,7 @@ export async function transferInventory(values: z.infer<typeof transferInventory
     revalidatePath('/inventory');
 }
 
+
+    
 
     
