@@ -1,0 +1,374 @@
+/**
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for most data, ensuring that only the authenticated user can access their own data.
+ * Public read access is granted to allergens.
+ *
+ * Data Structure:
+ * The Firestore database is structured with user-specific data nested under `/users/{userId}`.
+ * Outlets, Ingredients, Recipes, and other related entities are stored as subcollections under the respective user.
+ * Allergens are stored at the top level in `/allergens/{allergenId}` and are publicly readable.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data, enforced by path-based rules and the `isOwner()` helper function.
+ * - Listing of user-owned data is allowed by default for all subcollections under `/users/{userId}`.
+ * - Allergen data is publicly readable but requires external mechanisms to restrict writes (e.g., Firebase Functions with admin privileges).
+ * - No complex data validation is performed in these rules to allow for rapid prototyping and schema iteration.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user with matching userId can create their profile.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their profile.
+     * @deny (create) - Authenticated user cannot create a profile with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to outlet documents owned by a specific user.
+     * @path /users/{userId}/outlets/{outletId}
+     * @allow (create) - Authenticated user with matching userId can create an outlet.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their outlet.
+     * @deny (create) - Authenticated user cannot create an outlet with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/outlets/{outletId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to inventory item documents owned by a specific outlet.
+     * @path /users/{userId}/outlets/{outletId}/inventoryItems/{inventoryItemId}
+     * @allow (create) - Authenticated user with matching userId can create an inventory item.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their inventory item.
+     * @deny (create) - Authenticated user cannot create an inventory item with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/outlets/{outletId}/inventoryItems/{inventoryItemId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to ingredient documents owned by a specific user.
+     * @path /users/{userId}/ingredients/{ingredientId}
+     * @allow (create) - Authenticated user with matching userId can create an ingredient.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their ingredient.
+     * @deny (create) - Authenticated user cannot create an ingredient with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/ingredients/{ingredientId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to allergen documents.
+     * @path /allergens/{allergenId}
+     * @allow (get, list) - Public read access for all users.
+     * @deny (create, update, delete) - Write access is denied to all users.
+     * @principle Public read access with restricted write access.
+     */
+    match /allergens/{allergenId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to recipe documents owned by a specific user.
+     * @path /users/{userId}/recipes/{recipeId}
+     * @allow (create) - Authenticated user with matching userId can create a recipe.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their recipe.
+     * @deny (create) - Authenticated user cannot create a recipe with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/recipes/{recipeId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to recipe ingredient documents owned by a specific recipe.
+     * @path /users/{userId}/recipes/{recipeId}/recipeIngredients/{recipeIngredientId}
+     * @allow (create) - Authenticated user with matching userId can create a recipe ingredient.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their recipe ingredient.
+     * @deny (create) - Authenticated user cannot create a recipe ingredient with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/recipes/{recipeId}/recipeIngredients/{recipeIngredientId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to menu item documents owned by a specific outlet.
+     * @path /users/{userId}/outlets/{outletId}/menuItems/{menuItemId}
+     * @allow (create) - Authenticated user with matching userId can create a menu item.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their menu item.
+     * @deny (create) - Authenticated user cannot create a menu item with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/outlets/{outletId}/menuItems/{menuItemId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to sales log documents owned by a specific outlet.
+     * @path /users/{userId}/outlets/{outletId}/salesLogs/{salesLogId}
+     * @allow (create) - Authenticated user with matching userId can create a sales log.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their sales log.
+     * @deny (create) - Authenticated user cannot create a sales log with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/outlets/{outletId}/salesLogs/{salesLogId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to stock take documents owned by a specific outlet.
+     * @path /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}
+     * @allow (create) - Authenticated user with matching userId can create a stock take.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their stock take.
+     * @deny (create) - Authenticated user cannot create a stock take with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to stock take item documents owned by a specific stock take.
+     * @path /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}/stockTakeItems/{stockTakeItemId}
+     * @allow (create) - Authenticated user with matching userId can create a stock take item.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their stock take item.
+     * @deny (create) - Authenticated user cannot create a stock take item with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}/stockTakeItems/{stockTakeItemId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to fabrication documents owned by a specific ingredient.
+     * @path /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}
+     * @allow (create) - Authenticated user with matching userId can create a fabrication.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their fabrication.
+     * @deny (create) - Authenticated user cannot create a fabrication with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to fabrication yield documents owned by a specific fabrication.
+     * @path /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}/fabricationYields/{fabricationYieldId}
+     * @allow (create) - Authenticated user with matching userId can create a fabrication yield.
+     * @allow (get, list, update, delete) - Authenticated user with matching userId can access their fabrication yield.
+     * @deny (create) - Authenticated user cannot create a fabrication yield with a mismatched userId.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}/fabricationYields/{fabricationYieldId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+  }
+}
