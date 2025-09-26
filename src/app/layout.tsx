@@ -1,6 +1,7 @@
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { getMessages, NextIntlClientProvider } from 'next-intl/server';
+import { getMessages } from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { OutletProvider } from '@/context/OutletContext';
@@ -38,7 +39,7 @@ export default async function RootLayout({ children, params: { locale } }: Props
 
   return (
     <html
-      lang="{locale}"
+      lang={locale}
       className={`${inter.variable} ${playfairDisplay.variable}`}
     >
       <head>
