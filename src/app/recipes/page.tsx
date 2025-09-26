@@ -27,7 +27,8 @@ export default function RecipesPage() {
   const router = useRouter();
   const { appUser } = useAuth();
   
-  const canManageProduction = appUser && ['Admin', 'Chef', 'Cook'].includes(appUser.role);
+  const canManageRecipes = appUser && ['Admin', 'Manager', 'Chef'].includes(appUser.role);
+  const canPerformProduction = appUser && ['Admin', 'Manager', 'Chef', 'Cook'].includes(appUser.role);
 
   const handleEdit = (recipe: Recipe) => {
     router.push(`/recipes/${recipe.id}/edit`);
@@ -36,12 +37,14 @@ export default function RecipesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Recipes & Production">
-         <Button asChild>
-          <Link href="/recipes/new">
-            <PlusCircle className="mr-2" />
-            Add New Recipe
-          </Link>
-        </Button>
+        {canManageRecipes && (
+            <Button asChild>
+                <Link href="/recipes/new">
+                    <PlusCircle className="mr-2" />
+                    Add New Recipe
+                </Link>
+            </Button>
+        )}
       </PageHeader>
 
       <Tabs defaultValue="recipes">
@@ -62,7 +65,7 @@ export default function RecipesPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {canManageProduction ? (
+                  {canPerformProduction ? (
                     <ProductionForm />
                   ) : (
                     <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">
@@ -82,7 +85,7 @@ export default function RecipesPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {canManageProduction ? (
+                  {canPerformProduction ? (
                     <ButcheringForm />
                   ) : (
                      <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">

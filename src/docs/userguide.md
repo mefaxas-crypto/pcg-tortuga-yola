@@ -30,7 +30,7 @@ Before you can effectively use the system, an Admin user should set up the found
 ## 2. User Roles & Permissions
 
 - **Admin**: The superuser. Has unrestricted access to everything, including user and system settings.
-- **Manager**: High-level operator. Can do everything an Admin can do *except* manage users and core application settings. They can create ingredients, manage suppliers, handle all purchasing, run reports, and approve actions. They *cannot* manage recipes or menus.
+- **Manager**: High-level operator. Can do everything an Admin can do *except* manage users and core application settings. They can create ingredients, manage suppliers, handle all purchasing, run reports. They *cannot* manage recipes or menus.
 - **Chef**: The recipe and menu expert. Can create/edit recipes, menus, and ingredients. Also handles all production and butchering logs.
 - **Clerk**: Administrative staff role. Can log sales, manage suppliers, create ingredients, and handle the full purchasing workflow (creating and receiving POs). They cannot log production or manage recipes/menus.
 - **Cook**: Kitchen staff role. Can log sub-recipe production, log butchering, perform physical inventory counts, and create/receive POs. They cannot log sales or create master ingredients/suppliers.
@@ -58,7 +58,7 @@ This is the primary day-to-day workflow of the application.
     -   Use the "New Inventory Transfer" form to move stock from one outlet to another.
     -   The "Transfer History" table shows a log of all past movements.
 
-### 3.2. Creating Recipes & Menus (Chef Role)
+### 3.2. Creating Recipes & Menus (Chef/Manager/Admin Role)
 
 1.  **Navigate** to the **Recipes & Production** page.
 2.  **Create a Recipe**: Click **"Add New Recipe"**.
@@ -96,13 +96,7 @@ This is the primary day-to-day workflow of the application.
 5.  Optionally, add notes or attach a scanned invoice.
 6.  Click **"Confirm & Update Inventory"**. The items will be added to your stock. If you entered a new price, the item's cost will be updated using a weighted-average calculation.
 
-### 4.3. Approval Workflow
-
--   If your role is "Supervisor," receiving a PO will place it into a "Pending Approval" state.
--   An "Admin" or "Manager" must then go to the `Approvals` page, review the pending receipt, and either **Approve** or **Reject** it.
--   The inventory and cost updates will only be finalized upon approval.
-
-## 5. Production & Butchering (Cook/Chef Role)
+## 5. Production & Butchering (Cook/Chef/Manager/Admin Role)
 
 ### 5.1. Logging Sub-Recipe Production
 
@@ -128,13 +122,13 @@ This is for breaking down a large item (like a whole fish) into usable cuts.
 
 ## 6. Reports & AI Tools
 
-### 6.1. Reports
+### 6.1. Reports (Manager/Admin Role)
 
 -   **Navigate** to the **Reports** page.
 -   **Sales & Profitability**: Select a date range to view your key financial metrics. This report includes KPI cards, a performance-over-time chart, and a detailed Profit & Loss breakdown by menu item.
 -   **Variance Analysis**: Select a date range to analyze the difference between your theoretical food cost (what you sold) and your actual food cost (after physical counts). This helps pinpoint waste, loss, or portioning issues.
 
-### 6.2. AI Tools
+### 6.2. AI Tools (Chef/Manager/Admin Role)
 
 -   **Navigate** to the **AI Tools** page.
 -   **Waste Prediction**: Provide historical data and current inventory to get an AI-powered analysis of potential future waste and suggestions for prevention.

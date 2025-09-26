@@ -156,7 +156,7 @@ export function SalesForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Menu</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedOutlet}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a menu" />

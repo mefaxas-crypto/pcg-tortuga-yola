@@ -63,7 +63,6 @@ const roleDescriptions: Record<AppUser['role'], string> = {
     Clerk: 'Administrative staff role. Can log sales, manage suppliers, create ingredients, and handle the full purchasing workflow (creating and receiving POs). They cannot log production or manage recipes/menus.',
     Cook: 'Kitchen staff role. Can log sub-recipe production, log butchering, perform physical inventory counts, and create/receive POs. They cannot log sales or create master ingredients/suppliers.',
     Pending: 'New user who cannot access any part of the application until their role is changed by an Admin.',
-    Supervisor: 'This role is deprecated and should not be used.',
 }
 
 export function UserFormSheet({
@@ -166,7 +165,7 @@ export function UserFormSheet({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {UserRoles.filter(r => r !== 'Supervisor').map(role => (
+                      {UserRoles.map(role => (
                         <SelectItem key={role} value={role}>{role}</SelectItem>
                       ))}
                     </SelectContent>

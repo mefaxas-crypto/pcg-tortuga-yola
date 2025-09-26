@@ -34,8 +34,8 @@ export default function SettingsPage() {
       description: 'Manage the list of allergens used in recipes.'
     },
     { 
-      role: ['Admin', 'Manager', 'Chef', 'Clerk'], 
-      href: '/settings/categories', 
+      role: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'], 
+      href: '/settings/categories', _
       icon: Shapes, 
       title: 'Category Management', 
       description: 'Manage the categories for your inventory items.' 
@@ -50,6 +50,10 @@ export default function SettingsPage() {
   ];
 
   const accessibleCards = settingCards.filter(card => appUser && card.role.includes(appUser.role));
+
+  if (!appUser) {
+      return null;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +77,11 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         ))}
+        {accessibleCards.length === 0 && (
+            <div className="col-span-full text-center text-muted-foreground p-8 border border-dashed rounded-md">
+                You do not have permission to view any settings.
+            </div>
+        )}
       </div>
     </div>
   );

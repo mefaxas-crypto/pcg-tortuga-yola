@@ -33,17 +33,17 @@ export function Header() {
     if (!role) return '';
     switch (role) {
       case 'Admin':
-        return 'bg-primary/20 text-primary-foreground border-primary/50';
+        return 'bg-primary/80 text-primary-foreground border-primary/90';
       case 'Manager':
-        return 'bg-blue-500/20 text-blue-700 border-blue-500/50';
-      case 'Supervisor':
-        return 'bg-purple-500/20 text-purple-700 border-purple-500/50';
+        return 'bg-blue-500/80 text-white border-blue-600';
       case 'Chef':
-        return 'bg-green-500/20 text-green-700 border-green-500/50';
-      case 'User':
-        return 'bg-gray-500/20 text-gray-700 border-gray-500/50';
+        return 'bg-green-500/80 text-white border-green-600';
+      case 'Cook':
+        return 'bg-orange-500/80 text-white border-orange-600';
+      case 'Clerk':
+        return 'bg-indigo-500/80 text-white border-indigo-600';
       case 'Pending':
-        return 'bg-yellow-500/20 text-yellow-700 border-yellow-500/50';
+        return 'bg-yellow-500/80 text-white border-yellow-600';
       default:
         return 'bg-secondary';
     }

@@ -45,6 +45,7 @@ export function SidebarNav() {
     } catch (err) {
       // Don't show an error toast if the user simply closed the popup.
       if (err instanceof FirebaseError && err.code === 'auth/popup-closed-by-user') {
+        setSignInLoading(false);
         return;
       }
       toast({
@@ -63,7 +64,7 @@ export function SidebarNav() {
     { href: '/inventory', label: 'Inventory', icon: Warehouse, roles: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'] },
     { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['Admin', 'Manager', 'Chef', 'Clerk'] },
     { href: '/recipes', label: 'Recipes & Production', icon: BookOpen, roles: ['Admin', 'Manager', 'Chef', 'Cook'] },
-    { href: '/menus', label: 'Menus', icon: ClipboardList, roles: ['Admin', 'Chef'] },
+    { href: '/menus', label: 'Menus', icon: ClipboardList, roles: ['Admin', 'Manager', 'Chef'] },
     { href: '/purchasing', label: 'Purchasing', icon: PackagePlus, roles: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'] },
     { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['Admin', 'Manager', 'Chef', 'Clerk'] },
     { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['Admin', 'Manager'] },
@@ -121,7 +122,7 @@ export function SidebarNav() {
             </div>
         )}
       </SidebarContent>
-      {user && (
+      {user && appUser && appUser.role !== 'Pending' && (
         <SidebarFooter>
             <SidebarSeparator />
             <SidebarMenu>
