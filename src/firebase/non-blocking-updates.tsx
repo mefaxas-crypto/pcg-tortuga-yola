@@ -1,89 +1,104 @@
-'use client';
-    
 import {
+  writeBatch,
+  serverTimestamp as originalServerTimestamp,
+  type DocumentReference,
+  type WriteBatch,
+  type Firestore,
   setDoc,
-  addDoc,
   updateDoc,
   deleteDoc,
-  CollectionReference,
-  DocumentReference,
-  SetOptions,
+  type FieldValue,
 } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import {FirestorePermissionError} from '@/firebase/errors';
+import { handleFirebaseError, StandardizedError } from './errors';
 
-/**
- * Initiates a setDoc operation for a document reference.
- * Does NOT await the write operation internally.
- */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch(error => {
-    errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
-        requestResourceData: data,
-      })
-    )
-  })
-  // Execution continues immediately
+interface CommonOptions {
+  source?: string; // Optional source for error tracking
+}
+
+// --- Non-blocking setDoc ---
+type SetData = { [key: string]: unknown };
+export async function setDocumentNonBlocking(
+  ref: DocumentReference,
+  data: SetData,
+  options: CommonOptions = {}
+): Promise<{ error?: StandardizedError }> {
+  try {
+    await setDoc(ref, data);
+    return {};
+  } catch (e) {
+    const error = handleFirebaseError(e as Error, { source: options.source || 'setDocumentNonBlocking' });
+    return { error };
+  }
+}
+
+// --- Non-blocking updateDoc ---
+type UpdateData = { [key: string]: unknown | FieldValue };
+export async function updateDocumentNonBlocking(
+  ref: DocumentReference,
+  data: UpdateData,
+  options: CommonOptions = {}
+): Promise<{ error?: StandardizedError }> {
+  try {
+    await updateDoc(ref, data);
+    return {};
+  } catch (e) {
+    const error = handleFirebaseError(e as Error, { source: options.source || 'updateDocumentNonBlocking' });
+    return { error };
+  }
+}
+
+// --- Non-blocking deleteDoc ---
+export async function deleteDocumentNonBlocking(
+  ref: DocumentReference,
+  options: CommonOptions = {}
+): Promise<{ error?: StandardizedError }> {
+  try {
+    await deleteDoc(ref);
+    return {};
+  } catch (e) {
+    const error = handleFirebaseError(e as Error, { source: options.source || 'deleteDocumentNonBlocking' });
+    return { error };
+  }
 }
 
 
-/**
- * Initiates an addDoc operation for a collection reference.
- * Does NOT await the write operation internally.
- * Returns the Promise for the new doc ref, but typically not awaited by caller.
- */
-export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
-  const promise = addDoc(colRef, data)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        })
-      )
-    });
-  return promise;
+// --- Batched Writes with Error Handling ---
+class BatchedWrite {
+  private batch: WriteBatch;
+  public readonly source: string;
+
+  constructor(firestore: Firestore, source: string) {
+    this.batch = writeBatch(firestore);
+    this.source = source;
+  }
+
+  set<T>(documentRef: DocumentReference<T>, data: T): void {
+    this.batch.set(documentRef, data);
+  }
+
+  update(documentRef: DocumentReference, data: UpdateData): void {
+    this.batch.update(documentRef, data);
+  }
+
+  delete(documentRef: DocumentReference): void {
+    this.batch.delete(documentRef);
+  }
+
+  async commit(): Promise<{ error?: StandardizedError }> {
+    try {
+      await this.batch.commit();
+      return {};
+    } catch (e) {
+      const error = handleFirebaseError(e as Error, { source: this.source });
+      return { error };
+    }
+  }
 }
 
-
-/**
- * Initiates an updateDoc operation for a document reference.
- * Does NOT await the write operation internally.
- */
-export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, data)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        })
-      )
-    });
-}
+export const createBatchedWrite = (firestore: Firestore, options: { source: string }) => {
+  return new BatchedWrite(firestore, options.source);
+};
 
 
-/**
- * Initiates a deleteDoc operation for a document reference.
- * Does NOT await the write operation internally.
- */
-export function deleteDocumentNonBlocking(docRef: DocumentReference) {
-  deleteDoc(docRef)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        })
-      )
-    });
-}
+// --- Server Timestamp ---
+export const serverTimestamp = originalServerTimestamp as () => FieldValue;

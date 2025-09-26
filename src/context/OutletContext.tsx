@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Outlet } from '@/lib/types';
@@ -49,7 +48,7 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
         setSelectedOutlet(outletList[0]);
       }
     }
-  }, [isLoading, outletList, selectedOutlet, appUser?.outletId]);
+  }, [isLoading, outletList, selectedOutlet, appUser]);
 
 
   const value = useMemo(() => ({
