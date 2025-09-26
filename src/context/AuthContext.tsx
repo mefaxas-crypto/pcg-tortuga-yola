@@ -1,9 +1,8 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 
 interface AuthContextType {
@@ -14,10 +13,31 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// --- Mock User Data for Deactivated Auth ---
+const mockAppUser: AppUser = {
+  uid: 'dev-user',
+  email: 'dev@example.com',
+  displayName: 'Dev Admin',
+  photoURL: '',
+  role: 'Admin',
+};
+
+const mockUser = {
+  uid: 'dev-user',
+  email: 'dev@example.com',
+  displayName: 'Dev Admin',
+  photoURL: '',
+} as User;
+// -----------------------------------------
+
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // The original authentication logic is commented out.
+  // To re-activate authentication, uncomment the code below and remove the mock implementation.
+  
+  /*
   const [user, setUser] = useState<User | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,8 +96,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error signing out: ", error);
     }
   };
+  */
 
-  const value = { user, loading, appUser, signInWithGoogle, logout };
+  // --- Mock Implementation for Deactivated Auth ---
+  const value: AuthContextType = {
+    user: mockUser,
+    loading: false,
+    appUser: mockAppUser,
+    signInWithGoogle: async () => { console.log('Auth is deactivated.'); },
+    logout: async () => { console.log('Auth is deactivated.'); },
+  };
+  // -----------------------------------------
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

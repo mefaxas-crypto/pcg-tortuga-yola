@@ -14,7 +14,6 @@ import { Suspense } from 'react';
 import { DashboardStats } from './dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
-import { PanelLeft } from 'lucide-react';
 
 
 export default function Home() {
@@ -37,19 +36,8 @@ export default function Home() {
   }
   
   if (!user) {
-    return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[400px]">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <PanelLeft className="h-12 w-12 text-muted-foreground" />
-          <h3 className="text-2xl mt-4 font-bold tracking-tight">
-            Welcome to the Kitchen Manager
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Please sign in to continue.
-          </p>
-        </div>
-      </div>
-    )
+    // This part is now bypassed by the deactivated auth
+    return null;
   }
 
   if (!selectedOutlet) {
