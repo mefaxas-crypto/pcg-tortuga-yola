@@ -9,7 +9,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Menu, Recipe } from '@/lib/types';
 import { addMenu, editMenu } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -55,6 +55,7 @@ import {
 import { Check, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase } from '@/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Menu name must be at least 2 characters.'),
@@ -78,10 +79,15 @@ export function MenuForm({ mode, menu }: MenuFormProps) {
   const [loading, setLoading] = useState(false);
   const [isRecipeDialogOpen, setRecipeDialogOpen] = useState(false);
   const { firestore } = useFirebase();
+  const { user } = useAuth();
 
-  const recipesQuery = useMemo(() => firestore ? query(collection(firestore, 'recipes')) : null, [firestore]);
+  const recipesQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'recipes'), where('userId', '==', user.uid));
+  }, [firestore, user]);
+
   const { data: recipesData } = useCollection<Recipe>(recipesQuery);
-  const recipes = (recipesData || []).sort((a, b) => a.name.localeCompare(b.name));
+  const recipes = useMemo(() => (recipesData || []).sort((a, b) => a.name.localeCompare(b.name)), [recipesData]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

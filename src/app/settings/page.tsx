@@ -5,8 +5,8 @@ import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { List, Shapes, UtensilsCrossed, Store, Users } from 'lucide-react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { Link } from 'next-intl';
 
 export default function SettingsPage() {
   const { appUser } = useAuth();

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -21,6 +20,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
 import { UserFormSheet } from './UserFormSheet';
 import { useCollection, useFirebase } from '@/firebase';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 
 export function UsersTable() {
@@ -40,13 +41,34 @@ export function UsersTable() {
     setSheetState({ open: false });
   };
 
+  const getRoleBadgeClass = (role: string | undefined) => {
+    if (!role) return '';
+    switch (role) {
+      case 'Admin':
+        return 'bg-primary/80 text-primary-foreground border-primary/90';
+      case 'Manager':
+        return 'bg-blue-500/80 text-white border-blue-600';
+      case 'Chef':
+        return 'bg-green-500/80 text-white border-green-600';
+      case 'Cook':
+        return 'bg-orange-500/80 text-white border-orange-600';
+      case 'Clerk':
+        return 'bg-indigo-500/80 text-white border-indigo-600';
+      case 'Pending':
+        return 'bg-yellow-500/80 text-white border-yellow-600';
+      default:
+        return 'bg-secondary';
+    }
+  };
+
+
   return (
     <>
     <Card>
         <CardHeader>
             <CardTitle>Application Users</CardTitle>
             <CardDescription>
-                Manage application users.
+                Manage user roles and outlet assignments.
             </CardDescription>
         </CardHeader>
       <CardContent>
@@ -56,6 +78,7 @@ export function UsersTable() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -67,6 +90,7 @@ export function UsersTable() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full ml-auto" /></TableCell>
                   </TableRow>
                 ))}
@@ -86,6 +110,11 @@ export function UsersTable() {
                         </div>
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                        <Badge variant="outline" className={cn('capitalize text-xs', getRoleBadgeClass(user.role))}>
+                            {user.role}
+                        </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
                             <FilePenLine className="mr-2 h-4 w-4" />
