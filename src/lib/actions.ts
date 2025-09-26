@@ -30,6 +30,7 @@ import type {
   Recipe,
   Supplier,
   VarianceLogItem,
+  AppUser,
 } from './types';
 import {revalidatePath} from 'next/cache';
 import { Unit, convert, getBaseUnit } from './conversions';
@@ -648,7 +649,7 @@ export async function deleteMenu(menuId: string) {
 
 
 // Sales Actions
-export async function logSale(saleData: z.infer<typeof saleSchema>) {
+export async function logSale(saleData: z.infer<typeof saleSchema>, userId: string) {
   const validatedData = saleSchema.parse(saleData);
   if (!validatedData.outletId) {
     throw new Error('An outlet must be specified to log a sale.');
@@ -666,7 +667,7 @@ export async function logSale(saleData: z.infer<typeof saleSchema>) {
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
       console.warn(`Recipe "${recipe.name}" has no ingredients. No stock will be depleted.`);
       const saleRef = doc(collection(db, 'sales'));
-      transaction.set(saleRef, { ...validatedData, saleDate: serverTimestamp() });
+      transaction.set(saleRef, { ...validatedData, saleDate: serverTimestamp(), userId });
       return;
     }
     
@@ -703,6 +704,7 @@ export async function logSale(saleData: z.infer<typeof saleSchema>) {
     transaction.set(saleRef, {
       ...validatedData,
       saleDate: serverTimestamp(),
+      userId,
     });
 
     for (const data of ingredientsData) {
@@ -742,7 +744,7 @@ export async function logSale(saleData: z.infer<typeof saleSchema>) {
       const permissionError = new FirestorePermissionError({
           path: `sales`,
           operation: 'write',
-          requestResourceData: validatedData,
+          requestResourceData: { ...validatedData, userId },
       });
       errorEmitter.emit('permission-error', permissionError);
       console.error('Error logging sale:', error);
@@ -1560,3 +1562,5 @@ export async function transferInventory(data: z.infer<typeof transferInventorySc
   });
   return { success: true };
 }
+
+    

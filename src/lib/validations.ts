@@ -101,6 +101,7 @@ export const saleSchema = z.object({
   totalRevenue: z.number(),
   totalCost: z.number(),
   saleDate: z.date(),
+  userId: z.string().optional(), // Optional on client, required on server
 });
 
 export const productionLogSchema = z.object({
@@ -205,3 +206,5 @@ export const appUserSchema = z.object({
   role: z.enum(UserRoles),
   assignedOutletId: z.string().optional(),
 });
+
+    

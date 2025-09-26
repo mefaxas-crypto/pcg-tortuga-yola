@@ -31,7 +31,7 @@ export type Recipe = z.infer<typeof recipeSchema> & { id: string };
 export type RecipeIngredient = Recipe['ingredients'][number];
 export type Menu = z.infer<typeof menuSchema> & { id: string };
 export type MenuItem = Menu['items'][number];
-export type Sale = z.infer<typeof saleSchema> & { id: string };
+export type Sale = z.infer<typeof saleSchema> & { id: string, saleDate: Date };
 export type ProductionLog = z.infer<typeof productionLogSchema> & { id: string, logDate: Date, producedItems: {
         recipeId: string;
         recipeName: string;
@@ -104,3 +104,5 @@ export type AddOutletData = z.infer<typeof outletSchema>;
 export type AddAllergenData = z.infer<typeof allergenSchema>;
 export type AddIngredientCategoryData = z.infer<typeof ingredientCategorySchema>;
 export type AppUser = z.infer<typeof appUserSchema>;
+
+    

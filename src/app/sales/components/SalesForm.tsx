@@ -41,7 +41,7 @@ export function SalesForm() {
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const { toast } = useToast();
   const { selectedOutlet } = useOutletContext();
-  const { appUser } = useAuth();
+  const { user, appUser } = useAuth();
   const { firestore } = useFirebase();
 
   const menusQuery = useMemoFirebase(() => query(collection(firestore, 'menus')), [firestore]);
@@ -80,6 +80,14 @@ export function SalesForm() {
       });
       return;
     }
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Authenticated',
+        description: 'You must be logged in to log a sale.',
+      });
+      return;
+    }
     setLoading(true);
 
     const selectedMenu = menus.find(menu => menu.id === values.menuId);
@@ -106,7 +114,7 @@ export function SalesForm() {
             totalRevenue: selectedItem.sellingPrice * values.quantity,
             totalCost: selectedItem.totalCost * values.quantity,
             saleDate: new Date(), // This will be replaced by serverTimestamp in action
-        });
+        }, user.uid);
 
       toast({
         title: 'Sale Logged!',
@@ -210,3 +218,5 @@ export function SalesForm() {
     </Form>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -291,6 +292,10 @@
           "type": "string",
           "description": "Unique identifier for the sales log entry."
         },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who logged the sale."
+        },
         "outletId": {
           "type": "string",
           "description": "Reference to Outlet. (Relationship: Outlet 1:N SalesLog). The outlet where the sale occurred."
@@ -311,6 +316,7 @@
       },
       "required": [
         "id",
+        "userId",
         "outletId",
         "menuItemId",
         "quantity",
@@ -467,6 +473,22 @@
         }
       },
       {
+        "path": "/sales/{salesLogId}",
+        "definition": {
+          "entityName": "SalesLog",
+          "schema": {
+            "$ref": "#/backend/entities/SalesLog"
+          },
+          "description": "Stores sales logs for a specific outlet. Accessible only to the authenticated user who owns the outlet.",
+          "params": [
+            {
+              "name": "salesLogId",
+              "description": "The unique identifier for the sales log."
+            }
+          ]
+        }
+      },
+      {
         "path": "/users/{userId}/outlets/{outletId}",
         "definition": {
           "entityName": "Outlet",
@@ -615,30 +637,6 @@
         }
       },
       {
-        "path": "/users/{userId}/outlets/{outletId}/salesLogs/{salesLogId}",
-        "definition": {
-          "entityName": "SalesLog",
-          "schema": {
-            "$ref": "#/backend/entities/SalesLog"
-          },
-          "description": "Stores sales logs for a specific outlet. Accessible only to the authenticated user who owns the outlet.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "outletId",
-              "description": "The unique identifier for the outlet."
-            },
-            {
-              "name": "salesLogId",
-              "description": "The unique identifier for the sales log."
-            }
-          ]
-        }
-      },
-      {
         "path": "/users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}",
         "definition": {
           "entityName": "StockTake",
@@ -746,3 +744,5 @@
     "reasoning": "This Firestore structure prioritizes security and scalability by adhering to the principles of Authorization Independence, Structural Segregation, and Access Modeling.  It uses path-based ownership for user-specific data and the membership map pattern for collaborative data.  The design focuses on denormalization to avoid `get()` calls in security rules, which enhances atomicity and debuggability.\n\nAuthorization Independence is achieved by denormalizing necessary authorization data.  For example, Outlet documents, which are owned by Users, are stored under a path that inherently links them to a specific user.  The rules can then directly verify `request.auth.uid` against the `userId` field within the document, avoiding costly and insecure `get()` calls.\n\nStructural Segregation is employed to ensure that each collection has a homogeneous security posture.  For example, user profiles are stored in `/users/{userId}` which enforces that only the authenticated user can access their own profile.\n\nThe structure supports QAPs by using the aforementioned segregation and leveraging Firebase Authentication. Listing operations are secure because path-based ownership restricts access to only resources the authenticated user owns or has explicit membership to. DBAC is achieved by relying on `request.auth.uid` and denormalized user IDs within documents, avoiding custom claims."
   }
 }
+
+    
