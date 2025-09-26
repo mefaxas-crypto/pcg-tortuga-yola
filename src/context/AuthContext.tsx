@@ -5,7 +5,7 @@ import React, { createContext, useContext, ReactNode, useState, useEffect } from
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { useFirebase } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -27,13 +27,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        // Fetch app-specific user data from Firestore
         const userRef = doc(firestore, 'users', firebaseUser.uid);
         const docSnap = await getDoc(userRef);
         if (docSnap.exists()) {
           setAppUser(docSnap.data() as AppUser);
         } else {
-          // New user, create a document for them with a 'Pending' role
           const newUser: AppUser = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -41,7 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             photoURL: firebaseUser.photoURL,
             role: 'Pending',
           };
-          await setDoc(userRef, { ...newUser, createdAt: serverTimestamp() });
+          // Use the non-blocking write with standardized error handling
+          setDocumentNonBlocking(userRef, { ...newUser, createdAt: serverTimestamp() }, {});
           setAppUser(newUser);
         }
       } else {
