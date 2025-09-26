@@ -1,748 +1,221 @@
 
 {
   "entities": {
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents an application user's profile information, including their role and assigned outlets.",
       "type": "object",
-      "description": "Represents a user within the application. Stores core user information.",
       "properties": {
-        "id": {
+        "uid": { "type": "string", "description": "The user's unique ID from Firebase Authentication." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "photoURL": { "type": "string", "format": "uri", "description": "URL of the user's profile picture." },
+        "role": { 
           "type": "string",
-          "description": "Unique identifier for the user."
+          "description": "The user's role in the application.",
+          "enum": ["Admin", "Manager", "Chef", "Clerk", "Cook", "Pending"]
         },
-        "email": {
+        "outletId": {
           "type": "string",
-          "description": "User's email address.",
-          "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "User's first name."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "User's last name."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user account was created.",
-          "format": "date-time"
-        },
-        "lastLogin": {
-          "type": "string",
-          "description": "Timestamp indicating when the user last logged in.",
-          "format": "date-time"
+          "description": "ID of the single outlet the user is assigned to. Primarily for Clerk/Cook roles."
         }
       },
-      "required": [
-        "id",
-        "email",
-        "firstName",
-        "lastName",
-        "createdAt"
-      ]
+      "required": ["uid", "email", "displayName", "role"]
     },
     "Outlet": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Outlet",
+      "description": "Represents a single physical kitchen or location.",
       "type": "object",
-      "description": "Represents a physical outlet or location where inventory is managed.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the outlet."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the outlet (e.g., 'Main Kitchen', 'Bar')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the outlet."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Outlet). The user who manages this outlet."
-        }
+        "name": { "type": "string", "description": "The name of the outlet." },
+        "address": { "type": "string", "description": "The physical address of the outlet." },
+        "theme": { "type": "string", "description": "The UI theme associated with the outlet." },
+        "userId": { "type": "string", "description": "The ID of the user who owns this outlet." }
       },
-      "required": [
-        "id",
-        "name",
-        "userId"
-      ]
+      "required": ["name", "userId"]
     },
-    "Ingredient": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Ingredient",
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Represents a vendor or supplier of inventory items.",
       "type": "object",
-      "description": "Represents a single ingredient used in recipes.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ingredient."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the ingredient (e.g., 'Tomato', 'Flour')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the ingredient."
-        },
-        "unitOfMeasure": {
-          "type": "string",
-          "description": "The unit of measure for this ingredient (e.g., 'kg', 'lbs', 'oz')."
-        },
-        "allergenIds": {
-          "type": "array",
-          "description": "References to Allergens. (Relationship: Ingredient N:N Allergen).",
-          "items": {
-            "type": "string"
-          }
-        }
+        "name": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "userId": { "type": "string", "description": "The ID of the user who manages this supplier." }
       },
-      "required": [
-        "id",
-        "name",
-        "unitOfMeasure"
-      ]
-    },
-    "Allergen": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Allergen",
-      "type": "object",
-      "description": "Represents an allergen that can be associated with ingredients and recipes.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the allergen."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the allergen (e.g., 'Gluten', 'Nuts', 'Dairy')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the allergen."
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ]
-    },
-    "Recipe": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Recipe",
-      "type": "object",
-      "description": "Represents a recipe, consisting of multiple ingredients.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the recipe."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the recipe (e.g., 'Tomato Sauce', 'Chocolate Cake')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the recipe."
-        },
-        "instructions": {
-          "type": "string",
-          "description": "Detailed instructions for preparing the recipe."
-        },
-        "allergenIds": {
-          "type": "array",
-          "description": "References to Allergens. (Relationship: Recipe N:N Allergen).  Aggregated allergens from the ingredients.",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "instructions"
-      ]
-    },
-    "RecipeIngredient": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "RecipeIngredient",
-      "type": "object",
-      "description": "Represents the relationship between a recipe and an ingredient, including the quantity required.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the recipe ingredient."
-        },
-        "recipeId": {
-          "type": "string",
-          "description": "Reference to Recipe. (Relationship: Recipe 1:N RecipeIngredient)"
-        },
-        "ingredientId": {
-          "type": "string",
-          "description": "Reference to Ingredient. (Relationship: Ingredient 1:N RecipeIngredient)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the ingredient required for the recipe."
-        }
-      },
-      "required": [
-        "id",
-        "recipeId",
-        "ingredientId",
-        "quantity"
-      ]
+      "required": ["name", "userId"]
     },
     "InventoryItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "InventoryItem",
+      "title": "Inventory Item",
+      "description": "Defines the specification of a single raw ingredient or sub-recipe. This is the master item.",
       "type": "object",
-      "description": "Represents an item in the inventory at a specific outlet.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the inventory item."
-        },
-        "outletId": {
-          "type": "string",
-          "description": "Reference to Outlet. (Relationship: Outlet 1:N InventoryItem)"
-        },
-        "ingredientId": {
-          "type": "string",
-          "description": "Reference to Ingredient. (Relationship: Ingredient 1:N InventoryItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the item currently in stock."
-        },
-        "expirationDate": {
-          "type": "string",
-          "description": "The expiration date of the inventory item.",
-          "format": "date-time"
-        },
-        "parLevel": {
-          "type": "number",
-          "description": "The par level for this inventory item."
-        },
-        "supplier": {
-          "type": "string",
-          "description": "The supplier of this inventory item."
-        }
+        "materialCode": { "type": "string", "description": "SAP or other internal unique code for the material." },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "purchaseQuantity": { "type": "number" },
+        "purchaseUnit": { "type": "string" },
+        "purchasePrice": { "type": "number" },
+        "unitCost": { "type": "number", "description": "Calculated cost per a single recipe unit." },
+        "supplierId": { "type": "string" },
+        "allergens": { "type": "array", "items": { "type": "string" } },
+        "minStock": { "type": "number" },
+        "maxStock": { "type": "number" },
+        "recipeUnit": { "type": "string", "description": "The smallest unit used in recipes (e.g., 'g', 'ml')." },
+        "recipeUnitConversion": { "type": "number", "description": "How many recipe units are in one purchase unit." },
+        "userId": { "type": "string", "description": "The ID of the user who manages this item." }
       },
-      "required": [
-        "id",
-        "outletId",
-        "ingredientId",
-        "quantity"
-      ]
+      "required": ["name", "materialCode", "category", "purchaseQuantity", "purchaseUnit", "purchasePrice", "unitCost", "userId"]
     },
-    "MenuItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MenuItem",
+    "InventoryStock": {
+      "title": "Inventory Stock",
+      "description": "Represents the on-hand quantity of an InventoryItem at a specific Outlet.",
       "type": "object",
-      "description": "Represents an item on the menu, linking to a recipe.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the menu item."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the menu item (e.g., 'Spaghetti Bolognese')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the menu item."
-        },
-        "recipeId": {
-          "type": "string",
-          "description": "Reference to Recipe. (Relationship: Recipe 1:1 MenuItem). The recipe used to prepare this menu item."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price of the menu item."
-        },
-        "allergenIds": {
-          "type": "array",
-          "description": "References to Allergens. (Relationship: MenuItem N:N Allergen). Aggregated allergens from the Recipe.",
-          "items": {
-            "type": "string"
-          }
-        }
+        "inventoryId": { "type": "string", "description": "Reference to the InventoryItem." },
+        "outletId": { "type": "string", "description": "Reference to the Outlet." },
+        "quantity": { "type": "number", "description": "Current on-hand quantity in purchase units." },
+        "status": { "type": "string", "enum": ["In Stock", "Low Stock", "Out of Stock"] },
+        "userId": { "type": "string", "description": "The ID of the user who owns the parent outlet/item." }
       },
-      "required": [
-        "id",
-        "name",
-        "recipeId",
-        "price"
-      ]
+      "required": ["inventoryId", "outletId", "quantity", "status", "userId"]
     },
-    "SalesLog": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SalesLog",
-      "type": "object",
-      "description": "Represents a sales transaction, recording which menu items were sold and their quantities.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the sales log entry."
+    "Recipe": {
+        "title": "Recipe",
+        "description": "A recipe for a menu item or sub-recipe.",
+        "type": "object",
+        "properties": {
+            "internalCode": { "type": "string" },
+            "sapCode": { "type": "string" },
+            "name": { "type": "string" },
+            "isSubRecipe": { "type": "boolean" },
+            "category": { "type": "string" },
+            "yield": { "type": "number" },
+            "yieldUnit": { "type": "string" },
+            "notes": { "type": "string" },
+            "ingredients": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "itemId": { "type": "string" },
+                        "name": { "type": "string" },
+                        "quantity": { "type": "number" },
+                        "unit": { "type": "string" },
+                        "totalCost": { "type": "number" }
+                    },
+                    "required": ["itemId", "name", "quantity", "unit", "totalCost"]
+                }
+            },
+            "totalCost": { "type": "number" },
+            "contingencyPercentage": { "type": "number" },
+            "foodCostPercentage": { "type": "number" },
+            "userId": { "type": "string" }
         },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who logged the sale."
-        },
-        "outletId": {
-          "type": "string",
-          "description": "Reference to Outlet. (Relationship: Outlet 1:N SalesLog). The outlet where the sale occurred."
-        },
-        "menuItemId": {
-          "type": "string",
-          "description": "Reference to MenuItem. (Relationship: MenuItem 1:N SalesLog)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the menu item sold in this transaction."
-        },
-        "transactionDate": {
-          "type": "string",
-          "description": "The date and time of the sales transaction.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "outletId",
-        "menuItemId",
-        "quantity",
-        "transactionDate"
-      ]
+        "required": ["name", "internalCode", "isSubRecipe", "category", "ingredients", "totalCost", "userId"]
     },
-    "StockTake": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StockTake",
-      "type": "object",
-      "description": "Represents a physical stock take event, recording the counted quantities of inventory items.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the stock take event."
+    "Menu": {
+        "title": "Menu",
+        "description": "A collection of recipes sold as menu items.",
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "recipeId": { "type": "string" },
+                        "name": { "type": "string" },
+                        "category": { "type": "string" },
+                        "totalCost": { "type": "number" },
+                        "sellingPrice": { "type": "number" }
+                    },
+                    "required": ["recipeId", "name", "category", "totalCost", "sellingPrice"]
+                }
+            },
+            "userId": { "type": "string" }
         },
-        "outletId": {
-          "type": "string",
-          "description": "Reference to Outlet. (Relationship: Outlet 1:N StockTake). The outlet where the stock take was conducted."
-        },
-        "stockTakeDate": {
-          "type": "string",
-          "description": "The date and time the stock take was performed.",
-          "format": "date-time"
-        },
-        "notes": {
-          "type": "string",
-          "description": "Any notes or observations made during the stock take."
-        }
-      },
-      "required": [
-        "id",
-        "outletId",
-        "stockTakeDate"
-      ]
+        "required": ["name", "items", "userId"]
     },
-    "StockTakeItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StockTakeItem",
-      "type": "object",
-      "description": "Represents a specific item counted during a stock take event.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the stock take item."
+    "Sale": {
+        "title": "Sale",
+        "description": "A record of a single sale transaction.",
+        "type": "object",
+        "properties": {
+            "outletId": { "type": "string" },
+            "menuId": { "type": "string" },
+            "menuName": { "type": "string" },
+            "recipeId": { "type": "string" },
+            "recipeName": { "type": "string" },
+            "quantity": { "type": "number" },
+            "totalRevenue": { "type": "number" },
+            "totalCost": { "type": "number" },
+            "saleDate": { "type": "string", "format": "date-time" },
+            "userId": { "type": "string" }
         },
-        "stockTakeId": {
-          "type": "string",
-          "description": "Reference to StockTake. (Relationship: StockTake 1:N StockTakeItem)"
-        },
-        "inventoryItemId": {
-          "type": "string",
-          "description": "Reference to InventoryItem. (Relationship: InventoryItem 1:N StockTakeItem)"
-        },
-        "countedQuantity": {
-          "type": "number",
-          "description": "The quantity of the item counted during the stock take."
-        }
-      },
-      "required": [
-        "id",
-        "stockTakeId",
-        "inventoryItemId",
-        "countedQuantity"
-      ]
+        "required": ["outletId", "menuId", "recipeId", "quantity", "totalRevenue", "totalCost", "saleDate", "userId"]
     },
-    "Fabrication": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Fabrication",
-      "type": "object",
-      "description": "Represents the process of breaking down a raw ingredient into usable parts.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the fabrication process."
+    "PurchaseOrder": {
+        "title": "Purchase Order",
+        "description": "A request to a supplier to purchase items.",
+        "type": "object",
+        "properties": {
+            "poNumber": { "type": "string" },
+            "supplierId": { "type": "string" },
+            "supplierName": { "type": "string" },
+            "outletId": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "status": { "type": "string", "enum": ["Pending", "Partially Received", "Received", "Cancelled"] },
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "itemId": { "type": "string" },
+                        "name": { "type": "string" },
+                        "materialCode": { "type": "string" },
+                        "orderQuantity": { "type": "number" },
+                        "purchaseUnit": { "type": "string" },
+                        "purchasePrice": { "type": "number" }
+                    }
+                }
+            },
+            "userId": { "type": "string" }
         },
-        "ingredientId": {
-          "type": "string",
-          "description": "Reference to Ingredient. (Relationship: Ingredient 1:N Fabrication). The raw ingredient being fabricated."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the fabrication (e.g., Tenderloin Breakdown)."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the fabrication process."
-        }
-      },
-      "required": [
-        "id",
-        "ingredientId",
-        "name"
-      ]
+        "required": ["poNumber", "supplierId", "outletId", "status", "items", "userId"]
     },
-    "FabricationYield": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FabricationYield",
+    "Allergen": {
+      "title": "Allergen",
+      "description": "Represents a food allergen. This is a global collection.",
       "type": "object",
-      "description": "Represents the items yielded from a fabrication process, including their quantities and waste percentage.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the fabrication yield."
-        },
-        "fabricationId": {
-          "type": "string",
-          "description": "Reference to Fabrication. (Relationship: Fabrication 1:N FabricationYield)"
-        },
-        "ingredientId": {
-          "type": "string",
-          "description": "Reference to Ingredient. (Relationship: Ingredient 1:N FabricationYield). The ingredient yielded from the fabrication."
-        },
-        "yieldQuantity": {
-          "type": "number",
-          "description": "The quantity of the ingredient yielded from the fabrication process."
-        },
-        "wastePercentage": {
-          "type": "number",
-          "description": "The percentage of waste generated during the yield of the fabrication process."
-        }
-      },
-      "required": [
-        "id",
-        "fabricationId",
-        "ingredientId",
-        "yieldQuantity",
-        "wastePercentage"
-      ]
+      "properties": { "name": { "type": "string" } },
+      "required": ["name"]
+    },
+    "IngredientCategory": {
+      "title": "Ingredient Category",
+      "description": "A category for ingredients. This is a global collection.",
+      "type": "object",
+      "properties": { "name": { "type": "string" } },
+      "required": ["name"]
     }
   },
-  "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
-  },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles.  Accessible only to the authenticated user with matching userId.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/sales/{salesLogId}",
-        "definition": {
-          "entityName": "SalesLog",
-          "schema": {
-            "$ref": "#/backend/entities/SalesLog"
-          },
-          "description": "Stores sales logs for a specific outlet. Accessible only to the authenticated user who owns the outlet.",
-          "params": [
-            {
-              "name": "salesLogId",
-              "description": "The unique identifier for the sales log."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/outlets/{outletId}",
-        "definition": {
-          "entityName": "Outlet",
-          "schema": {
-            "$ref": "#/backend/entities/Outlet"
-          },
-          "description": "Stores outlets owned by a specific user. Accessible only to the authenticated user with matching userId in the outlet document.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "outletId",
-              "description": "The unique identifier for the outlet."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/outlets/{outletId}/inventoryItems/{inventoryItemId}",
-        "definition": {
-          "entityName": "InventoryItem",
-          "schema": {
-            "$ref": "#/backend/entities/InventoryItem"
-          },
-          "description": "Stores inventory items for a specific outlet. Accessible only to the authenticated user who owns the outlet.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "outletId",
-              "description": "The unique identifier for the outlet."
-            },
-            {
-              "name": "inventoryItemId",
-              "description": "The unique identifier for the inventory item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/ingredients/{ingredientId}",
-        "definition": {
-          "entityName": "Ingredient",
-          "schema": {
-            "$ref": "#/backend/entities/Ingredient"
-          },
-          "description": "Stores ingredients managed by a specific user.  Accessible only to the authenticated user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "ingredientId",
-              "description": "The unique identifier for the ingredient."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/allergens/{allergenId}",
-        "definition": {
-          "entityName": "Allergen",
-          "schema": {
-            "$ref": "#/backend/entities/Allergen"
-          },
-          "description": "Stores allergens. Publicly readable, but write access restricted to admin roles (managed externally).",
-          "params": [
-            {
-              "name": "allergenId",
-              "description": "The unique identifier for the allergen."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/recipes/{recipeId}",
-        "definition": {
-          "entityName": "Recipe",
-          "schema": {
-            "$ref": "#/backend/entities/Recipe"
-          },
-          "description": "Stores recipes created by a specific user.  Accessible only to the authenticated user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "recipeId",
-              "description": "The unique identifier for the recipe."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/recipes/{recipeId}/recipeIngredients/{recipeIngredientId}",
-        "definition": {
-          "entityName": "RecipeIngredient",
-          "schema": {
-            "$ref": "#/backend/entities/RecipeIngredient"
-          },
-          "description": "Stores recipe ingredients for a specific recipe. Accessible only to the authenticated user who owns the recipe.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "recipeId",
-              "description": "The unique identifier for the recipe."
-            },
-            {
-              "name": "recipeIngredientId",
-              "description": "The unique identifier for the recipe ingredient."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/outlets/{outletId}/menuItems/{menuItemId}",
-        "definition": {
-          "entityName": "MenuItem",
-          "schema": {
-            "$ref": "#/backend/entities/MenuItem"
-          },
-          "description": "Stores menu items for a specific outlet.  Accessible only to the authenticated user who owns the outlet.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "outletId",
-              "description": "The unique identifier for the outlet."
-            },
-            {
-              "name": "menuItemId",
-              "description": "The unique identifier for the menu item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}",
-        "definition": {
-          "entityName": "StockTake",
-          "schema": {
-            "$ref": "#/backend/entities/StockTake"
-          },
-          "description": "Stores stock take events for a specific outlet. Accessible only to the authenticated user who owns the outlet.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "outletId",
-              "description": "The unique identifier for the outlet."
-            },
-            {
-              "name": "stockTakeId",
-              "description": "The unique identifier for the stock take event."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/outlets/{outletId}/stockTakes/{stockTakeId}/stockTakeItems/{stockTakeItemId}",
-        "definition": {
-          "entityName": "StockTakeItem",
-          "schema": {
-            "$ref": "#/backend/entities/StockTakeItem"
-          },
-          "description": "Stores stock take items for a specific stock take event. Accessible only to the authenticated user who owns the outlet.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "outletId",
-              "description": "The unique identifier for the outlet."
-            },
-            {
-              "name": "stockTakeId",
-              "description": "The unique identifier for the stock take event."
-            },
-            {
-              "name": "stockTakeItemId",
-              "description": "The unique identifier for the stock take item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}",
-        "definition": {
-          "entityName": "Fabrication",
-          "schema": {
-            "$ref": "#/backend/entities/Fabrication"
-          },
-          "description": "Stores fabrications for a specific ingredient. Accessible only to the authenticated user who owns the ingredient.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "ingredientId",
-              "description": "The unique identifier for the ingredient."
-            },
-            {
-              "name": "fabricationId",
-              "description": "The unique identifier for the fabrication."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/ingredients/{ingredientId}/fabrications/{fabricationId}/fabricationYields/{fabricationYieldId}",
-        "definition": {
-          "entityName": "FabricationYield",
-          "schema": {
-            "$ref": "#/backend/entities/FabricationYield"
-          },
-          "description": "Stores fabrication yields for a specific fabrication. Accessible only to the authenticated user who owns the ingredient.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "ingredientId",
-              "description": "The unique identifier for the ingredient."
-            },
-            {
-              "name": "fabricationId",
-              "description": "The unique identifier for the fabrication."
-            },
-            {
-              "name": "fabricationYieldId",
-              "description": "The unique identifier for the fabrication yield."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "This Firestore structure prioritizes security and scalability by adhering to the principles of Authorization Independence, Structural Segregation, and Access Modeling.  It uses path-based ownership for user-specific data and the membership map pattern for collaborative data.  The design focuses on denormalization to avoid `get()` calls in security rules, which enhances atomicity and debuggability.\n\nAuthorization Independence is achieved by denormalizing necessary authorization data.  For example, Outlet documents, which are owned by Users, are stored under a path that inherently links them to a specific user.  The rules can then directly verify `request.auth.uid` against the `userId` field within the document, avoiding costly and insecure `get()` calls.\n\nStructural Segregation is employed to ensure that each collection has a homogeneous security posture.  For example, user profiles are stored in `/users/{userId}` which enforces that only the authenticated user can access their own profile.\n\nThe structure supports QAPs by using the aforementioned segregation and leveraging Firebase Authentication. Listing operations are secure because path-based ownership restricts access to only resources the authenticated user owns or has explicit membership to. DBAC is achieved by relying on `request.auth.uid` and denormalized user IDs within documents, avoiding custom claims."
+    "/users/{userId}": { "schema": { "$ref": "#/entities/UserProfile" }, "description": "Stores public-facing user profile information." },
+    "/outlets/{outletId}": { "schema": { "$ref": "#/entities/Outlet" }, "description": "Root collection for all outlets across all users." },
+    "/suppliers/{supplierId}": { "schema": { "$ref": "#/entities/Supplier" }, "description": "Root collection for all suppliers across all users." },
+    "/inventory/{inventoryId}": { "schema": { "$ref": "#/entities/InventoryItem" }, "description": "Root collection for all master inventory item specifications." },
+    "/inventoryStock/{stockId}": { "schema": { "$ref": "#/entities/InventoryStock" }, "description": "Represents the many-to-many relationship between InventoryItem and Outlet." },
+    "/recipes/{recipeId}": { "schema": { "$ref": "#/entities/Recipe" }, "description": "Root collection for all recipes." },
+    "/menus/{menuId}": { "schema": { "$ref": "#/entities/Menu" }, "description": "Root collection for all menus." },
+    "/sales/{saleId}": { "schema": { "$ref": "#/entities/Sale" }, "description": "Root collection for all sales logs." },
+    "/purchaseOrders/{poId}": { "schema": { "$ref": "#/entities/PurchaseOrder" }, "description": "Root collection for all purchase orders." },
+    "/allergens/{allergenId}": { "schema": { "$ref": "#/entities/Allergen" }, "description": "Global list of allergens, publicly readable." },
+    "/ingredientCategories/{categoryId}": { "schema": { "$ref": "#/entities/IngredientCategory" }, "description": "Global list of ingredient categories, publicly readable." }
+  },
+  "auth": {
+    "providers": ["google.com"]
   }
 }
-
-    
