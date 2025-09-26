@@ -1,9 +1,12 @@
 
+'use client';
+
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Settings, Shapes, UtensilsCrossed, Store } from 'lucide-react';
-import Link from 'next/link';
+import { List, Shapes, UtensilsCrossed, Store, Palette } from 'lucide-react';
+import Link from 'next-intl';
+import { ThemeSwitcher } from './components/ThemeSwitcher';
 
 export default function SettingsPage() {
   return (
@@ -77,21 +80,15 @@ export default function SettingsPage() {
          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-                <Settings />
+                <Palette />
                 General Settings
             </CardTitle>
             <CardDescription>
-              Manage other application preferences.
+              Manage application appearance and preferences.
             </CardDescription>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[88px]">
-                <div className="flex flex-col items-center gap-1 text-center">
-                    <p className="text-sm text-muted-foreground">
-                        Coming soon
-                    </p>
-                </div>
-            </div>
+             <ThemeSwitcher />
           </CardContent>
         </Card>
       </div>
