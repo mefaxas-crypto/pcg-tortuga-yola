@@ -4,10 +4,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useOutletContext } from '@/context/OutletContext';
-import { db } from '@/lib/firebase';
 import type { Sale, VarianceLog } from '@/lib/types';
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { useEffect, useState, useMemo } from 'react';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { addDays, format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const chartConfig = {
   variance: {
@@ -32,84 +32,42 @@ const chartConfig = {
 
 
 export function VarianceAnalysis() {
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
-  const [sales, setSales] = useState<Sale[] | null>(null);
-  const [varianceLogs, setVarianceLogs] = useState<VarianceLog[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    if (!selectedOutlet || !date?.from || !date?.to) {
-      setSales([]);
-      setVarianceLogs([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
 
+  const salesQuery = useMemoFirebase(() => {
+    if (!selectedOutlet || !date?.from || !date?.to) return null;
     const toDate = new Date(date.to);
     toDate.setHours(23, 59, 59, 999);
-
-    const salesQuery = query(
-        collection(db, 'sales'),
+    return query(
+        collection(firestore, 'sales'),
         where('outletId', '==', selectedOutlet.id),
         where('saleDate', '>=', Timestamp.fromDate(date.from)),
         where('saleDate', '<=', Timestamp.fromDate(toDate))
     );
+  }, [firestore, selectedOutlet, date]);
 
-     const varianceQuery = query(
-        collection(db, 'varianceLogs'),
+  const varianceQuery = useMemoFirebase(() => {
+    if (!selectedOutlet || !date?.from || !date?.to) return null;
+    const toDate = new Date(date.to);
+    toDate.setHours(23, 59, 59, 999);
+    return query(
+        collection(firestore, 'varianceLogs'),
         where('outletId', '==', selectedOutlet.id),
         where('logDate', '>=', Timestamp.fromDate(date.from)),
         where('logDate', '<=', Timestamp.fromDate(toDate)),
         orderBy('logDate', 'desc')
     );
+  }, [firestore, selectedOutlet, date]);
 
-    let salesLoaded = false;
-    let varianceLoaded = false;
-
-    const checkLoadingState = () => {
-        if (salesLoaded && varianceLoaded) {
-            setLoading(false);
-        }
-    }
-
-    const unsubSales = onSnapshot(salesQuery, (snapshot) => {
-        setSales(snapshot.docs.map(doc => doc.data() as Sale));
-        salesLoaded = true;
-        checkLoadingState();
-    }, (err) => {
-        console.error("Error fetching sales data:", err);
-        salesLoaded = true;
-        checkLoadingState();
-    });
-
-    const unsubVariance = onSnapshot(varianceQuery, (snapshot) => {
-        setVarianceLogs(snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id,
-                logDate: (data.logDate as Timestamp).toDate()
-            } as VarianceLog;
-        }));
-        varianceLoaded = true;
-        checkLoadingState();
-    }, (err) => {
-        console.error("Error fetching variance logs:", err);
-        varianceLoaded = true;
-        checkLoadingState();
-    });
-
-    return () => {
-        unsubSales();
-        unsubVariance();
-    };
-
-  }, [selectedOutlet, date]);
+  const { data: sales, isLoading: salesLoading } = useCollection<Sale>(salesQuery);
+  const { data: varianceLogs, isLoading: varianceLoading } = useCollection<VarianceLog>(varianceQuery);
+  
+  const loading = salesLoading || varianceLoading;
 
   const { theoreticalCost, actualCost, varianceAmount, variancePercentage, dailyVariance } = useMemo(() => {
     if (!sales || !varianceLogs) return { theoreticalCost: 0, actualCost: 0, varianceAmount: 0, variancePercentage: 0, dailyVariance: [] };
@@ -292,3 +250,5 @@ export function VarianceAnalysis() {
     </div>
   )
 }
+
+    
