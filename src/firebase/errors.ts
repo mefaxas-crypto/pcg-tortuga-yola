@@ -82,9 +82,6 @@ export function handleFirebaseError(
     );
   }
 
-  // Emit the error for global logging/monitoring
-  errorEmitter.emit('error', { source: options.source, error: standardizedError });
-
   if (isDev) {
     console.error(`[${options.source}]`, standardizedError);
   }
@@ -95,3 +92,4 @@ export function handleFirebaseError(
 
   return standardizedError;
 }
+

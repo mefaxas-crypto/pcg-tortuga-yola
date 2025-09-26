@@ -7,7 +7,6 @@ import type { FirestorePermissionError } from './errors';
 interface TypedEvents {
   'permission-error': (error: FirestorePermissionError) => void;
   'navigation:push': (path: string) => void;
-  error: (details: { source: string; error: Error }) => void;
 }
 
 // Extend EventEmitter with our custom typed events
