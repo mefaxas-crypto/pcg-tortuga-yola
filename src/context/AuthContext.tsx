@@ -40,7 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (!userData.role) {
                 const usersCollectionRef = collection(db, 'users');
                 const allUsersSnap = await getDocs(usersCollectionRef);
-                const isFirstUser = allUsersSnap.size === 1 && allUsersSnap.docs[0].id === firebaseUser.uid;
+                // If this is the only user in the system, they must be the admin.
+                const isFirstUser = allUsersSnap.size === 1;
                 const roleToAssign = isFirstUser ? 'Admin' : 'Pending';
                 
                 await updateDoc(userDocRef, { role: roleToAssign });
