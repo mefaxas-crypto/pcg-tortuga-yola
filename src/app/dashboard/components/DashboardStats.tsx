@@ -44,6 +44,7 @@ export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) 
 
   useEffect(() => {
     if (!selectedOutlet) {
+      setSales([]);
       setLoading(false);
       return;
     };
