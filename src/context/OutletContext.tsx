@@ -11,6 +11,7 @@ type OutletContextType = {
   selectedOutlet: Outlet | null;
   setSelectedOutlet: (outlet: Outlet | null) => void;
   outlets: Outlet[];
+  isLoading: boolean;
 };
 
 const OutletContext = createContext<OutletContextType | undefined>(undefined);
@@ -60,7 +61,8 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
     selectedOutlet,
     setSelectedOutlet,
     outlets: outletList,
-  }), [selectedOutlet, outletList]);
+    isLoading,
+  }), [selectedOutlet, outletList, isLoading]);
 
   return (
     <OutletContext.Provider value={value}>

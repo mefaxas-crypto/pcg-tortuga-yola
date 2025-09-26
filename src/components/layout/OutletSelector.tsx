@@ -14,7 +14,7 @@ import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
 
 export function OutletSelector() {
-  const { outlets, selectedOutlet, setSelectedOutlet } = useOutletContext();
+  const { outlets, selectedOutlet, setSelectedOutlet, isLoading } = useOutletContext();
   const { appUser } = useAuth();
 
   const isRestrictedUser = appUser && (appUser.role === 'Clerk' || appUser.role === 'Cook');
@@ -25,8 +25,8 @@ export function OutletSelector() {
     setSelectedOutlet(outlet || null);
   };
 
-  if (!outlets.length) {
-    return <Skeleton className='h-9 w-48' />
+  if (isLoading) {
+    return <Skeleton className='h-9 w-48' />;
   }
   
   if (isRestrictedUser && !selectedOutlet) {
@@ -41,9 +41,9 @@ export function OutletSelector() {
   return (
     <div className="flex items-center gap-2">
       <Store className="h-5 w-5 text-muted-foreground" />
-      <Select value={selectedOutlet?.id || ''} onValueChange={handleSelectChange} disabled={isRestrictedUser}>
+      <Select value={selectedOutlet?.id || ''} onValueChange={handleSelectChange} disabled={isRestrictedUser || outlets.length === 0}>
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Select Outlet" />
+          <SelectValue placeholder={outlets.length === 0 ? "No outlets found" : "Select Outlet"} />
         </SelectTrigger>
         <SelectContent>
           {outlets.map((outlet) => (
