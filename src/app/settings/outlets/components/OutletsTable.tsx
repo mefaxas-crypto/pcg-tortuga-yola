@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { Outlet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteOutletDialog } from './DeleteOutletDialog';
@@ -39,6 +39,7 @@ export function OutletsTable({ onEdit }: OutletsTableProps) {
       !authLoading && user && firestore
         ? query(
             collection(firestore, 'outlets'),
+            where('userId', '==', user.uid),
             orderBy('name', 'asc')
           )
         : null, [authLoading, user, firestore]);

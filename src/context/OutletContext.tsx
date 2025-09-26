@@ -3,7 +3,7 @@
 
 import type { Outlet } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import { useCollection, useFirebase } from '@/firebase';
 import { useAuth } from './AuthContext';
 
@@ -17,16 +17,20 @@ const OutletContext = createContext<OutletContextType | undefined>(undefined);
 
 export const OutletProvider = ({ children }: { children: ReactNode }) => {
   const { firestore } = useFirebase();
-  const { appUser } = useAuth();
+  const { appUser, user, loading: authLoading } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
 
   const outletsQuery = useMemo(
-    () => firestore ? query(collection(firestore, 'outlets'), orderBy('name', 'asc')) : null,
-    [firestore]
+    () => {
+        if (!firestore || !user) return null;
+        return query(collection(firestore, 'outlets'), where('userId', '==', user.uid), orderBy('name', 'asc'))
+    },
+    [firestore, user]
   );
-  const { data: outlets, isLoading } = useCollection<Outlet>(outletsQuery);
+  const { data: outlets, isLoading: outletsLoading } = useCollection<Outlet>(outletsQuery);
 
   const outletList = useMemo(() => outlets || [], [outlets]);
+  const isLoading = authLoading || outletsLoading;
 
   useEffect(() => {
     if (isLoading || outletList.length === 0) return;
