@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
 import { UserRoles } from '@/lib/validations';
 
@@ -25,40 +25,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
         setUser(firebaseUser);
+        
+        // Listen for real-time updates on the user's document
         const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setAppUser(userDocSnap.data() as AppUser);
-        } else {
-          // This is a new user signing up.
-          // Check if this is the VERY first user in the system.
-          const usersCollectionRef = collection(db, 'users');
-          const allUsersSnap = await getDocs(usersCollectionRef);
-          
-          const isFirstUser = allUsersSnap.empty;
+        const unsubscribeFirestore = onSnapshot(userDocRef, async (userDocSnap) => {
+          if (userDocSnap.exists()) {
+            setAppUser(userDocSnap.data() as AppUser);
+          } else {
+            // This is a new user signing up.
+            const usersCollectionRef = collection(db, 'users');
+            const allUsersSnap = await getDocs(usersCollectionRef);
+            const isFirstUser = allUsersSnap.empty;
 
-          const newUser: AppUser = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            role: isFirstUser ? 'Admin' : 'Pending', // First user is Admin, others are Pending
-          };
-          await setDoc(userDocRef, newUser);
-          setAppUser(newUser);
-        }
+            const newUser: AppUser = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              role: isFirstUser ? 'Admin' : 'Pending',
+            };
+            await setDoc(userDocRef, newUser);
+            setAppUser(newUser);
+          }
+        });
+        
+        setLoading(false);
+        // Return the firestore listener so it gets cleaned up
+        return () => unsubscribeFirestore();
+
       } else {
         setUser(null);
         setAppUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   const signInWithGoogle = async () => {
