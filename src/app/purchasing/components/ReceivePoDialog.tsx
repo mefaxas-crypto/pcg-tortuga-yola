@@ -86,7 +86,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
         received: item.orderQuantity, // Default to receiving what was ordered
       })),
       notes: '',
-      document: null,
+      document: undefined,
     },
   });
 
@@ -206,7 +206,7 @@ export function ReceivePoDialog({ po, open, onClose }: ReceivePoDialogProps) {
                   <FormField
                     control={form.control}
                     name="document"
-                    render={({ field: { onChange, ...rest } }) => (
+                    render={({ field: { onChange, value, ...rest } }) => (
                       <FormItem>
                         <FormLabel>Attach Invoice/Document (Optional)</FormLabel>
                         <FormControl>
