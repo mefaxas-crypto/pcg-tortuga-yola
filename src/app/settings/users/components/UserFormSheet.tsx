@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -33,9 +34,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import type { AppUser, Outlet } from '@/lib/types';
 import { UserRoles } from '@/lib/validations';
-import { doc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc, updateDoc, collection, query } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   role: z.enum(UserRoles),
@@ -70,9 +71,14 @@ export function UserFormSheet({
   user,
   onClose,
 }: UserFormSheetProps) {
+  const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
-  const [outlets, setOutlets] = useState<Outlet[]>([]);
   const { toast } = useToast();
+
+  const outletsQuery = useMemoFirebase(() => query(collection(firestore, 'outlets')), [firestore]);
+  const { data: outletsData } = useCollection<Outlet>(outletsQuery);
+  const outlets = (outletsData || []).sort((a,b) => a.name.localeCompare(b.name));
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -80,16 +86,6 @@ export function UserFormSheet({
       assignedOutletId: '',
     },
   });
-
-  useEffect(() => {
-    const q = query(collection(db, 'outlets'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data: Outlet[] = [];
-        snapshot.forEach(doc => data.push({id: doc.id, ...doc.data()} as Outlet));
-        setOutlets(data.sort((a,b) => a.name.localeCompare(b.name)));
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (open && user) {
@@ -107,7 +103,7 @@ export function UserFormSheet({
     }
     setLoading(true);
     try {
-        const userRef = doc(db, 'users', user.uid);
+        const userRef = doc(firestore, 'users', user.uid);
         const dataToUpdate: Partial<AppUser> = { role: values.role };
         if (values.role === 'Clerk' || values.role === 'Cook') {
             dataToUpdate.assignedOutletId = values.assignedOutletId;

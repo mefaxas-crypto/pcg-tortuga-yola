@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,12 +18,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteTemplateDialog } from './DeleteTemplateDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 
 type TemplatesTableProps = {
@@ -30,45 +31,26 @@ type TemplatesTableProps = {
 };
 
 export function TemplatesTable({ onEdit }: TemplatesTableProps) {
-  const [templates, setTemplates] = useState<ButcheryTemplate[] | null>(null);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
 
-  useEffect(() => {
-    const qTemplates = query(collection(db, 'butcheryTemplates'), orderBy('name', 'asc'));
-    const unsubscribeTemplates = onSnapshot(
-      qTemplates,
-      (querySnapshot) => {
-        const data: ButcheryTemplate[] = [];
-        querySnapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() } as ButcheryTemplate);
-        });
-        setTemplates(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching templates:', error);
-        setLoading(false);
-      }
-    );
-    
-    const qInventory = query(collection(db, 'inventory'));
-    const unsubscribeInventory = onSnapshot(qInventory, (snapshot) => {
-        const items: InventoryItem[] = [];
-        snapshot.forEach((doc) => {
-            items.push({ id: doc.id, ...doc.data() } as InventoryItem);
-        });
-        setInventory(items);
-    });
+  const templatesQuery = useMemoFirebase(() => query(collection(firestore, 'butcheryTemplates'), orderBy('name', 'asc')), [firestore]);
+  const { data: templates, isLoading: templatesLoading } = useCollection<ButcheryTemplate>(templatesQuery);
+  
+  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const { data: inventory, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
 
-    return () => {
-        unsubscribeTemplates();
-        unsubscribeInventory();
-    };
-  }, []);
+  const loading = templatesLoading || inventoryLoading;
+
+  const inventoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (inventory) {
+      inventory.forEach(item => map.set(item.materialCode, item.name));
+    }
+    return map;
+  }, [inventory]);
 
   const getPrimaryItemName = (materialCode: string) => {
-    return inventory.find(i => i.materialCode === materialCode)?.name || materialCode;
+    return inventoryMap.get(materialCode) || materialCode;
   }
 
   return (

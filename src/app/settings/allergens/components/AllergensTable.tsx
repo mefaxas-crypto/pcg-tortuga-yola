@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,38 +18,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Allergen } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteAllergenDialog } from './DeleteAllergenDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 
 export function AllergensTable() {
-  const [allergens, setAllergens] = useState<Allergen[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'allergens'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const allergensData: Allergen[] = [];
-        querySnapshot.forEach((doc) => {
-          allergensData.push({ id: doc.id, ...doc.data() } as Allergen);
-        });
-        setAllergens(allergensData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching allergens:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
+  const { firestore } = useFirebase();
+  const allergensQuery = useMemoFirebase(() => query(collection(firestore, 'allergens'), orderBy('name', 'asc')), [firestore]);
+  const { data: allergens, isLoading: loading } = useCollection<Allergen>(allergensQuery);
 
   return (
     <Card>

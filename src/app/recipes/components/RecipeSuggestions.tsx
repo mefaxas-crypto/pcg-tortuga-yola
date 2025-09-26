@@ -1,3 +1,4 @@
+
 'use client';
 
 import { suggestRecipesFromInventory } from '@/ai/flows/suggest-recipes-from-inventory';
@@ -26,10 +27,10 @@ import { Bot, ChefHat, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query } from 'firebase/firestore';
 import type { InventoryItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   inventory: z.string().min(1, 'Please list at least one ingredient.'),
@@ -37,9 +38,12 @@ const formSchema = z.object({
 
 export function RecipeSuggestions() {
   const [loading, setLoading] = useState(false);
-  const [inventoryLoading, setInventoryLoading] = useState(true);
   const [recipes, setRecipes] = useState<string[]>([]);
   const { toast } = useToast();
+  const { firestore } = useFirebase();
+
+  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const { data: inventoryData, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,32 +53,11 @@ export function RecipeSuggestions() {
   });
 
   useEffect(() => {
-    setInventoryLoading(true);
-    const q = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const items: InventoryItem[] = [];
-        querySnapshot.forEach((doc) => {
-          items.push(doc.data() as InventoryItem);
-        });
-        const inventoryNames = items.map((item) => item.name).join(', ');
-        form.setValue('inventory', inventoryNames);
-        setInventoryLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching inventory:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load inventory for suggestions.',
-        });
-        setInventoryLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [form, toast]);
+    if (inventoryData) {
+      const inventoryNames = inventoryData.map((item) => item.name).join(', ');
+      form.setValue('inventory', inventoryNames);
+    }
+  }, [inventoryData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);

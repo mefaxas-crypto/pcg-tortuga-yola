@@ -20,47 +20,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useOutletContext } from '@/context/OutletContext';
-import { db } from '@/lib/firebase';
+import { useDoc, useFirebase } from '@/firebase';
 import type { PurchaseOrder } from '@/lib/types';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Printer, ArrowLeft } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next-intl/client';
 
 export default function PurchaseOrderPage() {
   const router = useRouter();
   const params = useParams();
-  const [po, setPo] = useState<PurchaseOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { selectedOutlet } = useOutletContext();
+  const { firestore } = useFirebase();
   const id = params.id as string;
-
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    const fetchPO = async () => {
-      try {
-        const docRef = doc(db, 'purchaseOrders', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setPo({
-            id: docSnap.id,
-            ...data,
-            createdAt: data.createdAt?.toDate(),
-          } as PurchaseOrder);
-        }
-      } catch (error) {
-        console.error('Error fetching PO:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPO();
-  }, [id]);
-
+  const poRef = doc(firestore, 'purchaseOrders', id);
+  const { data: po, isLoading: loading } = useDoc<PurchaseOrder>(poRef);
+  const { selectedOutlet } = useOutletContext();
+  
   const totalCost = po?.items.reduce((sum, item) => sum + (item.orderQuantity * item.purchasePrice), 0) || 0;
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 

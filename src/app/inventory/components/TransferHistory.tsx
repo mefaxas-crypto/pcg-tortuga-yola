@@ -3,49 +3,24 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { db } from '@/lib/firebase';
 import type { InventoryTransfer } from '@/lib/types';
-import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight } from 'lucide-react';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 export function TransferHistory() {
-  const [transfers, setTransfers] = useState<InventoryTransfer[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setTransfers([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const q = query(collection(db, 'inventoryTransfers'), orderBy('transferDate', 'desc'), limit(50));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data: InventoryTransfer[] = [];
-      snapshot.forEach(doc => {
-        const docData = doc.data();
-        data.push({
-          id: doc.id,
-          ...docData,
-          transferDate: (docData.transferDate as Timestamp)?.toDate(),
-        } as InventoryTransfer);
-      });
-      setTransfers(data);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching transfer history:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  
+  const transfersQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(collection(firestore, 'inventoryTransfers'), orderBy('transferDate', 'desc'), limit(50));
+  }, [firestore, selectedOutlet]);
+  const { data: transfers, isLoading: loading } = useCollection<InventoryTransfer>(transfersQuery);
 
   return (
      <Card>

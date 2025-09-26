@@ -3,40 +3,17 @@
 
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
 import type { Menu } from '@/lib/types';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MenuForm } from '../../components/MenuForm';
+import { useDoc, useFirebase } from '@/firebase';
 
 export default function EditMenuPage({ params }: { params: { id: string } }) {
-  const [menu, setMenu] = useState<Menu | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const { id } = params;
-
-  useEffect(() => {
-    const fetchMenu = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const docRef = doc(db, 'menus', id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setMenu({ id: docSnap.id, ...docSnap.data() } as Menu);
-        } else {
-          console.log('No such document!');
-        }
-      } catch (error) {
-        console.error('Error fetching menu:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMenu();
-  }, [id]);
+  const docRef = doc(firestore, 'menus', id);
+  const { data: menu, isLoading: loading } = useDoc<Menu>(docRef);
 
   return (
     <div className="flex flex-col gap-6">

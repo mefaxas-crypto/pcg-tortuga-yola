@@ -18,41 +18,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Recipe } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteRecipeDialog } from './DeleteRecipeDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type RecipesTableProps = {
   onEdit: (recipe: Recipe) => void;
 };
 
 export function RecipesTable({ onEdit }: RecipesTableProps) {
-  const [recipes, setRecipes] = useState<Recipe[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'recipes'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const recipesData: Recipe[] = [];
-        querySnapshot.forEach((doc) => {
-          recipesData.push({ id: doc.id, ...doc.data() } as Recipe);
-        });
-        setRecipes(recipesData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching recipes:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
+  const { firestore } = useFirebase();
+  const recipesQuery = useMemoFirebase(() => query(collection(firestore, 'recipes'), orderBy('name', 'asc')), [firestore]);
+  const { data: recipes, isLoading: loading } = useCollection<Recipe>(recipesQuery);
 
   return (
     <Card>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,39 +18,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { IngredientCategory } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteCategoryDialog } from './DeleteCategoryDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useMemo } from 'react';
 
 
 export function CategoriesTable() {
-  const [categories, setCategories] = useState<IngredientCategory[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
+  const categoriesQuery = useMemoFirebase(() => query(collection(firestore, 'ingredientCategories'), orderBy('name', 'asc')), [firestore]);
+  const { data: categoriesData, isLoading: loading } = useCollection<IngredientCategory>(categoriesQuery);
 
-  useEffect(() => {
-    const q = query(collection(db, 'ingredientCategories'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const categoriesData: IngredientCategory[] = [];
-        querySnapshot.forEach((doc) => {
-          categoriesData.push({ id: doc.id, ...doc.data() } as IngredientCategory);
-        });
-        // Filter out "Sub-recipe" as it's a system category and should not be managed here.
-        setCategories(categoriesData.filter(c => c.name !== 'Sub-recipe'));
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching categories:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
+  const categories = useMemo(() => {
+    if (!categoriesData) return [];
+    return categoriesData.filter(c => c.name !== 'Sub-recipe');
+  }, [categoriesData]);
 
   return (
     <Card>

@@ -9,53 +9,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { db } from '@/lib/firebase';
 import type { Sale } from '@/lib/types';
-import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 export function RecentSales() {
-  const [sales, setSales] = useState<Sale[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setSales([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-
-    const q = query(
-      collection(db, 'sales'),
+  
+  const salesQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(
+      collection(firestore, 'sales'),
       where('outletId', '==', selectedOutlet.id),
       orderBy('saleDate', 'desc'),
       limit(15)
     );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const salesData: Sale[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        salesData.push({ 
-          id: doc.id, 
-          ...data,
-          saleDate: data.saleDate?.toDate(), // Convert Firestore Timestamp to JS Date
-        } as Sale);
-      });
-      setSales(salesData);
-      setLoading(false);
-    }, (error) => {
-        console.error("Error fetching recent sales: ", error);
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  }, [firestore, selectedOutlet]);
+  const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);

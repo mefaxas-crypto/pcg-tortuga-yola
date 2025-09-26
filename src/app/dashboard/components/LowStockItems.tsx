@@ -15,79 +15,44 @@ import {
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
-import { db } from '@/lib/firebase';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Package } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useOutletContext } from '@/context/OutletContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type LowStockItemsProps = {
     showTable?: boolean;
 }
 
 export function LowStockItems({ showTable = false }: LowStockItemsProps) {
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-  const [lowStockItemSpecs, setLowStockItemSpecs] = useState<InventoryItem[] | null>(null);
-  const [lowStockLevels, setLowStockLevels] = useState<InventoryStockItem[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-        setLowStockItemSpecs([]);
-        setLowStockLevels([]);
-        setLoading(false);
-        return;
-    }
-    setLoading(true);
-
-    const stockQuery = query(
-      collection(db, 'inventoryStock'),
+  
+  const lowStockLevelsQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(
+      collection(firestore, 'inventoryStock'),
       where('outletId', '==', selectedOutlet.id),
       where('status', 'in', ['Low Stock', 'Out of Stock'])
     );
+  }, [firestore, selectedOutlet]);
+  
+  const { data: lowStockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(lowStockLevelsQuery);
 
-    const unsubscribe = onSnapshot(
-      stockQuery,
-      (stockSnapshot) => {
-        const stockLevels: InventoryStockItem[] = [];
-        stockSnapshot.forEach((doc) => {
-          stockLevels.push({ id: doc.id, ...doc.data() } as InventoryStockItem);
-        });
-        setLowStockLevels(stockLevels);
+  const lowStockItemIds = useMemo(() => lowStockLevels?.map(s => s.inventoryId) || [], [lowStockLevels]);
 
-        if (stockLevels.length > 0) {
-            const specIds = stockLevels.map(s => s.inventoryId);
-            // Firestore 'in' queries fail with an empty array.
-            if (specIds.length === 0) {
-              setLowStockItemSpecs([]);
-              setLoading(false);
-              return;
-            }
-            const specQuery = query(collection(db, 'inventory'), where('__name__', 'in', specIds));
-            onSnapshot(specQuery, (specSnapshot) => {
-                const specs: InventoryItem[] = [];
-                specSnapshot.forEach((doc) => {
-                    specs.push({ id: doc.id, ...doc.data() } as InventoryItem);
-                });
-                setLowStockItemSpecs(specs);
-                setLoading(false);
-            });
-        } else {
-            setLowStockItemSpecs([]);
-            setLoading(false);
-        }
-      },
-      (error) => {
-        console.error('Error fetching low stock items:', error);
-        setLoading(false);
-      }
-    );
+  const lowStockItemSpecsQuery = useMemoFirebase(() => {
+    if (!lowStockItemIds || lowStockItemIds.length === 0) return null;
+    return query(collection(firestore, 'inventory'), where('__name__', 'in', lowStockItemIds));
+  }, [firestore, lowStockItemIds]);
 
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  const { data: lowStockItemSpecs, isLoading: specsLoading } = useCollection<InventoryItem>(lowStockItemSpecsQuery);
+
+  const loading = stockLoading || specsLoading;
 
   const combinedItems = useMemo(() => {
     if (!lowStockItemSpecs || !lowStockLevels) return [];

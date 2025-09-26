@@ -28,71 +28,33 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
 import { allUnits } from '@/lib/conversions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type InventoryTableProps = {
   onEdit: (item: InventoryItem) => void;
 };
 
 export function InventoryTable({ onEdit }: InventoryTableProps) {
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-  const [inventorySpecs, setInventorySpecs] = useState<InventoryItem[] | null>(null);
-  const [stockLevels, setStockLevels] = useState<InventoryStockItem[] | null>(null);
-  const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Effect to fetch master inventory specifications
-  useEffect(() => {
-    const q = query(collection(db, 'inventory'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const items: InventoryItem[] = [];
-        querySnapshot.forEach((doc) => {
-          items.push({ id: doc.id, ...doc.data() } as InventoryItem);
-        });
-        setInventorySpecs(items);
-      },
-      (error) => {
-        console.error('Error fetching inventory specs:', error);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
+  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory'), orderBy('name', 'asc')), [firestore]);
+  const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventoryQuery);
 
-  // Effect to fetch stock levels for the selected outlet
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setLoading(false);
-      return;
-    };
-    setLoading(true);
+  const stockQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(collection(firestore, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
+  }, [firestore, selectedOutlet]);
+  const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockQuery);
 
-    const q = query(collection(db, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const stock: InventoryStockItem[] = [];
-        querySnapshot.forEach((doc) => {
-          stock.push({ id: doc.id, ...doc.data() } as InventoryStockItem);
-        });
-        setStockLevels(stock);
-        setLoading(false);
-      },
-      (error) => {
-        console.error(`Error fetching stock for outlet ${selectedOutlet.id}:`, error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  const loading = specsLoading || stockLoading;
 
   // Memoized combination of specs and stock levels
   const combinedInventory = useMemo(() => {

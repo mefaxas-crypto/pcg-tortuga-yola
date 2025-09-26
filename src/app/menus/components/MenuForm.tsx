@@ -4,13 +4,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next-intl';
 import { useEffect, useState } from 'react';
 import type { Menu, Recipe } from '@/lib/types';
 import { addMenu, editMenu } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -55,6 +54,7 @@ import {
 } from '@/components/ui/command';
 import { Check, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Menu name must be at least 2 characters.'),
@@ -76,8 +76,12 @@ export function MenuForm({ mode, menu }: MenuFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isRecipeDialogOpen, setRecipeDialogOpen] = useState(false);
+  const { firestore } = useFirebase();
+
+  const recipesQuery = useMemoFirebase(() => query(collection(firestore, 'recipes')), [firestore]);
+  const { data: recipesData } = useCollection<Recipe>(recipesQuery);
+  const recipes = (recipesData || []).sort((a, b) => a.name.localeCompare(b.name));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,16 +104,6 @@ export function MenuForm({ mode, menu }: MenuFormProps) {
       });
     }
   }, [menu, mode, form]);
-
-  useEffect(() => {
-    const q = query(collection(db, 'recipes'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedRecipes: Recipe[] = [];
-      snapshot.forEach(doc => fetchedRecipes.push({ id: doc.id, ...doc.data() } as Recipe));
-      setRecipes(fetchedRecipes.sort((a,b) => a.name.localeCompare(b.name)));
-    });
-    return () => unsubscribe();
-  }, []);
 
   const handleRecipeAdd = (recipe: Recipe) => {
     // Check if recipe is already in the menu

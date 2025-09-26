@@ -24,11 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { db } from '@/lib/firebase';
 import type { InventoryItem, Supplier, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useEffect, useState, useMemo } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -44,6 +43,7 @@ import { Save, Trash2 } from 'lucide-react';
 import { addPurchaseOrder } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const poItemSchema = z.object({
   itemId: z.string(),
@@ -63,10 +63,14 @@ const formSchema = z.object({
 });
 
 export function PurchaseOrderForm() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { firestore } = useFirebase();
+  const [loading, setLoading] = useState(false);
   const { selectedOutlet } = useOutletContext();
+  
+  const suppliersQuery = useMemoFirebase(() => query(collection(firestore, 'suppliers')), [firestore]);
+  const { data: suppliersData } = useCollection<Supplier>(suppliersQuery);
+  const suppliers = (suppliersData || []).sort((a,b) => a.name.localeCompare(b.name));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,27 +88,18 @@ export function PurchaseOrderForm() {
   const supplierId = form.watch('supplierId');
 
   useEffect(() => {
-    const q = query(collection(db, 'suppliers'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const sup: Supplier[] = [];
-      snapshot.forEach((doc) => sup.push({ id: doc.id, ...doc.data() } as Supplier));
-      setSuppliers(sup.sort((a,b) => a.name.localeCompare(b.name)));
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (!supplierId || !selectedOutlet) {
       replace([]);
       return;
     }
 
-    const q = query(
-      collection(db, 'inventory'),
-      where('supplierId', '==', supplierId)
-    );
+    const fetchItems = async () => {
+      const q = query(
+        collection(firestore, 'inventory'),
+        where('supplierId', '==', supplierId)
+      );
 
-    const unsubscribe = onSnapshot(q, async (invSnapshot) => {
+      const invSnapshot = await getDocs(q);
       const inventorySpecs = invSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
       
       if (inventorySpecs.length === 0) {
@@ -113,14 +108,13 @@ export function PurchaseOrderForm() {
       }
 
       const inventoryIds = inventorySpecs.map(item => item.id);
-      // This is the critical guard. Firestore throws an error if `in` array is empty.
       if (inventoryIds.length === 0) {
         replace([]);
         return;
       }
 
       const stockQuery = query(
-        collection(db, 'inventoryStock'),
+        collection(firestore, 'inventoryStock'),
         where('outletId', '==', selectedOutlet.id),
         where('inventoryId', 'in', inventoryIds)
       );
@@ -150,10 +144,10 @@ export function PurchaseOrderForm() {
       });
 
       replace(poItems.sort((a,b) => a.name.localeCompare(b.name)));
-    });
+    };
 
-    return () => unsubscribe();
-  }, [supplierId, selectedOutlet, replace]);
+    fetchItems();
+  }, [supplierId, selectedOutlet, replace, firestore]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

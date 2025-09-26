@@ -31,16 +31,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { logProduction } from '@/lib/actions';
-import { db } from '@/lib/firebase';
 import type { Recipe } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { collection, query, where } from 'firebase/firestore';
+import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Flame, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   items: z
@@ -59,11 +59,15 @@ const formSchema = z.object({
 });
 
 export function ProductionForm() {
+  const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
-  const [subRecipes, setSubRecipes] = useState<Recipe[]>([]);
   const { toast } = useToast();
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const { selectedOutlet } = useOutletContext();
+  
+  const subRecipesQuery = useMemoFirebase(() => query(collection(firestore, 'recipes'), where('isSubRecipe', '==', true)), [firestore]);
+  const { data: subRecipesData } = useCollection<Recipe>(subRecipesQuery);
+  const subRecipes = (subRecipesData || []).sort((a,b) => a.name.localeCompare(b.name));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,21 +80,6 @@ export function ProductionForm() {
     control: form.control,
     name: 'items',
   });
-
-  useEffect(() => {
-    const q = query(
-      collection(db, 'recipes'),
-      where('isSubRecipe', '==', true)
-    );
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const recipesData: Recipe[] = [];
-      querySnapshot.forEach((doc) => {
-        recipesData.push({ id: doc.id, ...doc.data() } as Recipe);
-      });
-      setSubRecipes(recipesData.sort((a, b) => a.name.localeCompare(b.name)));
-    });
-    return () => unsubscribe();
-  }, []);
 
   const handleAddRecipe = (recipe: Recipe) => {
     if (fields.some((item) => item.recipeId === recipe.id)) {

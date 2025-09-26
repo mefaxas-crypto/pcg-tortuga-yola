@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,41 +18,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Supplier } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteSupplierDialog } from './DeleteSupplierDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type SuppliersTableProps = {
   onEdit: (supplier: Supplier) => void;
 };
 
 export function SuppliersTable({ onEdit }: SuppliersTableProps) {
-  const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'suppliers'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const suppliersData: Supplier[] = [];
-        querySnapshot.forEach((doc) => {
-          suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
-        });
-        setSuppliers(suppliersData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching suppliers:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
+  const { firestore } = useFirebase();
+  const suppliersQuery = useMemoFirebase(() => query(collection(firestore, 'suppliers'), orderBy('name', 'asc')), [firestore]);
+  const { data: suppliers, isLoading: loading } = useCollection<Supplier>(suppliersQuery);
 
   return (
     <Card>

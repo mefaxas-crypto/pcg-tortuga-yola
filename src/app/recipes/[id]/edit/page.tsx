@@ -4,39 +4,16 @@
 import PageHeader from '@/components/PageHeader';
 import { RecipeForm } from '../../components/RecipeForm';
 import { Card, CardContent } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
 import type { Recipe } from '@/lib/types';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDoc, useFirebase } from '@/firebase';
 
 export default function EditRecipePage({ params }: { params: { id: string } }) {
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const { id } = params;
-
-  useEffect(() => {
-    const fetchRecipe = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const docRef = doc(db, 'recipes', id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setRecipe({ id: docSnap.id, ...docSnap.data() } as Recipe);
-        } else {
-          console.log('No such document!');
-        }
-      } catch (error) {
-        console.error('Error fetching recipe:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecipe();
-  }, [id]);
+  const docRef = doc(firestore, 'recipes', id);
+  const { data: recipe, isLoading: loading } = useDoc<Recipe>(docRef);
 
   return (
     <div className="flex flex-col gap-6">

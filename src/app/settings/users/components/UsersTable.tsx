@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -12,56 +13,31 @@ import {
 import { Button } from '@/components/ui/button';
 import { FilePenLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { AppUser, Outlet } from '@/lib/types';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Store } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { UserFormSheet } from './UserFormSheet';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 
 export function UsersTable() {
-  const [users, setUsers] = useState<AppUser[] | null>(null);
-  const [outlets, setOutlets] = useState<Outlet[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const [sheetState, setSheetState] = useState<{ open: boolean; user?: AppUser }>({
     open: false,
   });
 
-  useEffect(() => {
-    const qUsers = query(collection(db, 'users'), orderBy('displayName', 'asc'));
-    const unsubscribeUsers = onSnapshot(
-      qUsers,
-      (querySnapshot) => {
-        const data: AppUser[] = [];
-        querySnapshot.forEach((doc) => {
-          data.push({ uid: doc.id, ...doc.data() } as AppUser);
-        });
-        setUsers(data);
-        if (loading) setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching users:', error);
-        if (loading) setLoading(false);
-      }
-    );
-    
-    const qOutlets = query(collection(db, 'outlets'));
-    const unsubscribeOutlets = onSnapshot(qOutlets, (snapshot) => {
-        const data: Outlet[] = [];
-        snapshot.forEach(doc => data.push({id: doc.id, ...doc.data()} as Outlet));
-        setOutlets(data);
-    });
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('displayName', 'asc')), [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
-    return () => {
-      unsubscribeUsers();
-      unsubscribeOutlets();
-    };
-  }, [loading]);
+  const outletsQuery = useMemoFirebase(() => query(collection(firestore, 'outlets')), [firestore]);
+  const { data: outlets, isLoading: outletsLoading } = useCollection<Outlet>(outletsQuery);
+
+  const loading = usersLoading || outletsLoading;
 
   const handleEdit = (user: AppUser) => {
     setSheetState({ open: true, user });
@@ -77,8 +53,6 @@ export function UsersTable() {
         return 'bg-primary/20 text-primary-foreground border-primary/50';
       case 'Manager':
         return 'bg-blue-500/20 text-blue-700 border-blue-500/50';
-      case 'Supervisor':
-        return 'bg-purple-500/20 text-purple-700 border-purple-500/50';
       case 'Chef':
         return 'bg-green-500/20 text-green-700 border-green-500/50';
       case 'Clerk':
@@ -126,7 +100,7 @@ export function UsersTable() {
                 ))}
               {!loading &&
                 users?.map((user) => {
-                  const assignedOutlet = outlets.find(o => o.id === user.assignedOutletId);
+                  const assignedOutlet = outlets?.find(o => o.id === user.assignedOutletId);
                   return (
                   <TableRow key={user.uid}>
                     <TableCell>

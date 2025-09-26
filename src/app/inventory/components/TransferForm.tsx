@@ -10,10 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { transferInventory } from '@/lib/actions';
-import { db } from '@/lib/firebase';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Check, ChevronsUpDown, Send } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -21,6 +20,7 @@ import { z } from 'zod';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   itemId: z.string().min(1, 'Please select an item to transfer.'),
@@ -37,10 +37,16 @@ const formSchema = z.object({
 export function TransferForm() {
   const [loading, setLoading] = useState(false);
   const { outlets } = useOutletContext();
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [stockLevels, setStockLevels] = useState<InventoryStockItem[]>([]);
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
+  const { firestore } = useFirebase();
+  
+  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const { data: inventory } = useCollection<InventoryItem>(inventoryQuery);
+  const sortedInventory = useMemo(() => (inventory || []).sort((a,b) => a.name.localeCompare(b.name)), [inventory]);
+
+  const stockQuery = useMemoFirebase(() => query(collection(firestore, 'inventoryStock')), [firestore]);
+  const { data: stockLevels } = useCollection<InventoryStockItem>(stockQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,44 +62,23 @@ export function TransferForm() {
   const fromOutletId = form.watch('fromOutletId');
   const selectedItemId = form.watch('itemId');
 
-  useEffect(() => {
-    const invQuery = query(collection(db, 'inventory'));
-    const unsubInv = onSnapshot(invQuery, (snapshot) => {
-        const items: InventoryItem[] = [];
-        snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data()} as InventoryItem));
-        setInventory(items.sort((a,b) => a.name.localeCompare(b.name)));
-    });
-
-    const stockQuery = query(collection(db, 'inventoryStock'));
-    const unsubStock = onSnapshot(stockQuery, (snapshot) => {
-        const stocks: InventoryStockItem[] = [];
-        snapshot.forEach(doc => stocks.push({ id: doc.id, ...doc.data()} as InventoryStockItem));
-        setStockLevels(stocks);
-    });
-
-    return () => {
-        unsubInv();
-        unsubStock();
-    };
-  }, []);
-
   const availableItemsToTransfer = useMemo(() => {
-    if (!fromOutletId) return [];
-    return inventory.filter(item => {
+    if (!fromOutletId || !sortedInventory || !stockLevels) return [];
+    return sortedInventory.filter(item => {
         const stock = stockLevels.find(s => s.inventoryId === item.id && s.outletId === fromOutletId);
         return stock && stock.quantity > 0;
     });
-  }, [fromOutletId, inventory, stockLevels]);
+  }, [fromOutletId, sortedInventory, stockLevels]);
 
   const selectedItemStock = useMemo(() => {
-    if (!selectedItemId || !fromOutletId) return null;
+    if (!selectedItemId || !fromOutletId || !stockLevels) return null;
     return stockLevels.find(s => s.inventoryId === selectedItemId && s.outletId === fromOutletId);
   }, [selectedItemId, fromOutletId, stockLevels]);
 
   const selectedItemSpec = useMemo(() => {
-    if(!selectedItemId) return null;
-    return inventory.find(i => i.id === selectedItemId);
-  }, [selectedItemId, inventory]);
+    if(!selectedItemId || !sortedInventory) return null;
+    return sortedInventory.find(i => i.id === selectedItemId);
+  }, [selectedItemId, sortedInventory]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

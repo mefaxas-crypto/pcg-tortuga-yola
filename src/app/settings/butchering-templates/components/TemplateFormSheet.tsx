@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -40,11 +41,11 @@ import { useToast } from '@/hooks/use-toast';
 import { addButcheryTemplate, updateButcheryTemplate } from '@/lib/actions';
 import { useEffect, useState, useMemo } from 'react';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query } from 'firebase/firestore';
 import { Check, ChevronsUpDown, Percent, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const yieldItemSchema = z.object({
     id: z.string(), // Material code
@@ -71,10 +72,14 @@ export function TemplateFormSheet({
   template,
   onClose,
 }: TemplateFormSheetProps) {
+  const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isPrimaryItemPopoverOpen, setPrimaryItemPopoverOpen] = useState(false);
   const [isYieldPopoverOpen, setYieldPopoverOpen] = useState(false);
+
+  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
+  const inventory = useMemo(() => (inventoryData || []).sort((a,b) => a.name.localeCompare(b.name)), [inventoryData]);
   
   const { toast } = useToast();
   
@@ -104,18 +109,6 @@ export function TemplateFormSheet({
       }
     }
   }, [template, mode, form, open]);
-
-  useEffect(() => {
-    const q = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const invItems: InventoryItem[] = [];
-      snapshot.forEach((doc) => {
-        invItems.push({ id: doc.id, ...doc.data() } as InventoryItem);
-      });
-      setInventory(invItems.sort((a, b) => a.name.localeCompare(b.name)));
-    });
-    return () => unsubscribe();
-  }, []);
 
   const watchedYields = form.watch('yields');
   const totalDistribution = useMemo(() => {

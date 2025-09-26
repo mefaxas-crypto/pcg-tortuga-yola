@@ -18,48 +18,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
 import { useRouter } from 'next/navigation';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 export function MenusTable() {
   const router = useRouter();
-  const [menus, setMenus] = useState<Menu[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setMenus(null); // Clear data when no outlet is selected
-      setLoading(true); // Set to loading while waiting for an outlet
-      return;
-    }
-    setLoading(true);
-
-    const q = query(collection(db, 'menus'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const menusData: Menu[] = [];
-        querySnapshot.forEach((doc) => {
-          menusData.push({ id: doc.id, ...doc.data() } as Menu);
-        });
-        setMenus(menusData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching menus:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  
+  const menusQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(collection(firestore, 'menus'), orderBy('name', 'asc'));
+  }, [firestore, selectedOutlet]);
+  
+  const { data: menus, isLoading: loading } = useCollection<Menu>(menusQuery);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

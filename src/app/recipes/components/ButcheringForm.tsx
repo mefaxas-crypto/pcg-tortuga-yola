@@ -46,14 +46,14 @@ import {
 } from '@/components/ui/select';
 import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
-import { db } from '@/lib/firebase';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const yieldItemSchema = z.object({
   itemId: z.string().min(1, 'Item ID is missing.'),
@@ -75,13 +75,19 @@ const formSchema = z.object({
 });
 
 export function ButcheringForm() {
+  const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
-  const [butcheryTemplates, setButcheryTemplates] = useState<ButcheryTemplateType[]>([]);
   const { toast } = useToast();
   const { selectedOutlet } = useOutletContext();
+  
+  const inventoryQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
+  const inventory = useMemo(() => (inventoryData || []).sort((a,b) => a.name.localeCompare(b.name)), [inventoryData]);
+
+  const templatesQuery = useMemoFirebase(() => query(collection(firestore, 'butcheryTemplates')), [firestore]);
+  const { data: butcheryTemplates } = useCollection<ButcheryTemplateType>(templatesQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -97,31 +103,6 @@ export function ButcheringForm() {
     control: form.control,
     name: 'yieldedItems',
   });
-
-  useEffect(() => {
-    const qInv = query(collection(db, 'inventory'));
-    const unsubscribeInv = onSnapshot(qInv, (snapshot) => {
-      const invItems: InventoryItem[] = [];
-      snapshot.forEach((doc) => {
-        invItems.push({ id: doc.id, ...doc.data() } as InventoryItem);
-      });
-      setInventory(invItems.sort((a, b) => a.name.localeCompare(b.name)));
-    });
-
-    const qTemplates = query(collection(db, 'butcheryTemplates'));
-    const unsubscribeTemplates = onSnapshot(qTemplates, (snapshot) => {
-        const templates: ButcheryTemplateType[] = [];
-        snapshot.forEach((doc) => {
-            templates.push({ id: doc.id, ...doc.data() } as ButcheryTemplateType);
-        });
-        setButcheryTemplates(templates);
-    });
-
-    return () => {
-        unsubscribeInv();
-        unsubscribeTemplates();
-    };
-  }, []);
   
   const watchedYieldedItems = form.watch('yieldedItems');
   const quantityUsed = form.watch('quantityUsed');
@@ -130,7 +111,7 @@ export function ButcheringForm() {
 
   const activeTemplate = useMemo(() => {
     const primaryItem = inventory.find(i => i.id === primaryItemId);
-    if (!primaryItem) return null;
+    if (!primaryItem || !butcheryTemplates) return null;
     return butcheryTemplates.find(t => t.primaryItemMaterialCode === primaryItem.materialCode) || null;
   }, [primaryItemId, inventory, butcheryTemplates]);
 

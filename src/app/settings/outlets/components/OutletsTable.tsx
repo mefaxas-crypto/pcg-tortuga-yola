@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,12 +18,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Outlet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteOutletDialog } from './DeleteOutletDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 
 type OutletsTableProps = {
@@ -30,29 +30,9 @@ type OutletsTableProps = {
 };
 
 export function OutletsTable({ onEdit }: OutletsTableProps) {
-  const [outlets, setOutlets] = useState<Outlet[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'outlets'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const data: Outlet[] = [];
-        querySnapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() } as Outlet);
-        });
-        setOutlets(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching outlets:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
+  const { firestore } = useFirebase();
+  const outletsQuery = useMemoFirebase(() => query(collection(firestore, 'outlets'), orderBy('name', 'asc')), [firestore]);
+  const { data: outlets, isLoading: loading } = useCollection<Outlet>(outletsQuery);
 
   return (
     <Card>

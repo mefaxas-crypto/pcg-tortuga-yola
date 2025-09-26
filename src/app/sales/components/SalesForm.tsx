@@ -20,15 +20,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { logSale } from '@/lib/actions';
-import { db } from '@/lib/firebase';
 import type { Menu, MenuItem as MenuItemType } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   menuId: z.string().min(1, 'Please select a menu.'),
@@ -38,11 +38,15 @@ const formSchema = z.object({
 
 export function SalesForm() {
   const [loading, setLoading] = useState(false);
-  const [menus, setMenus] = useState<Menu[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const { toast } = useToast();
   const { selectedOutlet } = useOutletContext();
   const { appUser } = useAuth();
+  const { firestore } = useFirebase();
+
+  const menusQuery = useMemoFirebase(() => query(collection(firestore, 'menus')), [firestore]);
+  const { data: menusData } = useCollection<Menu>(menusQuery);
+  const menus = menusData || [];
   
   const canLogSales = appUser && ['Admin', 'Manager', 'Chef', 'Clerk'].includes(appUser.role);
 
@@ -56,18 +60,6 @@ export function SalesForm() {
   });
 
   const selectedMenuId = form.watch('menuId');
-
-  useEffect(() => {
-    const q = query(collection(db, 'menus'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const menusData: Menu[] = [];
-      querySnapshot.forEach((doc) => {
-        menusData.push({ id: doc.id, ...doc.data() } as Menu);
-      });
-      setMenus(menusData);
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (selectedMenuId) {

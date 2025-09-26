@@ -16,17 +16,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { db } from '@/lib/firebase';
 import type { ProductionLog } from '@/lib/types';
 import {
   collection,
-  onSnapshot,
   query,
   orderBy,
   limit,
   where,
 } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,49 +31,22 @@ import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { UndoProductionLogDialog } from './UndoProductionLogDialog';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 export function ProductionLogHistory() {
-  const [logs, setLogs] = useState<ProductionLog[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setLogs([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-
-    const q = query(
-      collection(db, 'productionLogs'),
+  
+  const logsQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(
+      collection(firestore, 'productionLogs'),
       where('outletId', '==', selectedOutlet.id),
       orderBy('logDate', 'desc'),
       limit(20)
     );
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const logsData: ProductionLog[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          logsData.push({
-            id: doc.id,
-            ...data,
-            logDate: data.logDate?.toDate(), // Convert Firestore Timestamp to JS Date
-          } as ProductionLog);
-        });
-        setLogs(logsData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching production logs: ', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  }, [firestore, selectedOutlet]);
+  const { data: logs, isLoading: loading } = useCollection<ProductionLog>(logsQuery);
 
   return (
     <Card>

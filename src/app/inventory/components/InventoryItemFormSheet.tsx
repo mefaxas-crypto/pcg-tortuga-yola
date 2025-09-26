@@ -29,8 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem, editInventoryItem } from '@/lib/actions';
 import { useEffect, useState, useCallback } from 'react';
 import type { Supplier, InventoryItem, Allergen, IngredientCategory } from '@/lib/types';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -44,6 +43,7 @@ import { PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { allUnits } from '@/lib/conversions';
 import { UnitConversionDialog } from './UnitConversionDialog';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'SAP Code is required.'),
@@ -86,15 +86,27 @@ export function InventoryItemFormSheet({
   isInternalCreation = false,
   internalCreationCategory,
 }: InventoryItemFormSheetProps) {
+  const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [allergens, setAllergens] = useState<Allergen[]>([]);
-  const [categories, setCategories] = useState<IngredientCategory[]>([]);
   const [isNewSupplierSheetOpen, setNewSupplierSheetOpen] = useState(false);
   const [isConversionDialogOpen, setConversionDialogOpen] = useState(false);
   const [pendingFormValues, setPendingFormValues] = useState<z.infer<typeof formSchema> | null>(null);
 
   const { toast } = useToast();
+
+  const suppliersQuery = useMemoFirebase(() => query(collection(firestore, 'suppliers')), [firestore]);
+  const { data: suppliers } = useCollection<Supplier>(suppliersQuery);
+
+  const allergensQuery = useMemoFirebase(() => query(collection(firestore, 'allergens')), [firestore]);
+  const { data: allergens } = useCollection<Allergen>(allergensQuery);
+
+  const categoriesQuery = useMemoFirebase(() => query(collection(firestore, 'ingredientCategories')), [firestore]);
+  const { data: categoriesData } = useCollection<IngredientCategory>(categoriesQuery);
+
+  const categories = useMemo(() => {
+    if (!categoriesData) return [];
+    return categoriesData.filter(c => c.name !== 'Sub-recipe').sort((a, b) => a.name.localeCompare(b.name));
+  }, [categoriesData]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -155,42 +167,6 @@ export function InventoryItemFormSheet({
     }
   }, [item, mode, form, open, isInternalCreation, internalCreationCategory, commonReset]);
 
-  useEffect(() => {
-    const qSuppliers = query(collection(db, 'suppliers'));
-    const unsubscribeSuppliers = onSnapshot(qSuppliers, (querySnapshot) => {
-      const suppliersData: Supplier[] = [];
-      querySnapshot.forEach((doc) => {
-        suppliersData.push({ id: doc.id, ...doc.data() } as Supplier);
-      });
-      setSuppliers(suppliersData.sort((a, b) => a.name.localeCompare(b.name)));
-    });
-
-    const qAllergens = query(collection(db, 'allergens'));
-    const unsubscribeAllergens = onSnapshot(qAllergens, (querySnapshot) => {
-      const allergensData: Allergen[] = [];
-      querySnapshot.forEach((doc) => {
-        allergensData.push({ id: doc.id, ...doc.data() } as Allergen);
-      });
-      setAllergens(allergensData.sort((a, b) => a.name.localeCompare(b.name)));
-    });
-
-    const qCategories = query(collection(db, 'ingredientCategories'));
-    const unsubscribeCategories = onSnapshot(qCategories, (querySnapshot) => {
-        const categoriesData: IngredientCategory[] = [];
-        querySnapshot.forEach((doc) => {
-            categoriesData.push({ id: doc.id, ...doc.data() } as IngredientCategory);
-        });
-        // Filter out "Sub-recipe" as it's a system-reserved category for recipes only.
-        setCategories(categoriesData.filter(c => c.name !== 'Sub-recipe').sort((a, b) => a.name.localeCompare(b.name)));
-    });
-
-    return () => {
-      unsubscribeSuppliers();
-      unsubscribeAllergens();
-      unsubscribeCategories();
-    };
-  }, []);
-  
   const handleClose = () => {
     if (!loading) {
       form.reset();
@@ -255,10 +231,13 @@ export function InventoryItemFormSheet({
     }
   };
 
-  const allergenOptions = allergens.map(allergen => ({
-    value: allergen.name,
-    label: allergen.name,
-  }));
+  const allergenOptions = useMemo(() => {
+    if (!allergens) return [];
+    return allergens.map(allergen => ({
+      value: allergen.name,
+      label: allergen.name,
+    })).sort((a,b) => a.label.localeCompare(b.label));
+  }, [allergens]);
 
   const formTitle = isInternalCreation ? 'Add New Yield Item' : (mode === 'add' ? 'Add New Ingredient' : 'Edit Ingredient');
   const formDescription = isInternalCreation 
@@ -403,7 +382,7 @@ export function InventoryItemFormSheet({
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {suppliers.map(supplier => (
+                                    {(suppliers || []).map(supplier => (
                                     <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
                                     ))}
                                 </SelectContent>

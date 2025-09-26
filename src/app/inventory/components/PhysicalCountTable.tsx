@@ -15,9 +15,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, PhysicalCountItem, InventoryStockItem } from '@/lib/types';
-import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState, useMemo } from 'react';
+import { collection, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { Save } from 'lucide-react';
@@ -25,6 +24,7 @@ import { updatePhysicalInventory } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOutletContext } from '@/context/OutletContext';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type PhysicalCountState = {
     [itemId: string]: {
@@ -34,52 +34,23 @@ type PhysicalCountState = {
 }
 
 export function PhysicalCountTable() {
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-  const [inventorySpecs, setInventorySpecs] = useState<InventoryItem[] | null>(null);
-  const [stockLevels, setStockLevels] = useState<InventoryStockItem[] | null>(null);
   const [physicalCounts, setPhysicalCounts] = useState<PhysicalCountState>({});
-  const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setInventorySpecs(null);
-      setStockLevels(null);
-      setLoading(true);
-      return;
-    }
+  const inventorySpecsQuery = useMemoFirebase(() => query(collection(firestore, 'inventory')), [firestore]);
+  const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventorySpecsQuery);
 
-    setLoading(true);
-    const q = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items: InventoryItem[] = [];
-      snapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() } as InventoryItem));
-      setInventorySpecs(items);
-    });
-    return () => unsubscribe();
-  }, [selectedOutlet]);
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setStockLevels(null);
-      setLoading(true);
-      return;
-    }
-    setLoading(true);
-    const q = query(collection(db, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const stock: InventoryStockItem[] = [];
-      snapshot.forEach((doc) => stock.push({ id: doc.id, ...doc.data() } as InventoryStockItem));
-      setStockLevels(stock);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching stock levels:', error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  const stockLevelsQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
+    return query(collection(firestore, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
+  }, [firestore, selectedOutlet]);
+  const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockLevelsQuery);
+  
+  const loading = specsLoading || stockLoading;
 
   const combinedInventory = useMemo(() => {
     if (!inventorySpecs || !stockLevels) return null;

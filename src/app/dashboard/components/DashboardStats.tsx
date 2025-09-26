@@ -16,16 +16,16 @@ import {
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
-import { db } from '@/lib/firebase';
 import type { Sale } from '@/lib/types';
-import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { BarChart3, Bot, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useOutletContext } from '@/context/OutletContext';
 import { LowStockItems } from './LowStockItems';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type DashboardStatsProps = {
     showTopSelling?: boolean;
@@ -38,50 +38,28 @@ type AggregatedSale = {
 }
 
 export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) {
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!selectedOutlet) {
-      setSales([]);
-      setLoading(false);
-      return;
-    };
-    setLoading(true);
-
+  
+  const salesQuery = useMemoFirebase(() => {
+    if (!selectedOutlet) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const q = query(
-      collection(db, 'sales'),
+    return query(
+      collection(firestore, 'sales'),
       where('outletId', '==', selectedOutlet.id),
       where('saleDate', '>=', Timestamp.fromDate(today)),
       where('saleDate', '<', Timestamp.fromDate(tomorrow))
     );
+  }, [firestore, selectedOutlet]);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const salesData: Sale[] = [];
-        snapshot.forEach((doc) => {
-          salesData.push({ id: doc.id, ...doc.data() } as Sale);
-        });
-        setSales(salesData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching today\'s sales:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [selectedOutlet]);
+  const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
   const { totalRevenue, totalSales } = useMemo(() => {
+    if (!sales) return { totalRevenue: 0, totalSales: 0 };
     return sales.reduce((acc, sale) => {
         acc.totalRevenue += sale.totalRevenue;
         acc.totalSales += sale.quantity;
@@ -90,6 +68,7 @@ export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) 
   }, [sales]);
   
   const topSellingItems = useMemo(() => {
+    if (!sales) return [];
     const itemMap = new Map<string, AggregatedSale>();
     sales.forEach(sale => {
         const existing = itemMap.get(sale.recipeId);
