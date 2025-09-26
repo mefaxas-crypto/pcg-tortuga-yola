@@ -178,9 +178,9 @@ export function MenusTable() {
             </TableBody>
           </Table>
         </div>
-        {!loading && menus?.length === 0 && (
+        {!loading && (!menus || menus.length === 0) && (
           <div className="py-12 text-center text-muted-foreground">
-            No menus found. Add your first one!
+             {!selectedOutlet ? 'Please select an outlet to view menus.' : 'No menus found. Add your first one!'}
           </div>
         )}
       </CardContent>

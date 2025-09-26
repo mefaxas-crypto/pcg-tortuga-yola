@@ -44,6 +44,14 @@ export function PhysicalCountTable() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!selectedOutlet) {
+      setInventorySpecs([]);
+      setStockLevels([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     const q = query(collection(db, 'inventory'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items: InventoryItem[] = [];
@@ -51,7 +59,7 @@ export function PhysicalCountTable() {
       setInventorySpecs(items);
     });
     return () => unsubscribe();
-  }, []);
+  }, [selectedOutlet]);
 
   useEffect(() => {
     if (!selectedOutlet) {
@@ -323,9 +331,9 @@ export function PhysicalCountTable() {
             </TableBody>
           </Table>
         </div>
-        {!loading && filteredItems?.length === 0 && (
+        {!loading && (!filteredItems || filteredItems.length === 0) && (
           <div className="py-12 text-center text-muted-foreground">
-            {categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`}
+             {!selectedOutlet ? 'Please select an outlet to begin a physical count.' : categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`}
           </div>
         )}
       </CardContent>
