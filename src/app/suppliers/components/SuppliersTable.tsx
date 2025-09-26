@@ -18,12 +18,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { Supplier } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteSupplierDialog } from './DeleteSupplierDialog';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 type SuppliersTableProps = {
   onEdit: (supplier: Supplier) => void;
@@ -31,8 +32,20 @@ type SuppliersTableProps = {
 
 export function SuppliersTable({ onEdit }: SuppliersTableProps) {
   const { firestore } = useFirebase();
-  const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers'), orderBy('name', 'asc')) : null, [firestore]);
-  const { data: suppliers, isLoading: loading } = useCollection<Supplier>(suppliersQuery);
+  const { user, loading: authLoading } = useAuth();
+
+  const suppliersQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'suppliers'),
+      where('userId', '==', user.uid),
+      orderBy('name', 'asc')
+    );
+  }, [firestore, user]);
+
+  const { data: suppliers, isLoading: dataLoading } = useCollection<Supplier>(suppliersQuery);
+
+  const loading = authLoading || dataLoading;
 
   return (
     <Card>

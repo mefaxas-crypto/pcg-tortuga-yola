@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase } from '@/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -23,26 +23,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchOrCreateAppUser = useCallback(async (firebaseUser: User) => {
+    const userRef = doc(firestore, 'users', firebaseUser.uid);
+    const docSnap = await getDoc(userRef);
+
+    if (docSnap.exists()) {
+      setAppUser(docSnap.data() as AppUser);
+    } else {
+      const newUser: AppUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        role: 'Pending',
+      };
+      // Use setDoc directly here for immediate user profile creation upon sign-up.
+      // This is a critical path where we want to ensure the user document exists
+      // before other parts of the app try to access it.
+      await setDoc(userRef, { ...newUser, createdAt: serverTimestamp() });
+      setAppUser(newUser);
+    }
+  }, [firestore]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       if (firebaseUser) {
         setUser(firebaseUser);
-        const userRef = doc(firestore, 'users', firebaseUser.uid);
-        const docSnap = await getDoc(userRef);
-        if (docSnap.exists()) {
-          setAppUser(docSnap.data() as AppUser);
-        } else {
-          const newUser: AppUser = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            role: 'Pending',
-          };
-          // Use the non-blocking write with standardized error handling
-          setDocumentNonBlocking(userRef, { ...newUser, createdAt: serverTimestamp() }, { source: 'AuthContext.createUser' });
-          setAppUser(newUser);
-        }
+        await fetchOrCreateAppUser(firebaseUser);
       } else {
         setUser(null);
         setAppUser(null);
@@ -51,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [auth, firestore]);
+  }, [auth, fetchOrCreateAppUser]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();

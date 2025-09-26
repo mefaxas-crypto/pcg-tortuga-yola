@@ -18,12 +18,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { Recipe } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteRecipeDialog } from './DeleteRecipeDialog';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 type RecipesTableProps = {
   onEdit: (recipe: Recipe) => void;
@@ -31,8 +32,19 @@ type RecipesTableProps = {
 
 export function RecipesTable({ onEdit }: RecipesTableProps) {
   const { firestore } = useFirebase();
-  const recipesQuery = useMemo(() => firestore ? query(collection(firestore, 'recipes'), orderBy('name', 'asc')) : null, [firestore]);
-  const { data: recipes, isLoading: loading } = useCollection<Recipe>(recipesQuery);
+  const { user, loading: authLoading } = useAuth();
+  
+  const recipesQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'recipes'),
+      where('userId', '==', user.uid),
+      orderBy('name', 'asc')
+    );
+  }, [firestore, user]);
+
+  const { data: recipes, isLoading: dataLoading } = useCollection<Recipe>(recipesQuery);
+  const loading = authLoading || dataLoading;
 
   return (
     <Card>

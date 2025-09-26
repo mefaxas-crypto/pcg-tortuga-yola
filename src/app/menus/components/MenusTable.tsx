@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
@@ -26,18 +26,26 @@ import { useRouter } from 'next/navigation';
 import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export function MenusTable() {
   const router = useRouter();
   const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
+  const { user, loading: authLoading } = useAuth();
   
   const menusQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
-      return query(collection(firestore, 'menus'), orderBy('name', 'asc'));
-    }, [firestore, selectedOutlet]);
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'menus'),
+      where('userId', '==', user.uid),
+      orderBy('name', 'asc')
+    );
+  }, [firestore, user]);
   
-  const { data: menus, isLoading: loading } = useCollection<Menu>(menusQuery);
+  const { data: menus, isLoading: dataLoading } = useCollection<Menu>(menusQuery);
+
+  const loading = authLoading || dataLoading;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

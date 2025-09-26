@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addInventoryItem, editInventoryItem } from '@/lib/actions';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Supplier, InventoryItem, Allergen, IngredientCategory } from '@/lib/types';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -44,6 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { allUnits } from '@/lib/conversions';
 import { UnitConversionDialog } from './UnitConversionDialog';
 import { useCollection, useFirebase } from '@/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   materialCode: z.string().min(1, 'SAP Code is required.'),
@@ -87,6 +88,7 @@ export function InventoryItemFormSheet({
   internalCreationCategory,
 }: InventoryItemFormSheetProps) {
   const { firestore } = useFirebase();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isNewSupplierSheetOpen, setNewSupplierSheetOpen] = useState(false);
   const [isConversionDialogOpen, setConversionDialogOpen] = useState(false);
@@ -94,7 +96,10 @@ export function InventoryItemFormSheet({
 
   const { toast } = useToast();
 
-  const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers')) : null, [firestore]);
+  const suppliersQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'suppliers'), where('userId', '==', user.uid));
+  }, [firestore, user]);
   const { data: suppliers } = useCollection<Supplier>(suppliersQuery);
 
   const allergensQuery = useMemo(() => firestore ? query(collection(firestore, 'allergens')) : null, [firestore]);
