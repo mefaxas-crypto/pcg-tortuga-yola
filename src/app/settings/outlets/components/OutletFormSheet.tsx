@@ -45,6 +45,7 @@ type OutletFormSheetProps = {
 
 const themes = [
   { name: 'Bamboo', class: 'theme-bamboo', color: 'bg-[#8F9988]' },
+  { name: 'Ocean', class: 'theme-ocean', color: 'bg-[#3B82F6]' },
   { name: 'Default', class: '', color: 'bg-primary' },
 ];
 
