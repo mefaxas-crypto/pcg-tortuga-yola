@@ -45,9 +45,9 @@ export function PhysicalCountTable() {
 
   useEffect(() => {
     if (!selectedOutlet) {
-      setInventorySpecs([]);
-      setStockLevels([]);
-      setLoading(false);
+      setInventorySpecs(null);
+      setStockLevels(null);
+      setLoading(true);
       return;
     }
 
@@ -63,8 +63,8 @@ export function PhysicalCountTable() {
 
   useEffect(() => {
     if (!selectedOutlet) {
-      setStockLevels([]);
-      setLoading(false);
+      setStockLevels(null);
+      setLoading(true);
       return;
     }
     setLoading(true);
@@ -333,7 +333,7 @@ export function PhysicalCountTable() {
         </div>
         {!loading && (!filteredItems || filteredItems.length === 0) && (
           <div className="py-12 text-center text-muted-foreground">
-             {!selectedOutlet ? 'Please select an outlet to begin a physical count.' : categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`}
+             {selectedOutlet ? (categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`) : 'Please select an outlet to begin a physical count.'}
           </div>
         )}
       </CardContent>

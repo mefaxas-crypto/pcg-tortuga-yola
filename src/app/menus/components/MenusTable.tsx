@@ -35,8 +35,8 @@ export function MenusTable() {
 
   useEffect(() => {
     if (!selectedOutlet) {
-      setMenus([]);
-      setLoading(false);
+      setMenus(null); // Clear data when no outlet is selected
+      setLoading(true); // Set to loading while waiting for an outlet
       return;
     }
     setLoading(true);
@@ -180,7 +180,7 @@ export function MenusTable() {
         </div>
         {!loading && (!menus || menus.length === 0) && (
           <div className="py-12 text-center text-muted-foreground">
-             {!selectedOutlet ? 'Please select an outlet to view menus.' : 'No menus found. Add your first one!'}
+             {selectedOutlet ? 'No menus found. Add your first one!' : 'Please select an outlet to view menus.'}
           </div>
         )}
       </CardContent>
