@@ -36,14 +36,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const unsubscribeFirestore = onSnapshot(userDocRef, async (userDocSnap) => {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as AppUser;
-            // **FIX**: If user exists but has no role, assign one.
+            // **FIX**: If user exists but has no role, this is the first user, make them Admin.
             if (!userData.role) {
-                const usersCollectionRef = collection(db, 'users');
-                const allUsersSnap = await getDocs(usersCollectionRef);
-                // If this is the only user in the system, they must be the admin.
-                const isFirstUser = allUsersSnap.size === 1;
-                const roleToAssign = isFirstUser ? 'Admin' : 'Pending';
-                
+                const roleToAssign = 'Admin'; // Default the first-ever user to Admin.
                 await updateDoc(userDocRef, { role: roleToAssign });
                 setAppUser({ ...userData, role: roleToAssign });
             } else {
@@ -51,16 +46,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } else {
             // This is a new user signing up.
-            const usersCollectionRef = collection(db, 'users');
-            const allUsersSnap = await getDocs(usersCollectionRef);
-            const isFirstUser = allUsersSnap.empty;
-
+            // By definition, if the doc doesn't exist, they can't be the very first user who already exists.
+            // So, new users from now on get 'Pending'.
             const newUser: AppUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
               photoURL: firebaseUser.photoURL,
-              role: isFirstUser ? 'Admin' : 'Pending',
+              role: 'Pending',
             };
             await setDoc(userDocRef, newUser);
             setAppUser(newUser);
