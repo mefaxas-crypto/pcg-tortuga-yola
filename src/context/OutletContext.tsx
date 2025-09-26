@@ -3,7 +3,7 @@
 
 import type { Outlet } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, useFirebase } from '@/firebase';
 import { useAuth } from './AuthContext';
 
@@ -23,10 +23,11 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
 
   const outletsQuery = useMemo(
     () => {
-        if (!firestore || !user) return null;
-        return query(collection(firestore, 'outlets'), where('userId', '==', user.uid), orderBy('name', 'asc'))
+        if (!firestore) return null;
+        // Fetch all outlets, as they are not user-specific
+        return query(collection(firestore, 'outlets'), orderBy('name', 'asc'))
     },
-    [firestore, user]
+    [firestore]
   );
   const { data: outlets, isLoading: outletsLoading } = useCollection<Outlet>(outletsQuery);
 
