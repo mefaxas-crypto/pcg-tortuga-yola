@@ -21,6 +21,7 @@ import { LogOut, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { OutletSelector } from './OutletSelector';
 import { useAuth } from '@/context/AuthContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 
 export function Header() {
@@ -36,6 +37,7 @@ export function Header() {
 
       <div className="flex-1" />
       
+      <LanguageSwitcher />
       
       {user && (
         <DropdownMenu>

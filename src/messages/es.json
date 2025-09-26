@@ -1,0 +1,14 @@
+{
+  "Header": {
+    "dashboard": "Tablero",
+    "inventory": "Inventario",
+    "suppliers": "Proveedores",
+    "recipes": "Recetas y Producción",
+    "purchasing": "Compras",
+    "sales": "Ventas",
+    "reports": "Informes",
+    "ai_tools": "Herramientas de IA",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión"
+  }
+}

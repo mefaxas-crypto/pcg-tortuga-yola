@@ -1,0 +1,14 @@
+{
+  "Header": {
+    "dashboard": "Dashboard",
+    "inventory": "Inventory",
+    "suppliers": "Suppliers",
+    "recipes": "Recipes & Production",
+    "purchasing": "Purchasing",
+    "sales": "Sales",
+    "reports": "Reports",
+    "ai_tools": "AI Tools",
+    "settings": "Settings",
+    "logout": "Log out"
+  }
+}

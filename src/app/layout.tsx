@@ -1,7 +1,7 @@
-
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-
+import { getMessages, NextIntlClientProvider } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { OutletProvider } from '@/context/OutletContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -25,12 +25,20 @@ const playfairDisplay = Playfair_Display({
 
 type Props = {
   children: React.ReactNode;
+  params: { locale: string };
 };
 
-export default async function RootLayout({ children }: Props) {
+export default async function RootLayout({ children, params: { locale } }: Props) {
+  let messages;
+  try {
+    messages = await getMessages({ locale });
+  } catch (error) {
+    notFound();
+  }
+
   return (
     <html
-      lang="en"
+      lang="{locale}"
       className={`${inter.variable} ${playfairDisplay.variable}`}
     >
       <head>
@@ -41,21 +49,24 @@ export default async function RootLayout({ children }: Props) {
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen')}>
-        <AuthProvider>
-          <OutletProvider>
-            <SidebarProvider>
-              <Sidebar>
-                <SidebarNav />
-              </Sidebar>
-              <SidebarInset>
-                <Header />
-                <main className="p-4 lg:p-6 max-w-7xl mx-auto">{children}</main>
-              </SidebarInset>
-              <Toaster />
-            </SidebarProvider>
-          </OutletProvider>
-        </AuthProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <AuthProvider>
+            <OutletProvider>
+              <SidebarProvider>
+                <Sidebar>
+                  <SidebarNav />
+                </Sidebar>
+                <SidebarInset>
+                  <Header />
+                  <main className="p-4 lg:p-6 max-w-7xl mx-auto">{children}</main>
+                </SidebarInset>
+                <Toaster />
+              </SidebarProvider>
+            </OutletProvider>
+          </AuthProvider>
+        </NextIntlClientProvider>
         <SpeedInsights />
       </body>
     </html>
   );
+}
