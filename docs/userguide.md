@@ -14,6 +14,7 @@ Welcome to the PCG Kitchen Manager! This guide will walk you through the core fe
 
 -   After logging in, the first step is to **select a kitchen outlet** from the dropdown menu in the top-left of the header.
 -   All data you see on the Dashboard, Inventory, and Purchasing pages is scoped to the selected outlet. You can switch between outlets at any time.
+-   Users with the `Clerk` or `Cook` role may be assigned to a single outlet and will not be able to switch.
 
 ### 1.3. Initial Data Setup (For Admins)
 
@@ -28,10 +29,11 @@ Before you can effectively use the system, an Admin user should set up the found
 
 ## 2. User Roles & Permissions
 
-- **Admin**: The superuser. Has unrestricted access to everything, including user and system settings.
-- **Manager**: Can do everything an Admin can do *except* manage users and core application settings. They can create ingredients, manage suppliers, handle all purchasing, run reports, and approve actions. They *cannot* manage recipes or menus.
-- **Chef**: Can manage recipes, menus, and create ingredients. Has access to most operational features.
-- **User**: Standard operator role for daily tasks: logging sales, physical counts, creating POs, and logging production.
+- **Admin**: The superuser. Has unrestricted access to everything, including user and system settings. Can manage all data for all users.
+- **Manager**: Can manage all operational aspects of the kitchen, including inventory, recipes, menus, purchasing, and reporting for their own created data. Cannot manage users or system-wide settings.
+- **Chef**: Can manage recipes, menus, and ingredients. Has access to production and butchering logs.
+- **Clerk**: A role focused on logistical tasks. Can manage suppliers, create purchase orders, and log sales. May be restricted to a single outlet.
+- **Cook**: A role focused on kitchen production. Can perform inventory counts, log sub-recipe production, and log butchering. May be restricted to a single outlet.
 - **Pending**: A new user who has signed up but cannot access any part of the application until their role is changed by an Admin.
 
 ## 3. Core Workflow: Inventory to Sales
@@ -94,19 +96,13 @@ This is the primary day-to-day workflow of the application.
 5.  Optionally, add notes or attach a scanned invoice.
 6.  Click **"Confirm & Update Inventory"**. The items will be added to your stock. If you entered a new price, the item's cost will be updated using a weighted-average calculation.
 
-### 4.3. Approval Workflow
-
--   If your role is "Supervisor," receiving a PO will place it into a "Pending Approval" state.
--   An "Admin" or "Manager" must then go to the `Approvals` page, review the pending receipt, and either **Approve** or **Reject** it.
--   The inventory and cost updates will only be finalized upon approval.
-
 ## 5. Production & Butchering
 
 ### 5.1. Logging Sub-Recipe Production
 
 This is for making batches of items that are ingredients in other recipes (e.g., "Tomato Sauce").
 
-1.  First, create the recipe for the "Tomato Sauce" and make sure to toggle on **"Is Sub-Recipe?"**.
+1.  First, create the recipe for the "Tomato Sauce" and make sure to toggle on **"Is Sub-Recipe?"**. This automatically creates a corresponding inventory item.
 2.  Navigate to **Recipes & Production** -> **Sub-recipe Production**.
 3.  Use the **"Add Sub-Recipe to Log"** button to select "Tomato Sauce".
 4.  Enter the number of **Batches Produced** and click **"Log All Production"**.
@@ -137,6 +133,3 @@ This is for breaking down a large item (like a whole fish) into usable cuts.
 -   **Navigate** to the **AI Tools** page.
 -   **Waste Prediction**: Provide historical data and current inventory to get an AI-powered analysis of potential future waste and suggestions for prevention.
 -   **Recipe Suggestions**: The AI will analyze your current inventory and suggest recipes you can make to use up ingredients, minimizing spoilage.
--   **Demand Forecasting**: Use AI to predict future sales and generate optimized Min/Max stock levels for your ingredients.
--   **Prep List Generator**: Automatically generate daily prep lists based on sales forecasts.
--   **Menu Description Generator**: Create compelling, professional menu descriptions for your items.

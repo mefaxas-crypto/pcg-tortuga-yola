@@ -27,7 +27,7 @@ export default function RecipesPage() {
   const { appUser } = useAuth();
   
   const canManageRecipes = appUser && ['Admin', 'Manager', 'Chef'].includes(appUser.role);
-  const canPerformProduction = appUser && ['Admin', 'Manager', 'Chef', 'Cook'].includes(appUser.role);
+  const canPerformProduction = appUser && ['Admin', 'Manager', 'Chef', 'Cook', 'Clerk'].includes(appUser.role);
 
   const handleEdit = (recipe: Recipe) => {
     router.push(`/recipes/${recipe.id}/edit`);

@@ -6,7 +6,7 @@ This file tracks our development progress to ensure we build the app logically, 
 
 *   **1.1 Managing Suppliers:** We need to know who we're buying from.
     *   [x] Create "Suppliers" page.
-    *   [x] Display a basic table.
+    *   [x] Display a basic table of suppliers created by the current user.
     *   [x] Implement the "Add New Supplier" form (Name, Contact, Phone, Email) and save the data.
     *   [x] Implement Edit & Delete functionality for suppliers.
 
@@ -15,7 +15,7 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Overhaul the "Add New Ingredient" functionality to include all the detailed fields (SKU, units, costs, Min/Max levels, etc.).
     *   [x] Implement Edit & Delete functionality for ingredients.
     *   [x] Implement Physical Stock Takes & Variance Reporting.
-    *   **Note on Stock Levels:** The system has been upgraded to use a more professional Min/Max stock level system instead of a single par level. This allows for better cost and storage control.
+    *   **Note on Stock Levels:** The system uses a professional Min/Max stock level system.
 
 *   **1.3 Managing Foundational Data:** Simple but necessary lists for ingredients and recipes.
     *   [x] Create a dedicated "Allergens" data model and management UI (in "Settings").
@@ -29,7 +29,6 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Implement UI to create recipes by combining multiple inventory items (ingredients).
     *   [x] Automatically calculate the cost of a recipe based on the cost of its ingredients.
     *   [x] Implement UI to create "Menus" by combining recipes.
-    *   [x] Make the "Menu" dropdown in the recipe form functional.
     *   [x] Analyze menu profitability.
 
 *   **2.2 Inventory Depletion & Sales Tracking:**
@@ -42,11 +41,10 @@ This file tracks our development progress to ensure we build the app logically, 
     *   [x] Automatically suggest items to reorder based on "Low Stock" levels.
     *   [x] Implement a "Receiving" flow to update inventory quantities when a purchase order arrives.
     *   [x] Update PO status (e.g., Pending, Partially Received, Received).
-    *   [x] **Enhancement:** Add the ability to attach scanned documents (PDFs, images) to a received PO.
 
 *   **2.4 Multi-Outlet & Central Kitchen Support:**
-    *   [x] Create "Outlets" data model and management UI (e.g., "Hotel", "Restaurant").
-    *   [x] **Strategy:** Refactor inventory to separate shared "Item Specifications" (in `/inventory`) from outlet-specific "Stock Levels" (in a new `/inventoryStock` collection).
+    *   [x] Create "Outlets" data model and management UI.
+    *   [x] **Strategy:** Refactor inventory to separate shared "Item Specifications" (in `/inventory`) from outlet-specific "Stock Levels" (in a new `/inventoryStock` collection). All collections are now at the root level.
     *   [x] Scope all data (sales, inventory views, purchasing) to a specific outlet, likely via a global state/context.
     *   [x] Implement inventory transfers between outlets.
 
@@ -61,9 +59,8 @@ This file tracks our development progress to ensure we build the app logically, 
 *   **3.2 User Roles & Permissions:**
     *   [x] Implement a user authentication system using Firebase Auth.
     *   [x] Define roles (Admin, Manager, Chef, Clerk, Cook, Pending) in Firestore.
-    *   [x] Restrict access to pages and actions based on user role.
+    *   [x] Restrict access to pages and actions based on user role using UI logic and Firestore Security Rules.
     *   [x] Track which user performs critical actions (e.g., receiving POs, logging sales, updating inventory).
-    *   [ ] **Approval Workflow:** Implement a two-step approval process. Critical actions (like PO receiving) by a Supervisor will enter a "Pending Approval" state until confirmed by a Manager or Admin.
 
 *   **3.3 Multi-language Support:**
     *   [ ] Implement i18n (internationalization) routing and file structure.
@@ -78,19 +75,14 @@ This file tracks our development progress to ensure we build the app logically, 
 ## PHASE 4: WORLD-CLASS AI INTEGRATION
 
 *   **4.1 AI-Powered Purchasing Agent:**
-    *   [ ] Implement AI-driven demand forecasting based on sales history, seasonality, and **hotel occupancy forecasts**.
-    *   [ ] Create a tool in the ingredient form to generate **dynamically adjusted Min/Max stock levels**.
+    *   [ ] Implement AI-driven demand forecasting based on sales history, seasonality, and other factors.
+    *   [ ] Create a tool in the ingredient form to generate dynamically adjusted Min/Max stock levels.
     *   [ ] Generate optimized purchase orders to minimize waste and stockouts.
-    *   [ ] Track and analyze supplier price fluctuations over time to recommend cost-effective choices.
-    *   [ ] Display AI-suggested Min/Max levels directly on the **Create Purchase Order form** for easy comparison at the moment of ordering.
 
 *   **4.2 Dynamic Menu Engineering:**
     *   [ ] Implement AI-driven suggestions for menu pricing and item placement to maximize profitability.
     *   [ ] Generate compelling, professional menu descriptions for new or existing items.
-    *   [ ] Create entire themed menus based on high-level concepts and inventory analysis.
 
 *   **4.3 Advanced Operational Intelligence:**
-    *   [ ] Automatically generate daily prep lists for kitchen staff based on sales forecasts.
-    *   [ ] Implement intelligent variance analysis to detect patterns of waste, spoilage, or theft.
     *   [x] **(Existing)** Implement "Waste Prediction" tool.
     *   [x] **(Existing)** Implement "Intelligent Recipe Suggestions" tool.
