@@ -4,16 +4,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useOutletContext } from '@/context/OutletContext';
-import { db } from '@/lib/firebase';
 import type { Sale } from '@/lib/types';
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { useEffect, useState, useMemo } from 'react';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { addDays, format } from 'date-fns';
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type AggregatedSale = {
   recipeId: string;
@@ -38,54 +38,29 @@ const chartConfig = {
 
 
 export function SalesAndProfitability() {
+  const { firestore } = useFirebase();
   const { selectedOutlet } = useOutletContext();
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
-  const [sales, setSales] = useState<Sale[] | null>(null);
-  const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    if (!selectedOutlet || !date?.from || !date?.to) {
-      setSales([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+  const salesQuery = useMemoFirebase(() => {
+    if (!selectedOutlet || !date?.from || !date?.to) return null;
 
-    // Set time to end of day for the 'to' date
     const toDate = new Date(date.to);
     toDate.setHours(23, 59, 59, 999);
 
-    const q = query(
-        collection(db, 'sales'),
+    return query(
+        collection(firestore, 'sales'),
         where('outletId', '==', selectedOutlet.id),
         where('saleDate', '>=', Timestamp.fromDate(date.from)),
         where('saleDate', '<=', Timestamp.fromDate(toDate)),
         orderBy('saleDate', 'desc')
     );
+  }, [firestore, selectedOutlet, date]);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const salesData: Sale[] = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            salesData.push({
-                ...data,
-                id: doc.id,
-                saleDate: (data.saleDate as Timestamp).toDate(),
-            } as Sale);
-        });
-        setSales(salesData);
-        setLoading(false);
-    }, (err) => {
-        console.error("Error fetching sales data:", err);
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-
-  }, [selectedOutlet, date]);
+  const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
   const { totalRevenue, totalCost, totalProfit, foodCostPercentage, salesByDay } = useMemo(() => {
     if (!sales) return { totalRevenue: 0, totalCost: 0, totalProfit: 0, foodCostPercentage: 0, salesByDay: [] };
@@ -295,3 +270,5 @@ export function SalesAndProfitability() {
     </div>
   )
 }
+
+    
