@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
 import { UserRoles } from '@/lib/validations';
 
@@ -30,11 +30,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         
-        // Listen for real-time updates on the user's document
         const userDocRef = doc(db, 'users', firebaseUser.uid);
+        
+        // Listen for real-time updates on the user's document
         const unsubscribeFirestore = onSnapshot(userDocRef, async (userDocSnap) => {
           if (userDocSnap.exists()) {
-            setAppUser(userDocSnap.data() as AppUser);
+            const userData = userDocSnap.data() as AppUser;
+            // **FIX**: If user exists but has no role, assign one.
+            if (!userData.role) {
+                const usersCollectionRef = collection(db, 'users');
+                const allUsersSnap = await getDocs(usersCollectionRef);
+                const isFirstUser = allUsersSnap.size === 1 && allUsersSnap.docs[0].id === firebaseUser.uid;
+                const roleToAssign = isFirstUser ? 'Admin' : 'Pending';
+                
+                await updateDoc(userDocRef, { role: roleToAssign });
+                setAppUser({ ...userData, role: roleToAssign });
+            } else {
+                setAppUser(userData);
+            }
           } else {
             // This is a new user signing up.
             const usersCollectionRef = collection(db, 'users');
@@ -51,9 +64,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await setDoc(userDocRef, newUser);
             setAppUser(newUser);
           }
+           setLoading(false);
         });
         
-        setLoading(false);
         // Return the firestore listener so it gets cleaned up
         return () => unsubscribeFirestore();
 
