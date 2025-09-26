@@ -18,14 +18,14 @@ const OutletContext = createContext<OutletContextType | undefined>(undefined);
 
 export const OutletProvider = ({ children }: { children: ReactNode }) => {
   const { firestore } = useFirebase();
-  const { appUser, user, loading: authLoading } = useAuth();
+  const { appUser, loading: authLoading } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
 
   const outletsQuery = useMemo(
     () => {
         if (!firestore) return null;
-        // Fetch all outlets, as they are not user-specific
-        return query(collection(firestore, 'outlets'), orderBy('name', 'asc'))
+        // Fetch all outlets, sorted by name for predictable ordering.
+        return query(collection(firestore, 'outlets'), orderBy('name', 'asc'));
     },
     [firestore]
   );
@@ -46,12 +46,10 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // If no outlet is selected yet (or the assigned one wasn't found), set a default.
+    // If no outlet is selected yet (or the assigned one wasn't found),
+    // set the first one from the alphabetized list as a stable default.
     if (!selectedOutlet) {
-      const bambooOutlet = outletList.find(o => o.name === "Restaurante Bamboo");
-      if (bambooOutlet) {
-        setSelectedOutlet(bambooOutlet);
-      } else if (outletList.length > 0) {
+      if (outletList.length > 0) {
         setSelectedOutlet(outletList[0]);
       }
     }
