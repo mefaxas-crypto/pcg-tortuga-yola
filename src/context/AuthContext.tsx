@@ -1,9 +1,12 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import type { AppUser } from '@/lib/types';
+import { UserRoles } from '@/lib/validations';
 
 interface AuthContextType {
   user: User | null;
@@ -13,13 +16,6 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-export type AppUser = {
-    uid: string;
-    email: string | null;
-    displayName: string | null;
-    photoURL: string | null;
-    role: 'Admin' | 'Chef' | 'Purchasing Manager' | 'Supervisor' | 'User';
-}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -38,13 +34,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDocSnap.exists()) {
           setAppUser(userDocSnap.data() as AppUser);
         } else {
-          // New user, create a document for them.
+          // This is a new user signing up.
+          // Check if this is the VERY first user in the system.
+          const usersCollectionRef = collection(db, 'users');
+          const allUsersSnap = await getDocs(usersCollectionRef);
+          
+          const isFirstUser = allUsersSnap.empty;
+
           const newUser: AppUser = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: firebaseUser.displayName,
             photoURL: firebaseUser.photoURL,
-            role: 'User', // Default role
+            role: isFirstUser ? 'Admin' : 'Pending', // First user is Admin, others are Pending
           };
           await setDoc(userDocRef, newUser);
           setAppUser(newUser);

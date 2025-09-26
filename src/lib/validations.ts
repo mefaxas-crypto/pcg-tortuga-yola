@@ -194,3 +194,13 @@ export const transferInventorySchema = z.object({
     message: "Source and destination outlets cannot be the same.",
     path: ["toOutletId"],
 });
+
+export const UserRoles = ['Admin', 'Manager', 'Supervisor', 'Chef', 'User', 'Pending'] as const;
+
+export const appUserSchema = z.object({
+  uid: z.string(),
+  email: z.string().email().nullable(),
+  displayName: z.string().nullable(),
+  photoURL: z.string().url().nullable(),
+  role: z.enum(UserRoles),
+});

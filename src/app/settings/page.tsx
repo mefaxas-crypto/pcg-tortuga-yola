@@ -4,14 +4,35 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Shapes, UtensilsCrossed, Store, Palette } from 'lucide-react';
+import { List, Shapes, UtensilsCrossed, Store, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SettingsPage() {
+  const { appUser } = useAuth();
+  
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {appUser?.role === 'Admin' && (
+           <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                <Users />
+                User Management
+                </CardTitle>
+                <CardDescription>
+                Manage users, roles, and approval workflows.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild>
+                <Link href="/settings/users">Manage Users</Link>
+                </Button>
+            </CardContent>
+        </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -75,26 +96,6 @@ export default function SettingsPage() {
                 <Link href="/settings/butchering-templates">Manage Templates</Link>
                 </Button>
             </CardContent>
-        </Card>
-         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <Palette />
-                General Settings
-            </CardTitle>
-            <CardDescription>
-              Manage application appearance and preferences.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[88px]">
-                <div className="flex flex-col items-center gap-1 text-center">
-                    <p className="text-sm text-muted-foreground">
-                        User & role management coming soon.
-                    </p>
-                </div>
-            </div>
-          </CardContent>
         </Card>
       </div>
     </div>

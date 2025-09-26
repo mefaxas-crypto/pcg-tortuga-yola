@@ -3,6 +3,7 @@ import type { Unit } from './conversions';
 import { z } from 'zod';
 import { 
   allergenSchema, 
+  appUserSchema,
   butcheringLogSchema, 
   butcheryTemplateSchema, 
   ingredientCategorySchema, 
@@ -102,3 +103,5 @@ export type ReceivePurchaseOrderData = z.infer<typeof z.object({
 export type AddOutletData = z.infer<typeof outletSchema>;
 export type AddAllergenData = z.infer<typeof allergenSchema>;
 export type AddIngredientCategoryData = z.infer<typeof ingredientCategorySchema>;
+export type AppUser = z.infer<typeof appUserSchema>;
+
