@@ -4,7 +4,7 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { Link } from 'next-intl';
+import Link from 'next/link';
 import { MenusTable } from './components/MenusTable';
 
 export default function MenusPage() {

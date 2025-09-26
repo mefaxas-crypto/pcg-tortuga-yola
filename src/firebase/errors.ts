@@ -7,7 +7,7 @@ const isDev = process.env.NODE_ENV === 'development';
 export type SecurityRuleContext = {
   path: string;
   operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
-  requestResourceData?: any;
+  requestResourceData?: unknown;
 };
 
 export class FirestorePermissionError extends Error {

@@ -5,8 +5,8 @@ import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { useState } from 'react';
-import { TemplatesTable } from './components/TemplatesTable';
-import { TemplateFormSheet } from './components/TemplateFormSheet';
+import { TemplatesTable } from '@/app/settings/butchering-templates/components/TemplatesTable';
+import { TemplateFormSheet } from '@/app/settings/butchering-templates/components/TemplateFormSheet';
 import { ButcheryTemplate } from '@/lib/types';
 
 

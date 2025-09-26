@@ -48,9 +48,10 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if false; // Never list all users
       allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      // Prevent changing the userId (path param already immutable, but double guard request body)
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
     }
 
@@ -64,11 +65,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /outlets/{outletId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -81,11 +82,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /suppliers/{supplierId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -98,11 +99,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /inventory/{inventoryId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -115,11 +116,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /inventoryStock/{stockId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -132,11 +133,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /recipes/{recipeId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -149,11 +150,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /menus/{menuId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -166,11 +167,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /sales/{saleId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -183,11 +184,11 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes.
      */
     match /purchaseOrders/{poId} {
-      allow get: if isOwner(resource.data.userId);
-      allow list: if isOwner(resource.data.userId);
-      allow create: if request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.userId);
-      allow delete: if isExistingOwner(resource.data.userId);
+      allow get: if canReadOwned();
+      allow list: if canListOwned();
+      allow create: if canCreateOwned();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
     }
 
     /**
@@ -215,16 +216,31 @@ service cloud.firestore {
     }
 
     // ----- Helper Functions -----
-    function isSignedIn() {
-      return request.auth != null;
+    // Basic auth checks
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isExistingOwner(userId) { return isOwner(userId) && resource != null; }
+
+    // Require a userId field on create and that it matches the authenticated user
+    function hasValidCreateUserId() {
+      return request.resource.data.userId is string && request.resource.data.userId == request.auth.uid;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Enforce immutability of userId on update
+    function userIdUnchanged() {
+      return request.resource.data.userId == resource.data.userId;
     }
 
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+    // Limit result set size (if client sets limit). If no limit specified, allow but could enforce a default by requiring limit.
+    function withinListLimit() {
+      return !("limit" in request.query) || request.query.limit <= 100;
     }
+
+    // Generic ownership-based capability helpers for user-owned collections
+    function canReadOwned() { return isOwner(resource.data.userId); }
+    function canListOwned() { return canReadOwned() && withinListLimit(); }
+    function canCreateOwned() { return hasValidCreateUserId(); }
+    function canUpdateOwned() { return isExistingOwner(resource.data.userId) && userIdUnchanged(); }
+    function canDeleteOwned() { return isExistingOwner(resource.data.userId); }
   }
 }

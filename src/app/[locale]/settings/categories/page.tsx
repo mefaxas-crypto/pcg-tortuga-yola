@@ -5,8 +5,8 @@ import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { useState } from 'react';
-import { CategoryFormSheet } from './components/CategoryFormSheet';
-import { CategoriesTable } from './components/CategoriesTable';
+import { CategoryFormSheet } from '@/app/settings/categories/components/CategoryFormSheet';
+import { CategoriesTable } from '@/app/settings/categories/components/CategoriesTable';
 
 export default function CategoriesPage() {
   const [sheetOpen, setSheetOpen] = useState(false);

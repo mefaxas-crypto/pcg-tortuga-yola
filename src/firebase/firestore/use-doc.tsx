@@ -40,7 +40,7 @@ function docReducer<T>(state: DocState<T>, action: DocAction<T>): DocState<T> {
   }
 }
 
-export const useDoc = <T extends DocumentData>(
+export const useDoc = <T extends { id: string } | DocumentData>(
   ref: DocumentReference<T> | null,
   options?: UseDocOptions,
 ) => {
@@ -65,7 +65,7 @@ export const useDoc = <T extends DocumentData>(
       options?.snapshotListenOptions ?? {},
       (snapshot) => {
         if (snapshot.exists()) {
-          const data = { ...snapshot.data(), id: snapshot.id };
+          const data = { id: snapshot.id, ...(snapshot.data() as Omit<T, 'id'>) } as T;
           dispatch({ type: 'data', payload: data });
         } else {
           dispatch({ type: 'data', payload: null });

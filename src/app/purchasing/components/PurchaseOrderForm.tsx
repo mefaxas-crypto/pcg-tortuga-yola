@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import type { InventoryItem, Supplier, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { query, where, getDocs } from 'firebase/firestore';
 import { useEffect, useState, useMemo } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -43,6 +43,7 @@ import { Save, Trash2 } from 'lucide-react';
 import { addPurchaseOrder } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 const poItemSchema = z.object({
   itemId: z.string(),
@@ -66,8 +67,8 @@ export function PurchaseOrderForm() {
   const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
   
-  const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers')) : null, [firestore]);
-  const { data: suppliersData } = useCollection<Supplier>(suppliersQuery);
+  const suppliersQuery = useMemo(() => firestore ? query(collections.suppliers(firestore)) : null, [firestore]);
+  const { data: suppliersData } = useCollection(suppliersQuery);
   const suppliers = (suppliersData || []).sort((a,b) => a.name.localeCompare(b.name));
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -92,10 +93,7 @@ export function PurchaseOrderForm() {
     }
 
     const fetchItems = async () => {
-      const q = query(
-        collection(firestore, 'inventory'),
-        where('supplierId', '==', supplierId)
-      );
+      const q = query(collections.inventory(firestore), where('supplierId', '==', supplierId));
 
       const invSnapshot = await getDocs(q);
       const inventorySpecs = invSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
@@ -111,10 +109,7 @@ export function PurchaseOrderForm() {
         return;
       }
 
-      const stockQuery = query(
-        collection(firestore, 'inventoryStock'),
-        where('inventoryId', 'in', inventoryIds)
-      );
+      const stockQuery = query(collections.inventoryStock(firestore), where('inventoryId', 'in', inventoryIds));
 
       const stockSnapshot = await getDocs(stockQuery);
       const stockLevels = new Map(stockSnapshot.docs.map(doc => [doc.data().inventoryId, doc.data() as InventoryStockItem]));

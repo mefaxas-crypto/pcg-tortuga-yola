@@ -27,10 +27,11 @@ import { Bot, ChefHat, Sparkles } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { collection, query } from 'firebase/firestore';
+import { query } from 'firebase/firestore';
 import type { InventoryItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 const formSchema = z.object({
   inventory: z.string().min(1, 'Please list at least one ingredient.'),
@@ -42,8 +43,8 @@ export function RecipeSuggestions() {
   const { toast } = useToast();
   const { firestore } = useFirebase();
 
-  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
-  const { data: inventoryData, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
+  const inventoryQuery = useMemo(() => firestore ? query(collections.inventory(firestore)) : null, [firestore]);
+  const { data: inventoryData, isLoading: inventoryLoading } = useCollection(inventoryQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

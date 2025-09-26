@@ -16,12 +16,13 @@ import {
     TableRow,
   } from '@/components/ui/table';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
-import { collection, query, where } from 'firebase/firestore';
+import { query, where } from 'firebase/firestore';
 import { Package } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 type LowStockItemsProps = {
     showTable?: boolean;
@@ -30,40 +31,30 @@ type LowStockItemsProps = {
 export function LowStockItems({ showTable = false }: LowStockItemsProps) {
   const { firestore } = useFirebase();
   
-  const lowStockLevelsQuery = useMemo(() => {
-      if (!firestore) return null;
-      return query(
-        collection(firestore, 'inventoryStock'),
-        where('status', 'in', ['Low Stock', 'Out of Stock'])
-      );
-    }, [firestore]);
-  
-  const { data: lowStockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(lowStockLevelsQuery);
+  const lowStockLevelsQuery = useMemo(() => firestore ? query(
+      collections.inventoryStock(firestore),
+      where('status', 'in', ['Low Stock', 'Out of Stock'])
+    ) : null, [firestore]);
+  const { data: lowStockLevels, isLoading: stockLoading } = useCollection(lowStockLevelsQuery);
 
   const lowStockItemIds = useMemo(() => lowStockLevels?.map(s => s.inventoryId) || [], [lowStockLevels]);
 
-  const lowStockItemSpecsQuery = useMemo(() => {
-      if (!firestore || !lowStockItemIds || lowStockItemIds.length === 0) return null;
-      return query(collection(firestore, 'inventory'), where('__name__', 'in', lowStockItemIds));
-    }, [firestore, lowStockItemIds]);
-
-  const { data: lowStockItemSpecs, isLoading: specsLoading } = useCollection<InventoryItem>(lowStockItemSpecsQuery);
+  const lowStockItemSpecsQuery = useMemo(() => (firestore && lowStockItemIds.length > 0)
+    ? query(collections.inventory(firestore), where('__name__', 'in', lowStockItemIds))
+    : null, [firestore, lowStockItemIds]);
+  const { data: lowStockItemSpecs, isLoading: specsLoading } = useCollection(lowStockItemSpecsQuery);
 
   const loading = stockLoading || specsLoading;
 
   const combinedItems = useMemo(() => {
-    if (!lowStockItemSpecs || !lowStockLevels) return [];
-    
-    return lowStockLevels.map(stock => {
+    if (!lowStockItemSpecs || !lowStockLevels) return [] as (InventoryItem & InventoryStockItem)[];
+    const merged: (InventoryItem & InventoryStockItem)[] = [];
+    for (const stock of lowStockLevels) {
       const spec = lowStockItemSpecs.find(s => s.id === stock.inventoryId);
-      if (!spec) return null; // If spec is not found, return null
-      return {
-        ...spec,
-        ...stock,
-      } as InventoryItem & InventoryStockItem;
-    })
-    .filter(Boolean) // Filter out the null values
-    .sort((a,b) => a.name.localeCompare(b.name));
+      if (!spec) continue;
+      merged.push({ ...spec, ...stock });
+    }
+    return merged.sort((a, b) => a.name.localeCompare(b.name));
   }, [lowStockItemSpecs, lowStockLevels]);
 
   if (showTable) {
@@ -92,12 +83,14 @@ export function LowStockItems({ showTable = false }: LowStockItemsProps) {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {combinedItems.map(item => (
+                {combinedItems.map(item => {
+                  return (
                     <TableRow key={item.id}>
-                        <TableCell className='font-medium'>{item.name}</TableCell>
-                        <TableCell className='text-right'>{item.quantity.toFixed(2)} {item.purchaseUnit}</TableCell>
+                      <TableCell className='font-medium'>{item.name}</TableCell>
+                      <TableCell className='text-right'>{(item.quantity ?? 0).toFixed(2)} {item.purchaseUnit}</TableCell>
                     </TableRow>
-                ))}
+                  );
+                })}
             </TableBody>
         </Table>
     )

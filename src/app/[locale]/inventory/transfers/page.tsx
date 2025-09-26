@@ -2,8 +2,9 @@
 'use client';
 
 import PageHeader from '@/components/PageHeader';
-import { TransferForm } from '../components/TransferForm';
-import { TransferHistory } from '../components/TransferHistory';
+// Point to shared inventory components (non-localized folder)
+import { TransferForm } from '@/app/inventory/components/TransferForm';
+import { TransferHistory } from '@/app/inventory/components/TransferHistory';
 
 export default function TransfersPage() {
   return (

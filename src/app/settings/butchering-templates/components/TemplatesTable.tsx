@@ -18,11 +18,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { query, orderBy, where } from 'firebase/firestore';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteTemplateDialog } from './DeleteTemplateDialog';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -35,17 +36,15 @@ export function TemplatesTable({ onEdit }: TemplatesTableProps) {
   const { firestore } = useFirebase();
   const { user } = useAuth();
 
-  const templatesQuery = useMemo(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'butcheryTemplates'), where('userId', '==', user.uid), orderBy('name', 'asc'));
-  }, [firestore, user]);
-  const { data: templates, isLoading: templatesLoading } = useCollection<ButcheryTemplate>(templatesQuery);
+  const templatesQuery = useMemo(() => (firestore && user)
+    ? query(collections.butcheryTemplates(firestore), where('userId', '==', user.uid), orderBy('name', 'asc'))
+    : null, [firestore, user]);
+  const { data: templates, isLoading: templatesLoading } = useCollection(templatesQuery);
   
-  const inventoryQuery = useMemo(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'inventory'), where('userId', '==', user.uid));
-  },[firestore, user]);
-  const { data: inventory, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
+  const inventoryQuery = useMemo(() => (firestore && user)
+    ? query(collections.inventory(firestore), where('userId', '==', user.uid))
+    : null, [firestore, user]);
+  const { data: inventory, isLoading: inventoryLoading } = useCollection(inventoryQuery);
 
   const loading = templatesLoading || inventoryLoading;
 

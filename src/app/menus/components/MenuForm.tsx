@@ -4,12 +4,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useRouter } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import type { Menu, Recipe } from '@/lib/types';
 import { addMenu, editMenu } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where } from 'firebase/firestore';
+import { recipeConverter } from '@/firebase/firestore/converters';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -83,7 +84,7 @@ export function MenuForm({ mode, menu }: MenuFormProps) {
 
   const recipesQuery = useMemo(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'recipes'), where('userId', '==', user.uid));
+  return query(collection(firestore, 'recipes').withConverter(recipeConverter), where('userId', '==', user.uid));
   }, [firestore, user]);
 
   const { data: recipesData } = useCollection<Recipe>(recipesQuery);

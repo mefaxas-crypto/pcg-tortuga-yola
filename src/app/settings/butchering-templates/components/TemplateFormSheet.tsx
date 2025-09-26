@@ -41,11 +41,12 @@ import { useToast } from '@/hooks/use-toast';
 import { addButcheryTemplate, updateButcheryTemplate } from '@/lib/actions';
 import { useEffect, useState, useMemo } from 'react';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
-import { collection, query, where } from 'firebase/firestore';
+import { query, where } from 'firebase/firestore';
 import { Check, ChevronsUpDown, Percent, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 import { useAuth } from '@/context/AuthContext';
 
 const yieldItemSchema = z.object({
@@ -79,11 +80,10 @@ export function TemplateFormSheet({
   const [isPrimaryItemPopoverOpen, setPrimaryItemPopoverOpen] = useState(false);
   const [isYieldPopoverOpen, setYieldPopoverOpen] = useState(false);
 
-  const inventoryQuery = useMemo(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'inventory'), where('userId', '==', user.uid));
-  }, [firestore, user]);
-  const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
+  const inventoryQuery = useMemo(() => (firestore && user)
+    ? query(collections.inventory(firestore), where('userId', '==', user.uid))
+    : null, [firestore, user]);
+  const { data: inventoryData } = useCollection(inventoryQuery);
   const inventory = useMemo(() => (inventoryData || []).sort((a,b) => a.name.localeCompare(b.name)), [inventoryData]);
   
   const { toast } = useToast();

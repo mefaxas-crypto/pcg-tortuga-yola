@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { transferInventory } from '@/lib/actions';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { collection, query } from 'firebase/firestore';
+import { query } from 'firebase/firestore';
 import { Check, ChevronsUpDown, Send } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -21,6 +21,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 const formSchema = z.object({
   itemId: z.string().min(1, 'Please select an item to transfer.'),
@@ -41,12 +42,12 @@ export function TransferForm() {
   const { toast } = useToast();
   const { firestore } = useFirebase();
   
-  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
-  const { data: inventory } = useCollection<InventoryItem>(inventoryQuery);
+    const inventoryQuery = useMemo(() => firestore ? query(collections.inventory(firestore)) : null, [firestore]);
+    const { data: inventory } = useCollection(inventoryQuery);
   const sortedInventory = useMemo(() => (inventory || []).sort((a,b) => a.name.localeCompare(b.name)), [inventory]);
 
-  const stockQuery = useMemo(() => firestore ? query(collection(firestore, 'inventoryStock')) : null, [firestore]);
-  const { data: stockLevels } = useCollection<InventoryStockItem>(stockQuery);
+    const stockQuery = useMemo(() => firestore ? query(collections.inventoryStock(firestore)) : null, [firestore]);
+    const { data: stockLevels } = useCollection(stockQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

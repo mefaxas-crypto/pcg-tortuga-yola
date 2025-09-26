@@ -2,10 +2,10 @@
 'use client';
 
 import PageHeader from '@/components/PageHeader';
-import { SuppliersTable } from './components/SuppliersTable';
-import { AddSupplierSheet } from './components/AddSupplierSheet';
+import { SuppliersTable } from '@/app/suppliers/components/SuppliersTable';
+import { AddSupplierSheet } from '@/app/suppliers/components/AddSupplierSheet';
 import { useState } from 'react';
-import { SupplierFormSheet } from './components/SupplierFormSheet';
+import { SupplierFormSheet } from '@/app/suppliers/components/SupplierFormSheet';
 import type { Supplier } from '@/lib/types';
 
 export default function SuppliersPage() {

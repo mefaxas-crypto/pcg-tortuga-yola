@@ -4,12 +4,13 @@
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { InventoryTable } from './components/InventoryTable';
+// Use the shared inventory components from the non-localized route folder
+import { InventoryTable } from '@/app/inventory/components/InventoryTable';
 import { useState } from 'react';
-import { InventoryItemFormSheet } from './components/InventoryItemFormSheet';
+import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import type { InventoryItem } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PhysicalCountTable } from './components/PhysicalCountTable';
+import { PhysicalCountTable } from '@/app/inventory/components/PhysicalCountTable';
 
 export default function InventoryPage() {
   const [sheetState, setSheetState] = useState<{

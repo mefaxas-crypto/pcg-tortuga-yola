@@ -10,6 +10,7 @@ import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
 import { AuthProvider } from '@/context/AuthContext';
+import { OutletProvider } from '@/context/OutletContext';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
@@ -67,9 +68,11 @@ export default function RootLayout({ children }: Props) {
   return (
     <FirebaseClientProvider>
       <AuthProvider>
+        <OutletProvider>
           <ThemedLayout>
-              {children}
+            {children}
           </ThemedLayout>
+        </OutletProvider>
       </AuthProvider>
     </FirebaseClientProvider>
   );

@@ -1,57 +1,56 @@
+import { getApps, initializeApp, cert, AppOptions } from 'firebase-admin/app';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
-import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { firebaseConfig } from './config';
+// Provide a safe wrapper that won't crash if admin credentials are absent (e.g., on Vercel preview without secrets)
+let adminInitTried = false;
+let adminAvailable = false;
 
-// Define the shape of the services object for the server
-interface FirebaseServerServices {
-  app: App;
-  firestore: Firestore;
+function initAdminIfPossible() {
+  if (getApps().length) {
+    adminAvailable = true;
+    return;
+  }
+  if (adminInitTried) return;
+  adminInitTried = true;
+
+  try {
+    const saJson = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON;
+    if (saJson) {
+      const parsed = JSON.parse(saJson);
+      initializeApp({ credential: cert(parsed) });
+      adminAvailable = true;
+      return;
+    }
+    const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+    if (projectId && clientEmail && privateKey) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+      initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
+      adminAvailable = true;
+      return;
+    }
+    // No credentials provided -> stay in client-only mode
+    adminAvailable = false;
+  } catch (e) {
+    console.warn('[firebase-admin] Initialization failed, continuing without admin SDK:', e);
+    adminAvailable = false;
+  }
 }
 
-let app: App;
-let firestore: Firestore;
-
-// This service account is a placeholder. In a real production environment,
-// you would use environment variables to securely load the service account credentials.
-const serviceAccount = {
-  projectId: firebaseConfig.projectId,
-  // These are intentionally left blank for this example.
-  // In a real app, you'd populate them from secure environment variables.
-  clientEmail: `firebase-adminsdk-placeholder@${firebaseConfig.projectId}.iam.gserviceaccount.com`,
-  privateKey: '-----BEGIN PRIVATE KEY-----\n...placeholder...\n-----END PRIVATE KEY-----\n',
-};
-
-
-/**
- * Initializes and returns the Firebase Admin SDK services for server-side use.
- * This ensures that the Admin SDK is initialized only once.
- */
-export const initializeFirebaseAdmin = (): FirebaseServerServices => {
-  if (!getApps().length) {
-    try {
-      app = initializeApp({
-        credential: cert(serviceAccount),
-      });
-      firestore = getFirestore(app);
-      firestore.settings({ ignoreUndefinedProperties: true });
-
-    } catch (error) {
-      console.error("Firebase Admin initialization error:", error);
-      throw new Error("Failed to initialize Firebase Admin SDK. Check your service account configuration.");
-    }
-  } else {
-    app = getApps()[0];
-    firestore = getFirestore(app);
+export function getAdminDb() {
+  initAdminIfPossible();
+  if (!adminAvailable) {
+    throw new Error('Admin SDK not available: missing credentials. Provide FIREBASE_ADMIN_* env vars.');
   }
+  return getAdminFirestore();
+}
 
-  return { app, firestore };
-};
+export function tryGetAdminDb() {
+  try {
+    return getAdminDb();
+  } catch {
+    return null;
+  }
+}
 
-// Initialize and export the firestore instance for use in server actions
-const services = initializeFirebaseAdmin();
-firestore = services.firestore;
-
-export { firestore };
-
-    

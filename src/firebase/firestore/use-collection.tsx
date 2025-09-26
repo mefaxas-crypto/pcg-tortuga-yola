@@ -40,8 +40,8 @@ function collectionReducer<T>(state: CollectionState<T>, action: CollectionActio
   }
 }
 
-export const useCollection = <T extends DocumentData>(
-  query: Query<T> | null,
+export const useCollection = <T extends { id: string } | DocumentData>(
+  queryRef: Query<T> | null,
   options?: UseCollectionOptions,
 ) => {
   const [state, dispatch] = useReducer<React.Reducer<CollectionState<T>, CollectionAction<T>>>(collectionReducer, {
@@ -50,7 +50,7 @@ export const useCollection = <T extends DocumentData>(
     error: null,
   });
 
-  const memoizedQuery = useMemo(() => query, [query]);
+  const memoizedQuery = useMemo(() => queryRef, [queryRef]);
 
   useEffect(() => {
     if (!memoizedQuery) {
@@ -64,7 +64,7 @@ export const useCollection = <T extends DocumentData>(
       memoizedQuery,
       options?.snapshotListenOptions ?? {},
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<T, 'id'>) })) as T[];
         dispatch({ type: 'data', payload: data });
       },
       (unhandledError: FirestoreError) => {

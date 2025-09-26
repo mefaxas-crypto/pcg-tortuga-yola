@@ -47,12 +47,13 @@ import {
 import { Check, ChevronsUpDown, PlusCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import type { InventoryItem, ButcheryTemplate as ButcheryTemplateType } from '@/lib/types';
-import { collection, query } from 'firebase/firestore';
+import { query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 const yieldItemSchema = z.object({
   itemId: z.string().min(1, 'Item ID is missing.'),
@@ -80,12 +81,12 @@ export function ButcheringForm() {
   const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
   const { toast } = useToast();
   
-  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
-  const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
+  const inventoryQuery = useMemo(() => firestore ? query(collections.inventory(firestore)) : null, [firestore]);
+  const { data: inventoryData } = useCollection(inventoryQuery);
   const inventory = useMemo(() => (inventoryData || []).sort((a,b) => a.name.localeCompare(b.name)), [inventoryData]);
 
-  const templatesQuery = useMemo(() => firestore ? query(collection(firestore, 'butcheryTemplates')) : null, [firestore]);
-  const { data: butcheryTemplates } = useCollection<ButcheryTemplateType>(templatesQuery);
+  const templatesQuery = useMemo(() => firestore ? query(collections.butcheryTemplates(firestore)) : null, [firestore]);
+  const { data: butcheryTemplates } = useCollection(templatesQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

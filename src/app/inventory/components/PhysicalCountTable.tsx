@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, PhysicalCountItem, InventoryStockItem } from '@/lib/types';
 import { useState, useMemo } from 'react';
-import { collection, query } from 'firebase/firestore';
+import { query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { Save } from 'lucide-react';
@@ -24,6 +24,7 @@ import { updatePhysicalInventory } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 type PhysicalCountState = {
     [itemId: string]: {
@@ -39,14 +40,11 @@ export function PhysicalCountTable() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { toast } = useToast();
 
-  const inventorySpecsQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
-  const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventorySpecsQuery);
+  const inventorySpecsQuery = useMemo(() => firestore ? query(collections.inventory(firestore)) : null, [firestore]);
+  const { data: inventorySpecs, isLoading: specsLoading } = useCollection(inventorySpecsQuery);
 
-  const stockLevelsQuery = useMemo(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'inventoryStock'));
-    }, [firestore]);
-  const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockLevelsQuery);
+  const stockLevelsQuery = useMemo(() => firestore ? query(collections.inventoryStock(firestore)) : null, [firestore]);
+  const { data: stockLevels, isLoading: stockLoading } = useCollection(stockLevelsQuery);
   
   const loading = specsLoading || stockLoading;
 

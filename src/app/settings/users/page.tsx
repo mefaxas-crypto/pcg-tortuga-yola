@@ -5,7 +5,7 @@ import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { UsersTable } from './components/UsersTable';
 import { useEffect } from 'react';
-import { useRouter } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 export default function UsersPage() {
   const { appUser, loading } = useAuth();

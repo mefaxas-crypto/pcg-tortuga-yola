@@ -3,25 +3,26 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { firestore } from '@/firebase/firebase-server'; // Server-side Firebase admin instance
+// Admin Firestore shim & helpers (mimic modular client API surface)
 import {
   collection,
   doc,
-  writeBatch,
   serverTimestamp,
   getDocs,
   query,
   where,
   getDoc,
   increment,
-} from 'firebase/firestore';
-import { firestore } from '@/firebase/firebase-server'; // Server-side Firebase admin instance
+  newDocumentRef,
+} from '@/firebase/admin-firestore-shim';
+// Admin non-blocking helper equivalents
 import {
   setDocumentNonBlocking,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
   createBatchedWrite,
-  newDocumentRef,
-} from '@/firebase/non-blocking-updates';
+} from '@/firebase/admin-non-blocking-updates';
 import {
   supplierSchema,
   inventoryItemSchema,
@@ -53,33 +54,37 @@ import { cookies } from 'next/headers';
 
 
 // Helper to get the current user's UID from the session cookie
-async function getCurrentUserId() {
-    try {
-        const sessionCookie = cookies().get('__session')?.value;
-        if (!sessionCookie) {
-            throw new Error('User not authenticated.');
-        }
-        const decodedToken = await getAuth().verifySessionCookie(sessionCookie, true);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying session cookie:", error);
-        throw new Error("Authentication failed.");
+async function getCurrentUserId(): Promise<string> {
+  try {
+    const cookieStore = cookies();
+    const sessionCookie = cookieStore.get('__session')?.value;
+    if (!sessionCookie) {
+      throw new Error('User not authenticated.');
     }
+    const decodedToken = await getAuth().verifySessionCookie(sessionCookie, true);
+    return decodedToken.uid;
+  } catch (error) {
+    console.error('Error verifying session cookie:', error);
+    throw new Error('Authentication failed.');
+  }
 }
 
 
 // Helper to handle server actions and revalidation
-async function handleAction(
+async function handleAction<T>(
   path: string,
-  action: () => Promise<any>,
+  action: () => Promise<T> | T,
   errorMessage: string,
-) {
+): Promise<T> {
   try {
-    const result = await action();
+    const possible = action();
+    // If the action returned a promise, await it; otherwise continue.
+    const result = possible instanceof Promise ? await possible : possible;
     revalidatePath(path);
     return result;
-  } catch (e: any) {
-    throw new Error(`${errorMessage}: ${e.message}`);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`${errorMessage}: ${message}`);
   }
 }
 
@@ -87,7 +92,7 @@ async function handleAction(
 export async function addSupplier(values: z.infer<typeof supplierSchema>) {
   const userId = await getCurrentUserId();
   const validatedData = supplierSchema.parse(values);
-  const suppliersCollection = collection(firestore, 'suppliers');
+  // collection ref implicit via newDocumentRef/doc
   const docRef = newDocumentRef(firestore, 'suppliers');
   
   await handleAction('/suppliers', async () => {
@@ -142,7 +147,7 @@ export async function addInventoryItem(values: z.infer<typeof inventoryItemSchem
 
   const outletsSnapshot = await getDocs(collection(firestore, 'outlets'));
   outletsSnapshot.forEach((outletDoc) => {
-    const stockRef = doc(collection(firestore, 'inventoryStock'), `${inventoryRef.id}_${outletDoc.id}`);
+    const stockRef = collection(firestore, 'inventoryStock').doc(`${inventoryRef.id}_${outletDoc.id}`);
     batch.set(stockRef, {
       inventoryId: inventoryRef.id,
       outletId: outletDoc.id,
@@ -195,17 +200,23 @@ export async function updatePhysicalInventory(items: z.infer<typeof physicalCoun
     const userId = await getCurrentUserId();
     const batch = createBatchedWrite(firestore, { source: 'updatePhysicalInventory' });
     const varianceLogRef = newDocumentRef(firestore, 'varianceLogs');
-    const loggedItems: any[] = [];
+    const loggedItems: Array<{
+      id: string;
+      name: string;
+      unit: string;
+      theoreticalQuantity: number;
+      physicalQuantity: number;
+      variance: number;
+      varianceValue: number;
+    }> = [];
     let totalVarianceValue = 0;
 
-    for (const item of items) {
-        const stockRef = doc(firestore, `inventoryStock/${item.id}_${outletId}`);
+  for (const item of items) {
+    const stockRef = doc(firestore, 'inventoryStock', `${item.id}_${outletId}`);
         const itemSpecRef = doc(firestore, 'inventory', item.id);
         const itemSpecSnap = await getDoc(itemSpecRef);
-
-        if (!itemSpecSnap.exists()) continue;
-
-        const unitCost = itemSpecSnap.data().unitCost || 0;
+    if (!itemSpecSnap.exists) continue;
+    const unitCost = itemSpecSnap.data()?.unitCost || 0;
         const variance = item.physicalQuantity - item.theoreticalQuantity;
         const varianceValue = variance * unitCost;
 
@@ -286,18 +297,19 @@ export async function addRecipe(values: z.infer<typeof recipeSchema>) {
     }, { source: 'addRecipe' });
     
     if (validatedData.isSubRecipe) {
-        await addInventoryItem({
-            materialCode: validatedData.internalCode,
-            name: validatedData.name,
-            category: 'Sub-recipe',
-            purchaseQuantity: 1,
-            purchaseUnit: 'un.',
-            purchasePrice: validatedData.totalCost,
-            minStock: 0,
-            maxStock: 0,
-            recipeUnit: validatedData.yieldUnit,
-            recipeUnitConversion: validatedData.yield,
-        });
+      await addInventoryItem({
+        materialCode: validatedData.internalCode,
+        name: validatedData.name,
+        category: 'Sub-recipe',
+        purchaseQuantity: 1,
+        purchaseUnit: 'un.',
+        purchasePrice: validatedData.totalCost,
+        minStock: 0,
+        maxStock: 0,
+        recipeUnit: validatedData.yieldUnit,
+        recipeUnitConversion: validatedData.yield,
+        quantity: 0,
+      });
     }
   }, 'Failed to add recipe');
 }
@@ -350,10 +362,10 @@ export async function logSale(values: z.infer<typeof saleSchema>) {
 
   const recipeRef = doc(firestore, 'recipes', validatedData.recipeId);
   const recipeSnap = await getDoc(recipeRef);
-  if (recipeSnap.exists()) {
+  if (recipeSnap.exists) {
     const recipe = recipeSnap.data() as Recipe;
     for (const ingredient of recipe.ingredients) {
-      const stockRef = doc(firestore, `inventoryStock/${ingredient.itemId}_${validatedData.outletId}`);
+  const stockRef = doc(firestore, 'inventoryStock', `${ingredient.itemId}_${validatedData.outletId}`);
       const quantityToDeplete = ingredient.quantity * validatedData.quantity;
       batch.update(stockRef, {
         quantity: increment(-quantityToDeplete)
@@ -380,11 +392,11 @@ export async function logProduction(values: z.infer<typeof productionLogSchema>,
   for (const item of validatedData.items) {
     const recipeRef = doc(firestore, 'recipes', item.recipeId);
     const recipeSnap = await getDoc(recipeRef);
-    if (recipeSnap.exists()) {
+  if (recipeSnap.exists) {
       const recipe = recipeSnap.data() as Recipe;
       for (const ingredient of recipe.ingredients) {
         const quantityToDeplete = ingredient.quantity * item.quantityProduced;
-        const stockRef = doc(firestore, `inventoryStock/${ingredient.itemId}_${outletId}`);
+  const stockRef = doc(firestore, 'inventoryStock', `${ingredient.itemId}_${outletId}`);
         batch.update(stockRef, { quantity: increment(-quantityToDeplete) });
       }
 
@@ -392,7 +404,7 @@ export async function logProduction(values: z.infer<typeof productionLogSchema>,
       const subRecipeInvSnap = await getDocs(subRecipeAsInvQuery);
       if (!subRecipeInvSnap.empty) {
         const subRecipeInvId = subRecipeInvSnap.docs[0].id;
-        const subRecipeStockRef = doc(firestore, `inventoryStock/${subRecipeInvId}_${outletId}`);
+  const subRecipeStockRef = doc(firestore, 'inventoryStock', `${subRecipeInvId}_${outletId}`);
         const quantityToIncrease = (recipe.yield || 1) * item.quantityProduced;
         batch.update(subRecipeStockRef, { quantity: increment(quantityToIncrease) });
 
@@ -424,7 +436,7 @@ export async function logProduction(values: z.infer<typeof productionLogSchema>,
 export async function undoProductionLog(logId: string) {
     const logRef = doc(firestore, 'productionLogs', logId);
     const logSnap = await getDoc(logRef);
-    if (!logSnap.exists()) {
+  if (!logSnap.exists) {
         throw new Error("Production log not found.");
     }
 
@@ -434,12 +446,12 @@ export async function undoProductionLog(logId: string) {
     for (const item of log.producedItems) {
         const recipeRef = doc(firestore, 'recipes', item.recipeId);
         const recipeSnap = await getDoc(recipeRef);
-        if (recipeSnap.exists()) {
+  if (recipeSnap.exists) {
             const recipe = recipeSnap.data() as Recipe;
 
             for (const ingredient of recipe.ingredients) {
                 const quantityToReturn = ingredient.quantity * item.quantityProduced;
-                const stockRef = doc(firestore, `inventoryStock/${ingredient.itemId}_${log.outletId}`);
+                const stockRef = doc(firestore, 'inventoryStock', `${ingredient.itemId}_${log.outletId}`);
                 batch.update(stockRef, { quantity: increment(quantityToReturn) });
             }
 
@@ -447,7 +459,7 @@ export async function undoProductionLog(logId: string) {
             const subRecipeInvSnap = await getDocs(subRecipeAsInvQuery);
              if (!subRecipeInvSnap.empty) {
                 const subRecipeInvId = subRecipeInvSnap.docs[0].id;
-                const subRecipeStockRef = doc(firestore, `inventoryStock/${subRecipeInvId}_${log.outletId}`);
+                const subRecipeStockRef = doc(firestore, 'inventoryStock', `${subRecipeInvId}_${log.outletId}`);
                 const quantityToDeplete = (recipe.yield || 1) * item.quantityProduced;
                 batch.update(subRecipeStockRef, { quantity: increment(-quantityToDeplete) });
             }
@@ -468,16 +480,16 @@ export async function logButchering(values: z.infer<typeof butcheringLogSchema>,
     const userId = await getCurrentUserId();
     const validatedData = butcheringLogSchema.parse(values);
     const batch = createBatchedWrite(firestore, { source: 'logButchering' });
-    const primaryItemStockRef = doc(firestore, `inventoryStock/${validatedData.primaryItemId}_${outletId}`);
+  const primaryItemStockRef = doc(firestore, 'inventoryStock', `${validatedData.primaryItemId}_${outletId}`);
     batch.update(primaryItemStockRef, { quantity: increment(-validatedData.quantityUsed) });
     
     const primaryItemSpecRef = doc(firestore, 'inventory', validatedData.primaryItemId);
     const primaryItemSpecSnap = await getDoc(primaryItemSpecRef);
-    const primaryItemCost = primaryItemSpecSnap.exists() ? (primaryItemSpecSnap.data().unitCost || 0) * validatedData.quantityUsed : 0;
+  const primaryItemCost = primaryItemSpecSnap.exists ? ((primaryItemSpecSnap.data()?.unitCost || 0) * validatedData.quantityUsed) : 0;
     const yieldedItemsForLog = [];
 
     for (const yieldItem of validatedData.yieldedItems) {
-        const yieldStockRef = doc(firestore, `inventoryStock/${yieldItem.itemId}_${outletId}`);
+  const yieldStockRef = doc(firestore, 'inventoryStock', `${yieldItem.itemId}_${outletId}`);
         batch.update(yieldStockRef, { quantity: increment(yieldItem.weight) });
 
         const yieldSpecRef = doc(firestore, 'inventory', yieldItem.itemId);
@@ -518,13 +530,13 @@ export async function logButchering(values: z.infer<typeof butcheringLogSchema>,
 export async function undoButcheringLog(logId: string) {
     const logRef = doc(firestore, 'butcheringLogs', logId);
     const logSnap = await getDoc(logRef);
-    if (!logSnap.exists()) {
+  if (!logSnap.exists) {
         throw new Error("Butchering log not found.");
     }
     const log = logSnap.data() as ButcheringLog;
     const batch = createBatchedWrite(firestore, { source: 'undoButcheringLog' });
 
-    const primaryItemStockRef = doc(firestore, `inventoryStock/${log.primaryItem.itemId}_${log.outletId}`);
+  const primaryItemStockRef = doc(firestore, 'inventoryStock', `${log.primaryItem.itemId}_${log.outletId}`);
     batch.update(primaryItemStockRef, { quantity: increment(log.primaryItem.quantityUsed) });
     
     // This action is imperfect as we don't have enough info to reverse cost changes.
@@ -576,7 +588,7 @@ export async function receivePurchaseOrder(values: z.infer<typeof receivePoSchem
   const batch = createBatchedWrite(firestore, { source: 'receivePurchaseOrder' });
   const poRef = doc(firestore, 'purchaseOrders', validatedData.poId);
   const poSnap = await getDoc(poRef);
-  if (!poSnap.exists()) throw new Error('PO not found');
+  if (!poSnap.exists) throw new Error('PO not found');
 
   const poData = poSnap.data() as PurchaseOrder;
   const outletId = poData.outletId;
@@ -584,15 +596,15 @@ export async function receivePurchaseOrder(values: z.infer<typeof receivePoSchem
 
   for (const receivedItem of validatedData.items) {
     if (receivedItem.received > 0) {
-        const stockRef = doc(firestore, `inventoryStock/${receivedItem.itemId}_${outletId}`);
+  const stockRef = doc(firestore, 'inventoryStock', `${receivedItem.itemId}_${outletId}`);
         batch.update(stockRef, { quantity: increment(receivedItem.received) });
 
         const itemSpecRef = doc(firestore, 'inventory', receivedItem.itemId);
         const itemSpecSnap = await getDoc(itemSpecRef);
-        if (itemSpecSnap.exists()) {
+  if (itemSpecSnap.exists) {
             const spec = itemSpecSnap.data() as InventoryItem;
             const stockSnap = await getDoc(stockRef);
-            const currentStock = stockSnap.exists() ? stockSnap.data().quantity : 0;
+            const currentStock = stockSnap.exists ? stockSnap.data()?.quantity : 0;
             const currentTotalValue = (spec.unitCost || 0) * (currentStock || 0);
             const receivedValue = receivedItem.purchasePrice * receivedItem.received;
             const newTotalQuantity = (currentStock || 0) + receivedItem.received;
@@ -632,7 +644,7 @@ export async function addOutlet(values: z.infer<typeof outletSchema>) {
 
     const inventorySnapshot = await getDocs(collection(firestore, 'inventory'));
     inventorySnapshot.forEach(itemDoc => {
-        const stockRef = doc(firestore, `inventoryStock/${itemDoc.id}_${outletRef.id}`);
+  const stockRef = doc(firestore, 'inventoryStock', `${itemDoc.id}_${outletRef.id}`);
         batch.set(stockRef, {
             inventoryId: itemDoc.id,
             outletId: outletRef.id,
@@ -679,10 +691,10 @@ export async function transferInventory(values: z.infer<typeof transferInventory
     
     const batch = createBatchedWrite(firestore, { source: 'transferInventory' });
 
-    const fromStockRef = doc(firestore, `inventoryStock/${itemId}_${fromOutletId}`);
+  const fromStockRef = doc(firestore, 'inventoryStock', `${itemId}_${fromOutletId}`);
     batch.update(fromStockRef, { quantity: increment(-quantity) });
 
-    const toStockRef = doc(firestore, `inventoryStock/${itemId}_${toOutletId}`);
+  const toStockRef = doc(firestore, 'inventoryStock', `${itemId}_${toOutletId}`);
     batch.update(toStockRef, { quantity: increment(quantity) });
     
     const transferLogRef = newDocumentRef(firestore, 'inventoryTransfers');

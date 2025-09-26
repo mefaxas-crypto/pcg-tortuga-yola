@@ -28,12 +28,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { useState, useMemo } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
 import { allUnits } from '@/lib/conversions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCollection, useFirebase } from '@/firebase';
+import { collections } from '@/firebase/firestore/collections';
 
 type InventoryTableProps = {
   onEdit: (item: InventoryItem) => void;
@@ -43,14 +44,11 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
   const { firestore } = useFirebase();
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory'), orderBy('name', 'asc')) : null, [firestore]);
-  const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventoryQuery);
+  const inventoryQuery = useMemo(() => firestore ? query(collections.inventory(firestore), orderBy('name', 'asc')) : null, [firestore]);
+  const { data: inventorySpecs, isLoading: specsLoading } = useCollection(inventoryQuery);
 
-  const stockQuery = useMemo(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'inventoryStock'));
-    }, [firestore]);
-  const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockQuery);
+  const stockQuery = useMemo(() => firestore ? query(collections.inventoryStock(firestore)) : null, [firestore]);
+  const { data: stockLevels, isLoading: stockLoading } = useCollection(stockQuery);
 
   const loading = specsLoading || stockLoading;
 
