@@ -14,7 +14,7 @@ import { Suspense } from 'react';
 import { DashboardStats } from './dashboard/components/DashboardStats';
 import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
-import { LoginForm } from './(auth)/components/LoginForm';
+import { LoginForm } from '@/components/auth/LoginForm';
 
 
 export default function Home() {
