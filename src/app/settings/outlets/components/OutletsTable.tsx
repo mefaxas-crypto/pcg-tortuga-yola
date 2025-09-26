@@ -23,6 +23,7 @@ import type { Outlet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteOutletDialog } from './DeleteOutletDialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 
 type OutletsTableProps = {
@@ -31,8 +32,22 @@ type OutletsTableProps = {
 
 export function OutletsTable({ onEdit }: OutletsTableProps) {
   const { firestore } = useFirebase();
-  const outletsQuery = useMemoFirebase(() => query(collection(firestore, 'outlets'), orderBy('name', 'asc')), [firestore]);
-  const { data: outlets, isLoading: loading } = useCollection<Outlet>(outletsQuery);
+  const { user, loading: authLoading } = useAuth(); // Use loading state from useAuth
+
+  const outletsQuery = useMemoFirebase(
+    () =>
+      !authLoading && user
+        ? query(
+            collection(firestore, 'outlets'),
+            orderBy('name', 'asc')
+          )
+        : null,
+    [firestore, user, authLoading] // Add authLoading to dependency array
+  );
+
+  const { data: outlets, isLoading: dataLoading } = useCollection<Outlet>(outletsQuery);
+
+  const loading = authLoading || dataLoading;
 
   return (
     <Card>
@@ -55,7 +70,7 @@ export function OutletsTable({ onEdit }: OutletsTableProps) {
                     <TableCell>
                       <Skeleton className="h-5 w-32" />
                     </TableCell>
-                     <TableCell>
+                    <TableCell>
                       <Skeleton className="h-5 w-48" />
                     </TableCell>
                     <TableCell>

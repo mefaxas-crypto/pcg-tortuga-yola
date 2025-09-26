@@ -5,6 +5,7 @@ import type { Outlet } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useAuth } from './AuthContext';
 
 type OutletContextType = {
   selectedOutlet: Outlet | null;
@@ -16,6 +17,7 @@ const OutletContext = createContext<OutletContextType | undefined>(undefined);
 
 export const OutletProvider = ({ children }: { children: ReactNode }) => {
   const { firestore } = useFirebase();
+  const { appUser } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
 
   const outletsQuery = useMemoFirebase(
@@ -27,17 +29,28 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
   const outletList = useMemo(() => outlets || [], [outlets]);
 
   useEffect(() => {
-    // Set the default outlet once the outlets are loaded and no outlet is selected yet.
-    if (!isLoading && outletList.length > 0 && !selectedOutlet) {
+    if (isLoading || outletList.length === 0) return;
+
+    // If a user is logged in and assigned to a specific outlet, set that one.
+    if (appUser && appUser.outletId) {
+      const assignedOutlet = outletList.find(o => o.id === appUser.outletId);
+      if (assignedOutlet) {
+        setSelectedOutlet(assignedOutlet);
+        return;
+      }
+    }
+
+    // If no outlet is selected yet (or the assigned one wasn't found), set a default.
+    if (!selectedOutlet) {
       const bambooOutlet = outletList.find(o => o.name === "Restaurante Bamboo");
       if (bambooOutlet) {
         setSelectedOutlet(bambooOutlet);
       } else {
-        // Fallback to the first outlet if "Restaurante Bamboo" isn't found
         setSelectedOutlet(outletList[0]);
       }
     }
-  }, [isLoading, outletList, selectedOutlet]);
+  }, [isLoading, outletList, selectedOutlet, appUser?.outletId]);
+
 
   const value = useMemo(() => ({
     selectedOutlet,

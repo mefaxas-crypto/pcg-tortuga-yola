@@ -13,7 +13,6 @@ import { PhysicalCountTable } from './components/PhysicalCountTable';
 import { TransferForm } from './components/TransferForm';
 import { TransferHistory } from './components/TransferHistory';
 import { useOutletContext } from '@/context/OutletContext';
-import { Card, CardContent } from '@/components/ui/card';
 
 export default function InventoryPage() {
   const { selectedOutlet } = useOutletContext();

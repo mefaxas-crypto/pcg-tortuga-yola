@@ -1,4 +1,3 @@
-
 import type { Unit } from './conversions';
 import { z } from 'zod';
 import { 
@@ -87,22 +86,23 @@ export type AddSaleData = z.infer<typeof saleSchema>;
 export type LogProductionData = z.infer<typeof productionLogSchema>;
 export type ButcheringData = z.infer<typeof butcheringLogSchema>;
 export type AddPurchaseOrderData = z.infer<typeof purchaseOrderSchema>;
-export type ReceivePurchaseOrderData = z.infer<typeof z.object({
-  poId: z.string(),
-  items: z.array(z.object({
-    itemId: z.string(),
-    name: z.string(),
-    ordered: z.number(),
-    purchaseUnit: z.string(),
-    purchasePrice: z.coerce.number().min(0),
-    received: z.coerce.number().min(0, "Cannot be negative."),
-  })),
-  notes: z.string().optional(),
-  document: z.instanceof(File).optional().nullable(),
-})>;
+
+const receivePoClientSchema = z.object({
+    poId: z.string(),
+    items: z.array(z.object({
+        itemId: z.string(),
+        name: z.string(),
+        ordered: z.number(),
+        purchaseUnit: z.string(),
+        purchasePrice: z.coerce.number().min(0),
+        received: z.coerce.number().min(0, "Cannot be negative."),
+    })),
+    notes: z.string().optional(),
+    document: z.instanceof(File).optional().nullable(),
+});
+export type ReceivePurchaseOrderData = z.infer<typeof receivePoClientSchema>;
+
 export type AddOutletData = z.infer<typeof outletSchema>;
 export type AddAllergenData = z.infer<typeof allergenSchema>;
 export type AddIngredientCategoryData = z.infer<typeof ingredientCategorySchema>;
 export type AppUser = z.infer<typeof appUserSchema>;
-
-    

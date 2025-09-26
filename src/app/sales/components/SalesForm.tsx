@@ -23,7 +23,7 @@ import { logSale } from '@/lib/actions';
 import type { Menu, MenuItem as MenuItemType } from '@/lib/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { collection, query } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useOutletContext } from '@/context/OutletContext';
@@ -46,7 +46,7 @@ export function SalesForm() {
 
   const menusQuery = useMemoFirebase(() => query(collection(firestore, 'menus')), [firestore]);
   const { data: menusData } = useCollection<Menu>(menusQuery);
-  const menus = menusData || [];
+  const menus = useMemo(() => menusData || [], [menusData]);
   
   const canLogSales = appUser && ['Admin', 'Manager', 'Chef', 'Clerk'].includes(appUser.role);
 

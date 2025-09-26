@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Outlet } from '@/lib/types';
 import { Store } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useOutletContext } from '@/context/OutletContext';
