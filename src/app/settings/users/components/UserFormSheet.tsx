@@ -34,7 +34,6 @@ import type { AppUser } from '@/lib/types';
 import { UserRoles } from '@/lib/validations';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { revalidatePath } from 'next/cache';
 
 const formSchema = z.object({
   role: z.enum(UserRoles),
