@@ -23,7 +23,6 @@ import type { Menu } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteMenuDialog } from './DeleteMenuDialog';
 import { useRouter } from 'next/navigation';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
@@ -31,7 +30,6 @@ import { useAuth } from '@/context/AuthContext';
 export function MenusTable() {
   const router = useRouter();
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   const { user, loading: authLoading } = useAuth();
   
   const menusQuery = useMemo(() => {
@@ -166,7 +164,7 @@ export function MenusTable() {
         </div>
         {!loading && (!menus || menus.length === 0) && (
           <div className="py-12 text-center text-muted-foreground">
-             {selectedOutlet ? 'No menus found. Add your first one!' : 'Please select an outlet to view menus.'}
+             No menus found. Add your first one!
           </div>
         )}
       </CardContent>

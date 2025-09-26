@@ -5,15 +5,14 @@
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { cn } from '@/lib/utils';
-import { OutletProvider, useOutletContext } from '@/context/OutletContext';
 import { Toaster } from '@/components/ui/toaster';
 import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
 import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
-import { useEffect } from 'react';
 import { FirebaseClientProvider } from '@/firebase';
+import { OutletProvider } from '@/context/OutletContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,27 +30,13 @@ type Props = {
   children: React.ReactNode;
 };
 
-const THEMES = ['theme-bamboo', 'theme-ocean'];
 
 function ThemedLayout({ children }: { children: React.ReactNode }) {
-  const { selectedOutlet } = useOutletContext();
-
-  useEffect(() => {
-    const root = document.documentElement;
-    
-    root.classList.remove(...THEMES);
-    
-    const theme = selectedOutlet?.theme || 'theme-bamboo';
-    
-    if (theme) {
-      root.classList.add(theme);
-    }
-  }, [selectedOutlet]);
-
+  
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${playfairDisplay.variable}`}
+      className={`${inter.variable} ${playfairDisplay.variable} theme-bamboo`}
     >
       <head>
         <title>PCG Kitchen Manager</title>
@@ -81,16 +66,14 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: Props) {
   return (
-    <>
-      {/* <FirebaseClientProvider>
-        <AuthProvider>
-          <OutletProvider> */}
-            <ThemedLayout>
-                {children}
-            </ThemedLayout>
-          {/* </OutletProvider>
-        </AuthProvider>
-      </FirebaseClientProvider> */}
-    </>
+    <FirebaseClientProvider>
+      <AuthProvider>
+        <OutletProvider>
+          <ThemedLayout>
+              {children}
+          </ThemedLayout>
+        </OutletProvider>
+      </AuthProvider>
+    </FirebaseClientProvider>
   );
 }

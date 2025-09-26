@@ -1,99 +1,80 @@
 
+'use client';
+
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, Settings, Shapes, UtensilsCrossed, Store } from 'lucide-react';
+import { List, Shapes, UtensilsCrossed, Users } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { Link } from 'next-intl';
 
 export default function SettingsPage() {
+  const { appUser } = useAuth();
+  
+  const settingCards = [
+    { 
+      role: ['Admin'], 
+      href: '/settings/users', 
+      icon: Users, 
+      title: 'User Management', 
+      description: 'Manage users, roles, and approval workflows.' 
+    },
+    { 
+      role: ['Admin', 'Manager', 'Chef'], 
+      href: '/settings/allergens', 
+      icon: List, 
+      title: 'Allergen Management', 
+      description: 'Manage the list of allergens used in recipes.'
+    },
+    { 
+      role: ['Admin', 'Manager', 'Chef', 'Clerk', 'Cook'], 
+      href: '/settings/categories',
+      icon: Shapes, 
+      title: 'Category Management', 
+      description: 'Manage the categories for your inventory items.' 
+    },
+     { 
+      role: ['Admin', 'Manager', 'Chef'], 
+      href: '/settings/butchering-templates', 
+      icon: UtensilsCrossed, 
+      title: 'Butchering Templates', 
+      description: 'Create templates for butchering primary cuts.' 
+    },
+  ];
+
+  const accessibleCards = settingCards.filter(card => appUser && card.role.includes(appUser.role));
+
+  if (!appUser) {
+      return null;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Store />
-              Outlet Management
-            </CardTitle>
-            <CardDescription>
-              Define and manage your kitchen locations, like &quot;Tortuga Bay&quot; or &quot;La Yola&quot;.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/settings/outlets">Manage Outlets</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <List />
-              Allergen Management
-            </CardTitle>
-            <CardDescription>
-              Define and manage the list of allergens used in your ingredients and recipes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/settings/allergens">Manage Allergens</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
+        {accessibleCards.map((card) => (
+          <Card key={card.href}>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                <Shapes />
-                Category Management
-                </CardTitle>
-                <CardDescription>
-                Manage the categories for your inventory items.
-                </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <card.icon />
+                {card.title}
+              </CardTitle>
+              <CardDescription>
+                {card.description}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild>
-                <Link href="/settings/categories">Manage Categories</Link>
-                </Button>
+              <Button asChild>
+                <Link href={card.href}>Manage {card.title.split(' ')[0]}</Link>
+              </Button>
             </CardContent>
-        </Card>
-         <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                <UtensilsCrossed />
-                Butchering Templates
-                </CardTitle>
-                <CardDescription>
-                Create and manage templates for butchering primary cuts into yields.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button asChild>
-                <Link href="/settings/butchering-templates">Manage Templates</Link>
-                </Button>
-            </CardContent>
-        </Card>
-         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <Settings />
-                General Settings
-            </CardTitle>
-            <CardDescription>
-              Manage other application preferences.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[88px]">
-                <div className="flex flex-col items-center gap-1 text-center">
-                    <p className="text-sm text-muted-foreground">
-                        Coming soon
-                    </p>
-                </div>
+          </Card>
+        ))}
+        {accessibleCards.length === 0 && (
+            <div className="col-span-full text-center text-muted-foreground p-8 border border-dashed rounded-md">
+                You do not have permission to view any settings.
             </div>
-          </CardContent>
-        </Card>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { useOutletContext } from '@/context/OutletContext';
 import type { Sale } from '@/lib/types';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useState, useMemo } from 'react';
@@ -39,26 +38,24 @@ const chartConfig = {
 
 export function SalesAndProfitability() {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
   
   const salesQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet || !date?.from || !date?.to) return null;
+      if (!firestore || !date?.from || !date?.to) return null;
 
       const toDate = new Date(date.to);
       toDate.setHours(23, 59, 59, 999);
 
       return query(
           collection(firestore, 'sales'),
-          where('outletId', '==', selectedOutlet.id),
           where('saleDate', '>=', Timestamp.fromDate(date.from)),
           where('saleDate', '<=', Timestamp.fromDate(toDate)),
           orderBy('saleDate', 'desc')
       );
-    }, [firestore, selectedOutlet, date]);
+    }, [firestore, date]);
 
   const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
@@ -133,20 +130,6 @@ export function SalesAndProfitability() {
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
       );
-    }
-    if (!selectedOutlet) {
-        return (
-             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[200px]">
-                <div className="flex flex-col items-center gap-1 text-center">
-                <h3 className="text-2xl mt-4 font-bold tracking-tight">
-                    No Outlet Selected
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                    Please select an outlet from the header to view reports.
-                </p>
-                </div>
-            </div>
-        )
     }
     if (sales?.length === 0) {
         return (
@@ -260,7 +243,7 @@ export function SalesAndProfitability() {
         <Card>
             <CardHeader>
                 <CardTitle>Sales & Profitability Analysis</CardTitle>
-                <CardDescription>Analyze your sales performance for the selected outlet and date range.</CardDescription>
+                <CardDescription>Analyze your sales performance for the selected date range.</CardDescription>
             </CardHeader>
             <CardContent>
                 <DateRangePicker date={date} onDateChange={setDate} />

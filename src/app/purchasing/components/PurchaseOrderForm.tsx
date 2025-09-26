@@ -42,7 +42,6 @@ import { Input } from '@/components/ui/input';
 import { Save, Trash2 } from 'lucide-react';
 import { addPurchaseOrder } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 
 const poItemSchema = z.object({
@@ -66,7 +65,6 @@ export function PurchaseOrderForm() {
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const [loading, setLoading] = useState(false);
-  const { selectedOutlet } = useOutletContext();
   
   const suppliersQuery = useMemo(() => firestore ? query(collection(firestore, 'suppliers')) : null, [firestore]);
   const { data: suppliersData } = useCollection<Supplier>(suppliersQuery);
@@ -88,7 +86,7 @@ export function PurchaseOrderForm() {
   const supplierId = form.watch('supplierId');
 
   useEffect(() => {
-    if (!supplierId || !selectedOutlet || !firestore) {
+    if (!supplierId || !firestore) {
       replace([]);
       return;
     }
@@ -115,7 +113,6 @@ export function PurchaseOrderForm() {
 
       const stockQuery = query(
         collection(firestore, 'inventoryStock'),
-        where('outletId', '==', selectedOutlet.id),
         where('inventoryId', 'in', inventoryIds)
       );
 
@@ -147,14 +144,10 @@ export function PurchaseOrderForm() {
     };
 
     fetchItems();
-  }, [supplierId, selectedOutlet, replace, firestore]);
+  }, [supplierId, replace, firestore]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!selectedOutlet) {
-        toast({ variant: 'destructive', title: "No Outlet Selected", description: "Please select an outlet before creating a purchase order." });
-        return;
-    }
     setLoading(true);
     const supplier = suppliers.find(s => s.id === values.supplierId);
     if (!supplier) {
@@ -169,7 +162,7 @@ export function PurchaseOrderForm() {
             supplierName: supplier.name,
             items: values.items,
             status: 'Pending',
-        }, selectedOutlet.id);
+        }, 'default');
         toast({ title: "Purchase Order Created!", description: `PO for ${supplier.name} has been saved.` });
         form.reset({ supplierId: '', items: [] });
     } catch (error) {
@@ -186,7 +179,7 @@ export function PurchaseOrderForm() {
       <CardHeader>
         <CardTitle>Create Purchase Order</CardTitle>
         <CardDescription>
-          Select a supplier to see their items and create a new purchase order for the selected outlet. Quantities are suggested based on your Min/Max levels.
+          Select a supplier to see their items and create a new purchase order. Quantities are suggested based on your Min/Max levels.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -198,10 +191,10 @@ export function PurchaseOrderForm() {
               render={({ field }) => (
                 <FormItem className="max-w-sm">
                   <FormLabel>Supplier</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedOutlet}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={!selectedOutlet ? "Select an outlet first" : "Select a supplier"} />
+                        <SelectValue placeholder="Select a supplier" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

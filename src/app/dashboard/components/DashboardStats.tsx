@@ -21,7 +21,6 @@ import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { BarChart3, Bot, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useOutletContext } from '@/context/OutletContext';
 import { LowStockItems } from './LowStockItems';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,10 +38,9 @@ type AggregatedSale = {
 
 export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   
   const salesQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
+      if (!firestore) return null;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -50,11 +48,10 @@ export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) 
 
       return query(
         collection(firestore, 'sales'),
-        where('outletId', '==', selectedOutlet.id),
         where('saleDate', '>=', Timestamp.fromDate(today)),
         where('saleDate', '<', Timestamp.fromDate(tomorrow))
       );
-    }, [firestore, selectedOutlet]);
+    }, [firestore]);
 
   const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
@@ -96,7 +93,7 @@ export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) 
             <div className="grid gap-2">
               <CardTitle>Top Selling Items Today</CardTitle>
               <CardDescription>
-                Today&apos;s most popular menu items for this outlet.
+                Today&apos;s most popular menu items.
               </CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
@@ -169,9 +166,6 @@ export function DashboardStats({ showTopSelling = false }: DashboardStatsProps) 
           {loading ? <Skeleton className="h-7 w-32 mt-1" /> : (
             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
           )}
-          <p className="text-xs text-muted-foreground">
-            {selectedOutlet?.name}
-          </p>
         </CardContent>
       </Card>
       <Card>

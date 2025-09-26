@@ -22,7 +22,6 @@ import {
   query,
   orderBy,
   limit,
-  where,
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,23 +29,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { UndoProductionLogDialog } from './UndoProductionLogDialog';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
 
 export function ProductionLogHistory() {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   
   const logsQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
+      if (!firestore) return null;
       return query(
         collection(firestore, 'productionLogs'),
-        where('outletId', '==', selectedOutlet.id),
         orderBy('logDate', 'desc'),
         limit(20)
       );
-    }, [firestore, selectedOutlet]);
+    }, [firestore]);
   const { data: logs, isLoading: loading } = useCollection<ProductionLog>(logsQuery);
 
   return (
@@ -54,7 +50,7 @@ export function ProductionLogHistory() {
       <CardHeader>
         <CardTitle>Production History</CardTitle>
         <CardDescription>
-          A log of the most recently produced sub-recipes for the selected outlet. You can undo a log to reverse the inventory changes.
+          A log of the most recently produced sub-recipes. You can undo a log to reverse the inventory changes.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -132,7 +128,7 @@ export function ProductionLogHistory() {
           </Table>
           {!loading && (!logs || logs.length === 0) && (
             <div className="py-12 text-center text-muted-foreground">
-              No production logged yet for this outlet.
+              No production logged yet.
             </div>
           )}
         </ScrollArea>

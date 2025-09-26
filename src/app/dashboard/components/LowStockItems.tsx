@@ -20,7 +20,6 @@ import { collection, query, where } from 'firebase/firestore';
 import { Package } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useOutletContext } from '@/context/OutletContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirebase } from '@/firebase';
 
@@ -30,16 +29,14 @@ type LowStockItemsProps = {
 
 export function LowStockItems({ showTable = false }: LowStockItemsProps) {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   
   const lowStockLevelsQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
+      if (!firestore) return null;
       return query(
         collection(firestore, 'inventoryStock'),
-        where('outletId', '==', selectedOutlet.id),
         where('status', 'in', ['Low Stock', 'Out of Stock'])
       );
-    }, [firestore, selectedOutlet]);
+    }, [firestore]);
   
   const { data: lowStockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(lowStockLevelsQuery);
 

@@ -10,26 +10,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Sale } from '@/lib/types';
-import { collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
 
 export function RecentSales() {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   
   const salesQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
+      if (!firestore) return null;
       return query(
         collection(firestore, 'sales'),
-        where('outletId', '==', selectedOutlet.id),
         orderBy('saleDate', 'desc'),
         limit(15)
       );
-    }, [firestore, selectedOutlet]);
+    }, [firestore]);
   const { data: sales, isLoading: loading } = useCollection<Sale>(salesQuery);
 
   const formatCurrency = (value: number) => {
@@ -55,7 +52,7 @@ export function RecentSales() {
   if (!sales || sales.length === 0) {
       return (
         <div className="py-12 text-center text-muted-foreground">
-          No sales logged yet for this outlet.
+          No sales logged yet.
         </div>
       );
   }

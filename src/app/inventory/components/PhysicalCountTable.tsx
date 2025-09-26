@@ -16,14 +16,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, PhysicalCountItem, InventoryStockItem } from '@/lib/types';
 import { useState, useMemo } from 'react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { Save } from 'lucide-react';
 import { updatePhysicalInventory } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 
 type PhysicalCountState = {
@@ -35,7 +34,6 @@ type PhysicalCountState = {
 
 export function PhysicalCountTable() {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   const [physicalCounts, setPhysicalCounts] = useState<PhysicalCountState>({});
   const [isSaving, setIsSaving] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -45,9 +43,9 @@ export function PhysicalCountTable() {
   const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventorySpecsQuery);
 
   const stockLevelsQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
-      return query(collection(firestore, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
-    }, [firestore, selectedOutlet]);
+      if (!firestore) return null;
+      return query(collection(firestore, 'inventoryStock'));
+    }, [firestore]);
   const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockLevelsQuery);
   
   const loading = specsLoading || stockLoading;
@@ -150,14 +148,6 @@ export function PhysicalCountTable() {
 
 
   const handleSaveChanges = async () => {
-     if (!selectedOutlet) {
-      toast({
-        variant: "destructive",
-        title: "No Outlet Selected",
-        description: "Please select an outlet before saving counts.",
-      });
-      return;
-    }
     if (changedItems.length === 0) {
         toast({
             title: "No changes to save",
@@ -167,7 +157,7 @@ export function PhysicalCountTable() {
     }
     setIsSaving(true);
     try {
-        await updatePhysicalInventory(changedItems, selectedOutlet.id);
+        await updatePhysicalInventory(changedItems, 'default'); // Using a default ID as outlet is removed
         toast({
             title: "Inventory Updated",
             description: "Your physical counts have been saved successfully.",
@@ -304,7 +294,7 @@ export function PhysicalCountTable() {
         </div>
         {!loading && (!filteredItems || filteredItems.length === 0) && (
           <div className="py-12 text-center text-muted-foreground">
-             {selectedOutlet ? (categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`) : 'Please select an outlet to begin a physical count.'}
+             {categoryFilter === 'all' ? 'No ingredients found.' : `No ingredients found in the "${categoryFilter}" category.`}
           </div>
         )}
       </CardContent>

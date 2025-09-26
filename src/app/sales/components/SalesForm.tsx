@@ -26,7 +26,6 @@ import { collection, query } from 'firebase/firestore';
 import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useOutletContext } from '@/context/OutletContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCollection, useFirebase } from '@/firebase';
 
@@ -40,7 +39,6 @@ export function SalesForm() {
   const [loading, setLoading] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const { toast } = useToast();
-  const { selectedOutlet } = useOutletContext();
   const { user, appUser } = useAuth();
   const { firestore } = useFirebase();
 
@@ -72,14 +70,6 @@ export function SalesForm() {
   }, [selectedMenuId, menus, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!selectedOutlet) {
-      toast({
-        variant: 'destructive',
-        title: 'No Outlet Selected',
-        description: 'Please select an outlet from the header before logging a sale.',
-      });
-      return;
-    }
     if (!user) {
       toast({
         variant: 'destructive',
@@ -105,7 +95,7 @@ export function SalesForm() {
 
     try {
         await logSale({
-            outletId: selectedOutlet.id,
+            outletId: 'default', // Hardcoded as outlet functionality is removed
             menuId: values.menuId,
             menuName: selectedMenu.name,
             recipeId: values.recipeId,
@@ -157,7 +147,7 @@ export function SalesForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Menu</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedOutlet}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a menu" />
@@ -212,7 +202,7 @@ export function SalesForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={loading || !selectedOutlet} className="w-full">
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Logging Sale...' : 'Log Sale'}
         </Button>
       </form>

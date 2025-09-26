@@ -28,12 +28,11 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { InventoryItem, InventoryStockItem } from '@/lib/types';
 import { useState, useMemo } from 'react';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteInventoryItemDialog } from './DeleteInventoryItemDialog';
 import { allUnits } from '@/lib/conversions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 
 type InventoryTableProps = {
@@ -42,16 +41,15 @@ type InventoryTableProps = {
 
 export function InventoryTable({ onEdit }: InventoryTableProps) {
   const { firestore } = useFirebase();
-  const { selectedOutlet } = useOutletContext();
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: inventorySpecs, isLoading: specsLoading } = useCollection<InventoryItem>(inventoryQuery);
 
   const stockQuery = useMemo(() => {
-      if (!firestore || !selectedOutlet) return null;
-      return query(collection(firestore, 'inventoryStock'), where('outletId', '==', selectedOutlet.id));
-    }, [firestore, selectedOutlet]);
+      if (!firestore) return null;
+      return query(collection(firestore, 'inventoryStock'));
+    }, [firestore]);
   const { data: stockLevels, isLoading: stockLoading } = useCollection<InventoryStockItem>(stockQuery);
 
   const loading = specsLoading || stockLoading;

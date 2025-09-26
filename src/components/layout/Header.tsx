@@ -19,7 +19,6 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { placeholderImages } from '@/lib/placeholder-images.json';
 import { LogOut, Settings, User } from 'lucide-react';
 import Link from 'next/link';
-import { OutletSelector } from './OutletSelector';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
@@ -53,8 +52,6 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
       <SidebarTrigger className="md:hidden" />
-
-      {user && <OutletSelector />}
 
       <div className="flex-1" />
       

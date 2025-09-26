@@ -22,7 +22,6 @@ import { Eye, Inbox, MoreVertical, XCircle } from 'lucide-react';
 import { ReceivePoDialog } from './ReceivePoDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CancelPoDialog } from './CancelPoDialog';
-import { useOutletContext } from '@/context/OutletContext';
 import { useRouter } from 'next/navigation';
 import { useCollection, useFirebase } from '@/firebase';
 
@@ -36,20 +35,18 @@ const historyStatuses: PurchaseOrder['status'][] = ['Received', 'Cancelled'];
 export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     const router = useRouter();
     const { firestore } = useFirebase();
-    const { selectedOutlet } = useOutletContext();
     const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
 
     const purchaseOrdersQuery = useMemo(() => {
-            if (!firestore || !selectedOutlet) return null;
+            if (!firestore) return null;
             
             const statusesToQuery = status === 'active' ? activeStatuses : historyStatuses;
             return query(
                 collection(firestore, 'purchaseOrders'),
-                where('outletId', '==', selectedOutlet.id),
                 where('status', 'in', statusesToQuery),
                 orderBy('createdAt', 'desc')
             );
-        }, [firestore, selectedOutlet, status]);
+        }, [firestore, status]);
     
     const { data: purchaseOrders, isLoading: loading } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 
@@ -79,14 +76,6 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     
     const handleViewClick = (poId: string) => {
         router.push(`/purchasing/${poId}`);
-    }
-
-    if (!selectedOutlet) {
-        return (
-             <div className="py-12 text-center text-muted-foreground">
-                Please select an outlet to view purchase orders.
-            </div>
-        )
     }
 
     return (
