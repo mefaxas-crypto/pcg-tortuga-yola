@@ -1,7 +1,10 @@
+
 'use client';
 
 import type { Outlet } from '@/lib/types';
-import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type OutletContextType = {
   selectedOutlet: Outlet | null;
@@ -15,6 +18,35 @@ const OutletContext = createContext<OutletContextType | undefined>(undefined);
 export const OutletProvider = ({ children }: { children: ReactNode }) => {
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'outlets'));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data: Outlet[] = [];
+        snapshot.forEach((doc) =>
+          data.push({ id: doc.id, ...doc.data() } as Outlet)
+        );
+        const sortedOutlets = data.sort((a, b) => a.name.localeCompare(b.name));
+        setOutlets(sortedOutlets);
+
+        // Find and set "Restaurante Bamboo" as the default outlet.
+        const bambooOutlet = sortedOutlets.find(o => o.name === "Restaurante Bamboo");
+        if (bambooOutlet) {
+          setSelectedOutlet(bambooOutlet);
+        } else if (sortedOutlets.length > 0) {
+          // Fallback to the first outlet if Bamboo is not found
+          setSelectedOutlet(sortedOutlets[0]);
+        }
+      },
+      (error) => {
+        console.error('Error fetching outlets:', error);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
 
   const value = useMemo(() => ({
     selectedOutlet,
