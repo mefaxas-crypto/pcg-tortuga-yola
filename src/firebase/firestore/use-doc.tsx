@@ -9,7 +9,6 @@ import {
   type FirestoreError,
 } from 'firebase/firestore';
 import { useEffect, useReducer, useMemo } from 'react';
-import { useMemoFirebase } from '@/firebase/use-memo-firebase';
 import { handleFirebaseError, StandardizedError } from '@/firebase/errors';
 
 export interface UseDocOptions {
@@ -51,7 +50,7 @@ export const useDoc = <T extends DocumentData>(
     error: null,
   });
 
-  const memoizedRef = useMemoFirebase(ref, (a, b) => a?.isEqual(b) ?? false);
+  const memoizedRef = useMemo(() => ref, [ref]);
 
   useEffect(() => {
     if (!memoizedRef) {
@@ -79,7 +78,8 @@ export const useDoc = <T extends DocumentData>(
     );
 
     return () => unsubscribe();
-  }, [memoizedRef, options?.snapshotListenOptions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoizedRef]);
 
   return useMemo(() => state, [state]);
 };
