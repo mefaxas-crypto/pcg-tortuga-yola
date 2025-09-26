@@ -1,12 +1,10 @@
-
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
-import { UserRoles } from '@/lib/validations';
 
 interface AuthContextType {
   user: User | null;
@@ -32,22 +30,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         
-        // Listen for real-time updates on the user's document
         const unsubscribeFirestore = onSnapshot(userDocRef, async (userDocSnap) => {
           if (userDocSnap.exists()) {
-            const userData = userDocSnap.data() as AppUser;
-            // **FIX**: If user exists but has no role, this is the first user, make them Admin.
-            if (!userData.role) {
-                const roleToAssign = 'Admin'; // Default the first-ever user to Admin.
-                await updateDoc(userDocRef, { role: roleToAssign });
-                setAppUser({ ...userData, role: roleToAssign });
-            } else {
-                setAppUser(userData);
-            }
+            setAppUser(userDocSnap.data() as AppUser);
           } else {
-            // This is a new user signing up.
-            // By definition, if the doc doesn't exist, they can't be the very first user who already exists.
-            // So, new users from now on get 'Pending'.
             const newUser: AppUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -61,7 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
            setLoading(false);
         });
         
-        // Return the firestore listener so it gets cleaned up
         return () => unsubscribeFirestore();
 
       } else {
