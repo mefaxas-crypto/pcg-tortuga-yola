@@ -24,6 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CancelPoDialog } from './CancelPoDialog';
 import { useRouter } from 'next/navigation';
 import { useCollection, useFirebase } from '@/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 type PurchaseOrdersTableProps = {
     status: 'active' | 'history';
@@ -35,18 +36,20 @@ const historyStatuses: PurchaseOrder['status'][] = ['Received', 'Cancelled'];
 export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     const router = useRouter();
     const { firestore } = useFirebase();
+    const { user } = useAuth();
     const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
 
     const purchaseOrdersQuery = useMemo(() => {
-            if (!firestore) return null;
+            if (!firestore || !user) return null;
             
             const statusesToQuery = status === 'active' ? activeStatuses : historyStatuses;
             return query(
                 collection(firestore, 'purchaseOrders'),
+                where('userId', '==', user.uid),
                 where('status', 'in', statusesToQuery),
                 orderBy('createdAt', 'desc')
             );
-        }, [firestore, status]);
+        }, [firestore, status, user]);
     
     const { data: purchaseOrders, isLoading: loading } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 

@@ -18,12 +18,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { ButcheryTemplate, InventoryItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteTemplateDialog } from './DeleteTemplateDialog';
 import { useCollection, useFirebase } from '@/firebase';
 import { useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 
 type TemplatesTableProps = {
@@ -32,11 +33,18 @@ type TemplatesTableProps = {
 
 export function TemplatesTable({ onEdit }: TemplatesTableProps) {
   const { firestore } = useFirebase();
+  const { user } = useAuth();
 
-  const templatesQuery = useMemo(() => firestore ? query(collection(firestore, 'butcheryTemplates'), orderBy('name', 'asc')) : null, [firestore]);
+  const templatesQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'butcheryTemplates'), where('userId', '==', user.uid), orderBy('name', 'asc'));
+  }, [firestore, user]);
   const { data: templates, isLoading: templatesLoading } = useCollection<ButcheryTemplate>(templatesQuery);
   
-  const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
+  const inventoryQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'inventory'), where('userId', '==', user.uid));
+  },[firestore, user]);
   const { data: inventory, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
 
   const loading = templatesLoading || inventoryLoading;
