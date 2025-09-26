@@ -18,45 +18,45 @@ import {
 } from 'firebase/firestore';
 import {db} from './firebase';
 import type {
-  AddAllergenData,
-  AddIngredientCategoryData,
-  AddMenuData,
-  AddOutletData,
-  AddPurchaseOrderData,
-  AddRecipeData,
-  AddSaleData,
-  ButcheringData,
   ButcheringLog,
   ButcheryTemplate,
-  InventoryFormData,
   InventoryItem,
   InventoryStockItem,
-  InventoryTransferData,
-  LogProductionData,
   Menu,
   Outlet,
   PhysicalCountItem,
   ProductionLog,
   PurchaseOrder,
   Recipe,
-  ReceivePurchaseOrderData,
   Supplier,
   VarianceLogItem,
 } from './types';
 import {revalidatePath} from 'next/cache';
 import { Unit, convert, getBaseUnit } from './conversions';
+import { 
+  supplierSchema, 
+  inventoryItemSchema, 
+  allergenSchema, 
+  ingredientCategorySchema, 
+  recipeSchema, 
+  menuSchema, 
+  saleSchema,
+  productionLogSchema,
+  butcheringLogSchema,
+  purchaseOrderSchema,
+  receivePoSchema,
+  outletSchema,
+  transferInventorySchema
+} from './validations';
+import { z } from 'zod';
 
-// We are defining a specific type for adding a supplier
-// that doesn't require the `id` field, as it will be auto-generated.
-type AddSupplierData = Omit<Supplier, 'id'>;
-type EditSupplierData = Omit<Supplier, 'id'>;
-
-export async function addSupplier(supplierData: AddSupplierData) {
+export async function addSupplier(supplierData: z.infer<typeof supplierSchema>) {
+  const validatedData = supplierSchema.parse(supplierData);
   try {
-    const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
+    const docRef = await addDoc(collection(db, 'suppliers'), validatedData);
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
-    const newSupplier: Supplier = { id: docRef.id, ...supplierData };
+    const newSupplier: Supplier = { id: docRef.id, ...validatedData };
     return newSupplier;
   } catch (e) {
     console.error('Error adding document: ', e);
@@ -64,10 +64,11 @@ export async function addSupplier(supplierData: AddSupplierData) {
   }
 }
 
-export async function editSupplier(id: string, supplierData: EditSupplierData) {
+export async function editSupplier(id: string, supplierData: z.infer<typeof supplierSchema>) {
+  const validatedData = supplierSchema.parse(supplierData);
   try {
     const supplierRef = doc(db, 'suppliers', id);
-    await updateDoc(supplierRef, supplierData);
+    await updateDoc(supplierRef, validatedData);
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
     return {success: true};
@@ -123,7 +124,8 @@ function getStatus(
   }
 }
 
-export async function addInventoryItem(formData: InventoryFormData) {
+export async function addInventoryItem(formData: z.infer<typeof inventoryItemSchema>) {
+  const validatedData = inventoryItemSchema.parse(formData);
   try {
     // Separate form data
     const {
@@ -135,7 +137,7 @@ export async function addInventoryItem(formData: InventoryFormData) {
       minStock,
       maxStock,
       ...restOfForm
-    } = formData;
+    } = validatedData;
 
     const inventoryUnit = purchaseUnit;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
@@ -162,13 +164,13 @@ export async function addInventoryItem(formData: InventoryFormData) {
       const totalBaseUnits = purchaseQuantity * finalRecipeUnitConversion;
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
-    const supplierName = await getSupplierName(formData.supplierId);
+    const supplierName = await getSupplierName(validatedData.supplierId);
 
     // This is the master inventory item data (the "spec")
     const itemSpecData = {
       ...restOfForm,
       supplier: supplierName,
-      supplierId: formData.supplierId || '',
+      supplierId: validatedData.supplierId || '',
       purchaseQuantity,
       purchaseUnit,
       purchasePrice,
@@ -196,8 +198,8 @@ export async function addInventoryItem(formData: InventoryFormData) {
         transaction.set(stockRef, {
           inventoryId: docRef.id,
           outletId: outletDoc.id,
-          quantity: formData.quantity || 0,
-          status: getStatus(formData.quantity || 0, itemSpecData.minStock),
+          quantity: validatedData.quantity || 0,
+          status: getStatus(validatedData.quantity || 0, itemSpecData.minStock),
         });
       });
       
@@ -236,12 +238,13 @@ async function getSupplierName(supplierId?: string): Promise<string> {
 
 export async function editInventoryItem(
   id: string,
-  formData: InventoryFormData
+  formData: z.infer<typeof inventoryItemSchema>
 ) {
+  const validatedData = inventoryItemSchema.parse(formData);
   try {
     const itemRef = doc(db, 'inventory', id);
 
-    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, minStock, maxStock, ...restOfForm } = formData;
+    const { purchaseQuantity, purchaseUnit, purchasePrice, recipeUnit, recipeUnitConversion, minStock, maxStock, ...restOfForm } = validatedData;
     
     const inventoryUnit = purchaseUnit;
     const finalRecipeUnit = recipeUnit || getBaseUnit(purchaseUnit as Unit);
@@ -261,12 +264,12 @@ export async function editInventoryItem(
       unitCost = totalBaseUnits > 0 ? purchasePrice / totalBaseUnits : 0;
     }
 
-    const supplierName = await getSupplierName(formData.supplierId);
+    const supplierName = await getSupplierName(validatedData.supplierId);
 
     const dataToUpdate = {
       ...restOfForm,
       supplier: supplierName,
-      supplierId: formData.supplierId || '',
+      supplierId: validatedData.supplierId || '',
       purchaseQuantity,
       purchaseUnit,
       purchasePrice,
@@ -399,9 +402,10 @@ export async function updatePhysicalInventory(items: PhysicalCountItem[], outlet
 
 
 // Allergen Actions
-export async function addAllergen(allergenData: AddAllergenData) {
+export async function addAllergen(allergenData: z.infer<typeof allergenSchema>) {
+  const validatedData = allergenSchema.parse(allergenData);
   try {
-    const docRef = await addDoc(collection(db, 'allergens'), allergenData);
+    const docRef = await addDoc(collection(db, 'allergens'), validatedData);
     revalidatePath('/settings/allergens');
     return {success: true, id: docRef.id};
   } catch (e) {
@@ -422,9 +426,10 @@ export async function deleteAllergen(allergenId: string) {
 }
 
 // Ingredient Category Actions
-export async function addIngredientCategory(categoryData: AddIngredientCategoryData) {
+export async function addIngredientCategory(categoryData: z.infer<typeof ingredientCategorySchema>) {
+    const validatedData = ingredientCategorySchema.parse(categoryData);
     try {
-        const docRef = await addDoc(collection(db, 'ingredientCategories'), categoryData);
+        const docRef = await addDoc(collection(db, 'ingredientCategories'), validatedData);
         revalidatePath('/settings/categories');
         revalidatePath('/inventory');
         return { success: true, id: docRef.id };
@@ -448,29 +453,30 @@ export async function deleteIngredientCategory(categoryId: string) {
 
 
 // Recipe Actions
-export async function addRecipe(recipeData: AddRecipeData) {
+export async function addRecipe(recipeData: z.infer<typeof recipeSchema>) {
+  const validatedData = recipeSchema.parse(recipeData);
   try {
     await runTransaction(db, async (transaction) => {
       // 1. Create the recipe document itself
       const recipeRef = doc(collection(db, 'recipes'));
-      transaction.set(recipeRef, recipeData);
+      transaction.set(recipeRef, validatedData);
 
       // 2. If it's a sub-recipe, create its master inventory item spec (but NO stock records)
-      if (recipeData.isSubRecipe) {
-        const inventoryQuery = query(collection(db, 'inventory'), where('materialCode', '==', recipeData.internalCode));
+      if (validatedData.isSubRecipe) {
+        const inventoryQuery = query(collection(db, 'inventory'), where('materialCode', '==', validatedData.internalCode));
         const existingInv = await getDocs(inventoryQuery);
 
         if (existingInv.empty) {
           const inventoryRef = doc(collection(db, 'inventory'));
-          const unitCost = recipeData.totalCost / (recipeData.yield || 1);
+          const unitCost = validatedData.totalCost / (validatedData.yield || 1);
           
           const inventorySpec = {
-            materialCode: recipeData.internalCode,
-            name: recipeData.name,
+            materialCode: validatedData.internalCode,
+            name: validatedData.name,
             category: 'Sub-recipe',
-            unit: recipeData.yieldUnit || 'un.',
-            purchaseUnit: recipeData.yieldUnit || 'un.',
-            purchaseQuantity: recipeData.yield || 1,
+            unit: validatedData.yieldUnit || 'un.',
+            purchaseUnit: validatedData.yieldUnit || 'un.',
+            purchaseQuantity: validatedData.yield || 1,
             minStock: 0,
             maxStock: 0,
             supplier: 'In-house',
@@ -478,7 +484,7 @@ export async function addRecipe(recipeData: AddRecipeData) {
             purchasePrice: isFinite(unitCost) ? unitCost : 0,
             unitCost: isFinite(unitCost) ? unitCost : 0,
             allergens: [],
-            recipeUnit: recipeData.yieldUnit || 'un.',
+            recipeUnit: validatedData.yieldUnit || 'un.',
             recipeUnitConversion: 1,
           };
           transaction.set(inventoryRef, inventorySpec);
@@ -495,25 +501,26 @@ export async function addRecipe(recipeData: AddRecipeData) {
   }
 }
 
-export async function editRecipe(id: string, recipeData: Omit<Recipe, 'id'>) {
+export async function editRecipe(id: string, recipeData: z.infer<typeof recipeSchema>) {
+  const validatedData = recipeSchema.parse(recipeData);
   try {
     const recipeRef = doc(db, 'recipes', id);
-    await updateDoc(recipeRef, recipeData);
+    await updateDoc(recipeRef, validatedData);
     
     // If it's a sub-recipe, update its corresponding inventory item
-    if (recipeData.isSubRecipe) {
-      const inventoryRef = doc(db, 'inventory', recipeData.internalCode);
+    if (validatedData.isSubRecipe) {
+      const inventoryRef = doc(db, 'inventory', validatedData.internalCode);
       const invSnap = await getDoc(inventoryRef);
       if (invSnap.exists()) {
-        const unitCost = recipeData.totalCost / (recipeData.yield || 1);
+        const unitCost = validatedData.totalCost / (validatedData.yield || 1);
         await updateDoc(inventoryRef, {
-          name: recipeData.name,
-          unit: recipeData.yieldUnit || 'un.',
-          purchaseUnit: recipeData.yieldUnit || 'un.',
-          purchaseQuantity: recipeData.yield || 1,
+          name: validatedData.name,
+          unit: validatedData.yieldUnit || 'un.',
+          purchaseUnit: validatedData.yieldUnit || 'un.',
+          purchaseQuantity: validatedData.yield || 1,
           purchasePrice: isFinite(unitCost) ? unitCost : 0,
           unitCost: isFinite(unitCost) ? unitCost : 0,
-          recipeUnit: recipeData.yieldUnit || 'un.',
+          recipeUnit: validatedData.yieldUnit || 'un.',
         });
       }
     }
@@ -553,9 +560,10 @@ export async function deleteRecipe(recipeId: string) {
 
 
 // Menu Actions
-export async function addMenu(menuData: AddMenuData) {
+export async function addMenu(menuData: z.infer<typeof menuSchema>) {
+    const validatedData = menuSchema.parse(menuData);
     try {
-        const docRef = await addDoc(collection(db, 'menus'), menuData);
+        const docRef = await addDoc(collection(db, 'menus'), validatedData);
         revalidatePath('/menus');
         return { success: true, id: docRef.id };
     } catch (e) {
@@ -564,10 +572,11 @@ export async function addMenu(menuData: AddMenuData) {
     }
 }
 
-export async function editMenu(id: string, menuData: Omit<Menu, 'id'>) {
+export async function editMenu(id: string, menuData: z.infer<typeof menuSchema>) {
+    const validatedData = menuSchema.parse(menuData);
     try {
         const menuRef = doc(db, 'menus', id);
-        await updateDoc(menuRef, menuData);
+        await updateDoc(menuRef, validatedData);
         revalidatePath('/menus');
         revalidatePath(`/menus/${id}/edit`);
         return { success: true };
@@ -590,19 +599,20 @@ export async function deleteMenu(menuId: string) {
 
 
 // Sales Actions
-export async function logSale(saleData: AddSaleData) {
-  if (!saleData.outletId) {
+export async function logSale(saleData: z.infer<typeof saleSchema>) {
+  const validatedData = saleSchema.parse(saleData);
+  if (!validatedData.outletId) {
     throw new Error('An outlet must be specified to log a sale.');
   }
 
   try {
     await runTransaction(db, async (transaction) => {
       // --- READ PHASE ---
-      const recipeRef = doc(db, 'recipes', saleData.recipeId);
+      const recipeRef = doc(db, 'recipes', validatedData.recipeId);
       const recipeSnap = await transaction.get(recipeRef);
 
       if (!recipeSnap.exists()) {
-        throw new Error(`Recipe with ID ${saleData.recipeId} not found!`);
+        throw new Error(`Recipe with ID ${validatedData.recipeId} not found!`);
       }
       const recipe = recipeSnap.data() as Recipe;
 
@@ -610,7 +620,7 @@ export async function logSale(saleData: AddSaleData) {
         console.warn(`Recipe "${recipe.name}" has no ingredients. No stock will be depleted.`);
         // Just log the sale and return.
         const saleRef = doc(collection(db, 'sales'));
-        transaction.set(saleRef, { ...saleData, saleDate: serverTimestamp() });
+        transaction.set(saleRef, { ...validatedData, saleDate: serverTimestamp() });
         return;
       }
       
@@ -620,12 +630,12 @@ export async function logSale(saleData: AddSaleData) {
         const stockQuery = query(
           collection(db, 'inventoryStock'),
           where('inventoryId', '==', recipeIngredient.itemId),
-          where('outletId', '==', saleData.outletId)
+          where('outletId', '==', validatedData.outletId)
         );
         // Execute this query outside the transaction's `transaction.get`
         const stockSnaps = await getDocs(stockQuery);
         if (stockSnaps.empty) {
-          console.warn(`Stock record for ingredient ${recipeIngredient.name} (ID: ${recipeIngredient.itemId}) not found at outlet ${saleData.outletId}. Cannot deplete stock.`);
+          console.warn(`Stock record for ingredient ${recipeIngredient.name} (ID: ${recipeIngredient.itemId}) not found at outlet ${validatedData.outletId}. Cannot deplete stock.`);
           return null; // Skip this ingredient
         }
         const stockDocRef = stockSnaps.docs[0].ref;
@@ -648,7 +658,7 @@ export async function logSale(saleData: AddSaleData) {
       // --- WRITE PHASE ---
       const saleRef = doc(collection(db, 'sales'));
       transaction.set(saleRef, {
-        ...saleData,
+        ...validatedData,
         saleDate: serverTimestamp(),
       });
 
@@ -661,7 +671,7 @@ export async function logSale(saleData: AddSaleData) {
         const invItem = data.invItemSnap.data() as InventoryItem;
         const stockData = data.stockDocSnap.data() as InventoryStockItem;
 
-        const quantityInRecipeUnit = data.recipeIngredient.quantity * saleData.quantity;
+        const quantityInRecipeUnit = data.recipeIngredient.quantity * validatedData.quantity;
         const neededInBaseUnit = convert(quantityInRecipeUnit, data.recipeIngredient.unit as Unit, invItem.recipeUnit as Unit);
         
         let quantityToDeplete: number;
@@ -696,14 +706,15 @@ export async function logSale(saleData: AddSaleData) {
 }
 
 // Production Actions
-export async function logProduction(data: LogProductionData, outletId: string) {
+export async function logProduction(data: z.infer<typeof productionLogSchema>, outletId: string) {
+  const validatedData = productionLogSchema.parse(data);
   if (!outletId) {
     throw new Error("Outlet ID must be provided to log production.");
   }
   try {
     await runTransaction(db, async (transaction) => {
       // --- READ PHASE ---
-      const subRecipeRefs = data.items.map((item) => doc(db, 'recipes', item.recipeId));
+      const subRecipeRefs = validatedData.items.map((item) => doc(db, 'recipes', item.recipeId));
       const subRecipeSnaps = await Promise.all(subRecipeRefs.map((ref) => transaction.get(ref)));
       
       const inventoryRefsToFetch = new Map<string, DocumentReference>();
@@ -745,8 +756,8 @@ export async function logProduction(data: LogProductionData, outletId: string) {
       const stockDocMap = new Map(stockRefsAndSnaps.map(item => [item.inventoryId, { ref: item.ref, snap: item.snap }]));
 
       // --- WRITE PHASE ---
-      for (let i = 0; i < data.items.length; i++) {
-        const itemToProduce = data.items[i];
+      for (let i = 0; i < validatedData.items.length; i++) {
+        const itemToProduce = validatedData.items[i];
         const subRecipe = subRecipeSnaps[i].data() as Recipe;
         
         // Deplete raw ingredients
@@ -810,7 +821,7 @@ export async function logProduction(data: LogProductionData, outletId: string) {
         logDate: serverTimestamp(),
         user: 'Chef John Doe', // Placeholder
         outletId: outletId,
-        producedItems: data.items.map(item => {
+        producedItems: validatedData.items.map(item => {
             const subRecipe = subRecipeSnaps.find(snap => snap.id === item.recipeId)?.data() as Recipe;
             return {
                 recipeId: item.recipeId,
@@ -956,26 +967,27 @@ export async function undoProductionLog(logId: string) {
   }
 }
 
-export async function logButchering(data: ButcheringData, outletId: string) {
+export async function logButchering(data: z.infer<typeof butcheringLogSchema>, outletId: string) {
+  const validatedData = butcheringLogSchema.parse(data);
   if (!outletId) {
     throw new Error("An outlet ID must be provided to log butchering.");
   }
   try {
       await runTransaction(db, async (transaction) => {
           // --- 1. READ PHASE ---
-          const primaryItemSpecRef = doc(db, 'inventory', data.primaryItemId);
+          const primaryItemSpecRef = doc(db, 'inventory', validatedData.primaryItemId);
           const primaryItemSpecSnap = await transaction.get(primaryItemSpecRef);
           if (!primaryItemSpecSnap.exists()) throw new Error('Primary butchering item not found in inventory.');
           const primaryItemSpec = primaryItemSpecSnap.data() as InventoryItem;
 
-          const primaryStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', data.primaryItemId), where('outletId', '==', outletId));
+          const primaryStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', validatedData.primaryItemId), where('outletId', '==', outletId));
           const primaryStockDocs = await getDocs(primaryStockQuery);
           if (primaryStockDocs.empty) throw new Error(`Stock for ${primaryItemSpec.name} not found at this outlet.`);
           const primaryStockRef = primaryStockDocs.docs[0].ref;
           const primaryStockSnap = await transaction.get(primaryStockRef);
           const primaryStock = primaryStockSnap.data() as InventoryStockItem;
 
-          const producedItems = data.yieldedItems.filter(item => item.weight > 0);
+          const producedItems = validatedData.yieldedItems.filter(item => item.weight > 0);
           if (producedItems.length === 0) throw new Error("No yielded items with a weight greater than 0 were provided.");
 
           const yieldedItemReads = await Promise.all(producedItems.map(async (item) => {
@@ -988,7 +1000,7 @@ export async function logButchering(data: ButcheringData, outletId: string) {
           }));
 
           // --- 2. CALCULATION PHASE ---
-          const quantityUsedInPurchaseUnit = convert(data.quantityUsed, data.quantityUnit as Unit, primaryItemSpec.purchaseUnit as Unit);
+          const quantityUsedInPurchaseUnit = convert(validatedData.quantityUsed, validatedData.quantityUnit as Unit, primaryItemSpec.purchaseUnit as Unit);
           if (quantityUsedInPurchaseUnit > (primaryStock.quantity ?? 0)) {
               throw new Error(`Not enough stock for ${primaryItemSpec.name}. Available: ${(primaryStock.quantity ?? 0).toFixed(2)} ${primaryItemSpec.purchaseUnit}, Required: ${quantityUsedInPurchaseUnit.toFixed(2)} ${primaryItemSpec.purchaseUnit}`);
           }
@@ -1205,12 +1217,13 @@ export async function deleteButcheryTemplate(id: string) {
 
 
 // Purchase Order Actions
-export async function addPurchaseOrder(poData: AddPurchaseOrderData, outletId: string) {
+export async function addPurchaseOrder(poData: z.infer<typeof purchaseOrderSchema>, outletId: string) {
+    const validatedData = purchaseOrderSchema.parse(poData);
     if (!outletId) {
       throw new Error("An outlet must be specified to create a purchase order.");
     }
 
-    const itemsToOrder = poData.items.filter(item => item.orderQuantity > 0);
+    const itemsToOrder = validatedData.items.filter(item => item.orderQuantity > 0);
     if (itemsToOrder.length === 0) {
         throw new Error("Cannot create a purchase order with no items. Please add a quantity to at least one item.");
     }
@@ -1221,7 +1234,7 @@ export async function addPurchaseOrder(poData: AddPurchaseOrderData, outletId: s
             const poNumber = `PO-${Date.now()}`;
             const poRef = doc(collection(db, 'purchaseOrders'));
             transaction.set(poRef, {
-                ...poData,
+                ...validatedData,
                 items: itemsToOrder, // Save only the items being ordered
                 outletId,
                 poNumber,
@@ -1252,19 +1265,19 @@ export async function cancelPurchaseOrder(poId: string) {
     }
 }
 
-export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
-  
+export async function receivePurchaseOrder(data: z.infer<typeof receivePoSchema>) {
+  const validatedData = receivePoSchema.parse(data);
   try {
     await runTransaction(db, async (transaction) => {
       // --- READS ---
-      const poRef = doc(db, 'purchaseOrders', data.poId);
+      const poRef = doc(db, 'purchaseOrders', validatedData.poId);
       const poSnap = await transaction.get(poRef);
       if (!poSnap.exists()) throw new Error("Purchase Order not found.");
       const po = poSnap.data() as PurchaseOrder;
       const outletId = po.outletId;
       if (!outletId) throw new Error("PO is not associated with an outlet.");
 
-      const receivedItems = data.items.filter((item) => item.received > 0);
+      const receivedItems = validatedData.items.filter((item) => item.received > 0);
 
       const itemReads = await Promise.all(receivedItems.map(async (item) => {
         const specRef = doc(db, 'inventory', item.itemId);
@@ -1325,8 +1338,8 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
         }
       }
 
-      const isPartiallyReceived = data.items.some(item => item.received < item.ordered);
-      const isFullyReceived = data.items.every(item => item.received >= item.ordered);
+      const isPartiallyReceived = validatedData.items.some(item => item.received < item.ordered);
+      const isFullyReceived = validatedData.items.every(item => item.received >= item.ordered);
       
       let newStatus: PurchaseOrder['status'] = po.status;
       if (isFullyReceived) {
@@ -1337,12 +1350,12 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
 
       // In a real app, we'd handle file uploads to Firebase Storage here.
       // For now, we just save a placeholder name.
-      const documentUrl = data.document ? `documents/${data.poId}/${data.document.name}` : '';
+      const documentUrl = validatedData.document ? `documents/${validatedData.poId}/${validatedData.document.name}` : '';
 
       transaction.update(poRef, {
         status: newStatus,
         receivedAt: serverTimestamp(),
-        notes: data.notes || '',
+        notes: validatedData.notes || '',
         receivedDocumentUrl: documentUrl
       });
     });
@@ -1358,12 +1371,13 @@ export async function receivePurchaseOrder(data: ReceivePurchaseOrderData) {
 }
 
 // Outlet Actions
-export async function addOutlet(data: AddOutletData) {
+export async function addOutlet(data: z.infer<typeof outletSchema>) {
+  const validatedData = outletSchema.parse(data);
   try {
     await runTransaction(db, async (transaction) => {
       // 1. Create the new outlet document.
       const outletRef = doc(collection(db, 'outlets'));
-      transaction.set(outletRef, data);
+      transaction.set(outletRef, validatedData);
       
       // 2. Fetch all existing inventory item specifications.
       const inventoryQuery = query(collection(db, 'inventory'));
@@ -1391,8 +1405,9 @@ export async function addOutlet(data: AddOutletData) {
 }
 
 export async function editOutlet(id: string, data: Partial<Outlet>) {
+  const validatedData = outletSchema.partial().parse(data);
   try {
-    await updateDoc(doc(db, 'outlets', id), data);
+    await updateDoc(doc(db, 'outlets', id), validatedData);
     revalidatePath('/settings/outlets');
     return { success: true };
   } catch (error) {
@@ -1424,36 +1439,37 @@ export async function deleteOutlet(id: string) {
   }
 }
 
-export async function transferInventory(data: InventoryTransferData) {
+export async function transferInventory(data: z.infer<typeof transferInventorySchema>) {
+  const validatedData = transferInventorySchema.parse(data);
   try {
     await runTransaction(db, async (transaction) => {
       // --- READS ---
       // Get item spec
-      const itemRef = doc(db, 'inventory', data.itemId);
+      const itemRef = doc(db, 'inventory', validatedData.itemId);
       const itemSnap = await transaction.get(itemRef);
       if (!itemSnap.exists()) throw new Error('Inventory item not found.');
       const itemData = itemSnap.data() as InventoryItem;
 
       // Get outlets info
-      const fromOutletRef = doc(db, 'outlets', data.fromOutletId);
-      const toOutletRef = doc(db, 'outlets', data.toOutletId);
+      const fromOutletRef = doc(db, 'outlets', validatedData.fromOutletId);
+      const toOutletRef = doc(db, 'outlets', validatedData.toOutletId);
       const fromOutletSnap = await transaction.get(fromOutletRef);
       const toOutletSnap = await transaction.get(toOutletRef);
       if (!fromOutletSnap.exists() || !toOutletSnap.exists()) throw new Error('One or both outlets not found.');
 
       // Get stock documents
-      const fromStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', data.itemId), where('outletId', '==', data.fromOutletId));
+      const fromStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', validatedData.itemId), where('outletId', '==', validatedData.fromOutletId));
       const fromStockDocs = await getDocs(fromStockQuery);
       if (fromStockDocs.empty) throw new Error(`Stock for ${itemData.name} not found at source outlet.`);
       const fromStockRef = fromStockDocs.docs[0].ref;
       const fromStockSnap = await transaction.get(fromStockRef);
       const fromStock = fromStockSnap.data() as InventoryStockItem;
 
-      if ((fromStock.quantity ?? 0) < data.quantity) {
-        throw new Error(`Not enough stock to transfer. Available: ${fromStock.quantity}, Requested: ${data.quantity}`);
+      if ((fromStock.quantity ?? 0) < validatedData.quantity) {
+        throw new Error(`Not enough stock to transfer. Available: ${fromStock.quantity}, Requested: ${validatedData.quantity}`);
       }
       
-      const toStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', data.itemId), where('outletId', '==', data.toOutletId));
+      const toStockQuery = query(collection(db, 'inventoryStock'), where('inventoryId', '==', validatedData.itemId), where('outletId', '==', validatedData.toOutletId));
       const toStockDocs = await getDocs(toStockQuery);
       if (toStockDocs.empty) throw new Error(`Stock for ${itemData.name} not found at destination outlet.`);
       const toStockRef = toStockDocs.docs[0].ref;
@@ -1462,14 +1478,14 @@ export async function transferInventory(data: InventoryTransferData) {
 
       // --- WRITES ---
       // Decrement source
-      const newFromQuantity = fromStock.quantity - data.quantity;
+      const newFromQuantity = fromStock.quantity - validatedData.quantity;
       transaction.update(fromStockRef, {
         quantity: newFromQuantity,
         status: getStatus(newFromQuantity, itemData.minStock)
       });
       
       // Increment destination
-      const newToQuantity = (toStock.quantity ?? 0) + data.quantity;
+      const newToQuantity = (toStock.quantity ?? 0) + validatedData.quantity;
       transaction.update(toStockRef, {
         quantity: newToQuantity,
         status: getStatus(newToQuantity, itemData.minStock)
@@ -1480,15 +1496,15 @@ export async function transferInventory(data: InventoryTransferData) {
       transaction.set(transferLogRef, {
         transferDate: serverTimestamp(),
         user: 'Chef John Doe', // Placeholder
-        itemId: data.itemId,
+        itemId: validatedData.itemId,
         itemName: itemData.name,
-        quantity: data.quantity,
+        quantity: validatedData.quantity,
         unit: itemData.unit,
-        fromOutletId: data.fromOutletId,
+        fromOutletId: validatedData.fromOutletId,
         fromOutletName: fromOutletSnap.data().name,
-        toOutletId: data.toOutletId,
+        toOutletId: validatedData.toOutletId,
         toOutletName: toOutletSnap.data().name,
-        notes: data.notes || '',
+        notes: validatedData.notes || '',
       });
     });
 
