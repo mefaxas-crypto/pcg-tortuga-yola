@@ -4,7 +4,7 @@
 import type { Outlet } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useFirebase } from '@/firebase';
 
 type OutletContextType = {
   selectedOutlet: Outlet | null;
@@ -16,11 +16,13 @@ type OutletContextType = {
 const OutletContext = createContext<OutletContextType | undefined>(undefined);
 
 export const OutletProvider = ({ children }: { children: ReactNode }) => {
+  const { firestore } = useFirebase();
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'outlets'));
+    if (!firestore) return;
+    const q = query(collection(firestore, 'outlets'));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -45,7 +47,7 @@ export const OutletProvider = ({ children }: { children: ReactNode }) => {
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [firestore]);
 
 
   const value = useMemo(() => ({
