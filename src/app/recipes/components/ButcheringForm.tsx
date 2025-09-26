@@ -52,7 +52,6 @@ import { cn } from '@/lib/utils';
 import { allUnits, Unit, convert } from '@/lib/conversions';
 import { logButchering } from '@/lib/actions';
 import { InventoryItemFormSheet } from '@/app/inventory/components/InventoryItemFormSheet';
-import { useOutletContext } from '@/context/OutletContext';
 import { useCollection, useFirebase } from '@/firebase';
 
 const yieldItemSchema = z.object({
@@ -80,7 +79,6 @@ export function ButcheringForm() {
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const [isNewItemSheetOpen, setNewItemSheetOpen] = useState(false);
   const { toast } = useToast();
-  const { selectedOutlet } = useOutletContext();
   
   const inventoryQuery = useMemo(() => firestore ? query(collection(firestore, 'inventory')) : null, [firestore]);
   const { data: inventoryData } = useCollection<InventoryItem>(inventoryQuery);
@@ -184,14 +182,6 @@ export function ButcheringForm() {
   }, [watchedYieldedItems, quantityUsed, quantityUnit]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!selectedOutlet) {
-      toast({
-        variant: 'destructive',
-        title: 'No Outlet Selected',
-        description: 'Please select an outlet before logging butchering.',
-      });
-      return;
-    }
     setLoading(true);
     try {
       const primaryItem = inventory.find(i => i.id === values.primaryItemId);
@@ -220,10 +210,10 @@ export function ButcheringForm() {
         yieldedItems: itemsWithFinalCost,
       };
 
-      await logButchering(finalData, selectedOutlet.id);
+      await logButchering(finalData, 'default');
       toast({
         title: 'Butchering Logged!',
-        description: `Inventory at ${selectedOutlet.name} has been updated.`,
+        description: `Inventory has been updated.`,
       });
       form.reset({
         primaryItemId: '',
@@ -286,7 +276,6 @@ export function ButcheringForm() {
                             'justify-between',
                             !field.value && 'text-muted-foreground',
                           )}
-                          disabled={!selectedOutlet}
                         >
                           {field.value
                             ? inventory.find(
@@ -461,7 +450,7 @@ export function ButcheringForm() {
           </div>
         </fieldset>
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading || !selectedOutlet}>
+          <Button type="submit" disabled={loading}>
             {loading ? "Logging..." : "Log Butchering"}
           </Button>
         </div>

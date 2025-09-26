@@ -12,7 +12,6 @@ import { Header } from '@/components/layout/Header';
 import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
-import { OutletProvider } from '@/context/OutletContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -68,11 +67,9 @@ export default function RootLayout({ children }: Props) {
   return (
     <FirebaseClientProvider>
       <AuthProvider>
-        <OutletProvider>
           <ThemedLayout>
               {children}
           </ThemedLayout>
-        </OutletProvider>
       </AuthProvider>
     </FirebaseClientProvider>
   );

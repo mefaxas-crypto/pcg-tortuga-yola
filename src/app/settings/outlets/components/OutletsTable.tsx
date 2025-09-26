@@ -18,12 +18,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Outlet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteOutletDialog } from './DeleteOutletDialog';
 import { useCollection, useFirebase } from '@/firebase';
-import { useAuth } from '@/context/AuthContext';
 import { useMemo } from 'react';
 
 
@@ -33,20 +32,17 @@ type OutletsTableProps = {
 
 export function OutletsTable({ onEdit }: OutletsTableProps) {
   const { firestore } = useFirebase();
-  const { user, loading: authLoading } = useAuth(); // Use loading state from useAuth
 
   const outletsQuery = useMemo(() =>
-      !authLoading && user && firestore
+      firestore
         ? query(
             collection(firestore, 'outlets'),
-            where('userId', '==', user.uid),
             orderBy('name', 'asc')
           )
-        : null, [authLoading, user, firestore]);
+        : null, [firestore]);
 
-  const { data: outlets, isLoading: dataLoading } = useCollection<Outlet>(outletsQuery);
+  const { data: outlets, isLoading: loading } = useCollection<Outlet>(outletsQuery);
 
-  const loading = authLoading || dataLoading;
 
   return (
     <Card>

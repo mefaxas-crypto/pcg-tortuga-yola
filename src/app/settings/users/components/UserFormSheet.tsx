@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useMemo } from 'react';
 import type { AppUser, Outlet } from '@/lib/types';
-import { doc, updateDoc, collection, query, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, query } from 'firebase/firestore';
 import { useFirebase, useCollection } from '@/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -51,9 +51,9 @@ export function UserFormSheet({
   const { toast } = useToast();
 
   const outletsQuery = useMemo(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'outlets'), where('userId', '==', user.uid));
-  }, [firestore, user]);
+    if (!firestore) return null;
+    return query(collection(firestore, 'outlets'));
+  }, [firestore]);
 
   const { data: outlets } = useCollection<Outlet>(outletsQuery);
 
