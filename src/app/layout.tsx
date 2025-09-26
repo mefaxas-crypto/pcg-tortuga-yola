@@ -1,8 +1,8 @@
+
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
-import { notFound } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { OutletProvider } from '@/context/OutletContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -30,12 +30,7 @@ type Props = {
 };
 
 export default async function RootLayout({ children, params: { locale } }: Props) {
-  let messages;
-  try {
-    messages = await getMessages({ locale });
-  } catch (error) {
-    notFound();
-  }
+  const messages = await getMessages();
 
   return (
     <html
@@ -50,7 +45,7 @@ export default async function RootLayout({ children, params: { locale } }: Props
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen')}>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             <OutletProvider>
               <SidebarProvider>
