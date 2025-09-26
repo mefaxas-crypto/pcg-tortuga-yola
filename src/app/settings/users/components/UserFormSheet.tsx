@@ -13,6 +13,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -44,6 +45,15 @@ type UserFormSheetProps = {
   user?: AppUser;
   onClose: () => void;
 };
+
+const roleDescriptions: Record<AppUser['role'], string> = {
+    Admin: 'Can manage users, settings, and all data across all outlets.',
+    Manager: 'Can manage all aspects of their assigned outlets, including inventory, purchasing, and approving actions.',
+    Supervisor: 'Can perform daily operations like receiving purchase orders, which may require manager approval.',
+    Chef: 'Can manage recipes and menus, and log production or butchering.',
+    User: 'Has basic, view-only access or limited data entry permissions.',
+    Pending: 'New user who cannot access any part of the application until their role is changed by an Admin.',
+}
 
 export function UserFormSheet({
   open,
@@ -93,6 +103,8 @@ export function UserFormSheet({
     }
   }
 
+  const selectedRole = form.watch('role');
+
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <SheetContent>
@@ -127,6 +139,11 @@ export function UserFormSheet({
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedRole && (
+                    <FormDescription>
+                        {roleDescriptions[selectedRole]}
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

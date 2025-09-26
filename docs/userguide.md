@@ -6,8 +6,9 @@ Welcome to the PCG Kitchen Manager! This guide will walk you through the core fe
 
 ### 1.1. Logging In
 
--   Upon visiting the app, you will be prompted to sign in with your Google account. Click the **"Sign in with Google"** button.
+-   Upon visiting the app, you will be prompted to sign in with your Google account. Click the **"Sign in with Google"** button in the sidebar.
 -   This application uses role-based access control. Your assigned role (e.g., Admin, Manager, Chef) will determine which features you can see and use.
+-   New users will have a **"Pending"** status and must be approved by an Admin before they can access the application.
 
 ### 1.2. Selecting an Outlet
 
@@ -18,17 +19,27 @@ Welcome to the PCG Kitchen Manager! This guide will walk you through the core fe
 
 Before you can effectively use the system, an Admin user should set up the foundational data in the **Settings** section:
 
-1.  **Outlets**: Go to `Settings -> Outlet Management` to add all your physical kitchen locations (e.g., "Main Kitchen," "Pool Bar").
-2.  **Categories**: Go to `Settings -> Category Management` to define your inventory categories (e.g., "Meat," "Produce," "Dry Goods").
-3.  **Allergens**: Go to `Settings -> Allergen Management` to create a list of all allergens you need to track.
-4.  **Butchering Templates**: Go to `Settings -> Butchering Templates` to create templates for common butchering tasks (e.g., breaking down a whole salmon).
-5.  **Suppliers**: Go to the **Suppliers** page from the main menu to add all your vendors.
+1.  **Users**: Go to `Settings -> User Management` to approve new users and manage their roles.
+2.  **Outlets**: Go to `Settings -> Outlet Management` to add all your physical kitchen locations (e.g., "Main Kitchen," "Pool Bar").
+3.  **Categories**: Go to `Settings -> Category Management` to define your inventory categories (e.g., "Meat," "Produce," "Dry Goods").
+4.  **Allergens**: Go to `Settings -> Allergen Management` to create a list of all allergens you need to track.
+5.  **Butchering Templates**: Go to `Settings -> Butchering Templates` to create templates for common butchering tasks (e.g., breaking down a whole salmon).
+6.  **Suppliers**: Go to the **Suppliers** page from the main menu to add all your vendors.
 
-## 2. Core Workflow: Inventory to Sales
+## 2. User Roles & Permissions
+
+- **Admin**: Can manage users, settings, and all data across all outlets. This is the highest permission level.
+- **Manager**: Can manage all aspects of their assigned outlets, including inventory, purchasing, sales, reports, and approving actions from Supervisors.
+- **Supervisor**: Can perform daily operations like receiving purchase orders and logging counts. These actions may require manager approval in a future update.
+- **Chef**: Can manage recipes and menus, and log production or butchering.
+- **User**: Has basic, view-only access or limited data entry permissions (e.g., logging sales).
+- **Pending**: A new user who has signed up but cannot access any part of the application until their role is changed by an Admin.
+
+## 3. Core Workflow: Inventory to Sales
 
 This is the primary day-to-day workflow of the application.
 
-### 2.1. Managing Inventory
+### 3.1. Managing Inventory
 
 1.  **Navigate** to the **Inventory** page.
 2.  **Add Ingredients**: Click **"Add New Ingredient"**.
@@ -46,7 +57,7 @@ This is the primary day-to-day workflow of the application.
     -   Use the "New Inventory Transfer" form to move stock from one outlet to another.
     -   The "Transfer History" table shows a log of all past movements.
 
-### 2.2. Creating Recipes & Menus
+### 3.2. Creating Recipes & Menus
 
 1.  **Navigate** to the **Recipes & Production** page.
 2.  **Create a Recipe**: Click **"Add New Recipe"**.
@@ -59,23 +70,23 @@ This is the primary day-to-day workflow of the application.
     -   Give the menu a name (e.g., "Dinner Menu").
     -   Add recipes to the menu and set the final **Selling Price** for each.
 
-### 2.3. Logging Sales
+### 3.3. Logging Sales
 
 1.  **Navigate** to the **Sales** page.
 2.  In the "Log a New Sale" card, select the **Menu** and the **Menu Item** that was sold.
 3.  Enter the **Quantity Sold** and click **"Log Sale"**.
 4.  **Result**: This action immediately depletes the corresponding ingredients from your selected outlet's inventory and records the transaction for financial reporting.
 
-## 3. Purchasing & Receiving
+## 4. Purchasing & Receiving
 
-### 3.1. Creating a Purchase Order (PO)
+### 4.1. Creating a Purchase Order (PO)
 
 1.  **Navigate** to the **Purchasing** page.
 2.  On the "Create New PO" tab, select a **Supplier**.
 3.  The table will automatically populate with all items from that supplier. It will also suggest an **Order Quantity** for any items that are below their "Min Stock" level.
 4.  Adjust quantities as needed and click **"Create Purchase Order"**.
 
-### 3.2. Receiving a Purchase Order
+### 4.2. Receiving a Purchase Order
 
 1.  On the **Purchasing** page, go to the "Existing POs" tab.
 2.  Find the "Pending" PO you wish to receive in the "Active" list.
@@ -84,15 +95,15 @@ This is the primary day-to-day workflow of the application.
 5.  Optionally, add notes or attach a scanned invoice.
 6.  Click **"Confirm & Update Inventory"**. The items will be added to your stock. If you entered a new price, the item's cost will be updated using a weighted-average calculation.
 
-### 3.3. Approval Workflow
+### 4.3. Approval Workflow
 
 -   If your role is "Supervisor," receiving a PO will place it into a "Pending Approval" state.
 -   An "Admin" or "Manager" must then go to the `Approvals` page, review the pending receipt, and either **Approve** or **Reject** it.
 -   The inventory and cost updates will only be finalized upon approval.
 
-## 4. Production & Butchering
+## 5. Production & Butchering
 
-### 4.1. Logging Sub-Recipe Production
+### 5.1. Logging Sub-Recipe Production
 
 This is for making batches of items that are ingredients in other recipes (e.g., "Tomato Sauce").
 
@@ -102,7 +113,7 @@ This is for making batches of items that are ingredients in other recipes (e.g.,
 4.  Enter the number of **Batches Produced** and click **"Log All Production"**.
 5.  **Result**: The raw ingredients (tomatoes, herbs, etc.) will be depleted from inventory, and the stock of "Tomato Sauce" (as an inventory item) will be increased.
 
-### 4.2. Logging Butchering Yield
+### 5.2. Logging Butchering Yield
 
 This is for breaking down a large item (like a whole fish) into usable cuts.
 
@@ -114,15 +125,15 @@ This is for breaking down a large item (like a whole fish) into usable cuts.
 6.  Click **"Log Butchering"**.
 7.  **Result**: The stock of "Whole Salmon" will be depleted, and the stock for "Salmon Fillet" and "Salmon Trim" will be increased, with the cost of the primary item intelligently distributed across the yields.
 
-## 5. Reports & AI Tools
+## 6. Reports & AI Tools
 
-### 5.1. Reports
+### 6.1. Reports
 
 -   **Navigate** to the **Reports** page.
 -   **Sales & Profitability**: Select a date range to view your key financial metrics. This report includes KPI cards, a performance-over-time chart, and a detailed Profit & Loss breakdown by menu item.
 -   **Variance Analysis**: Select a date range to analyze the difference between your theoretical food cost (what you sold) and your actual food cost (after physical counts). This helps pinpoint waste, loss, or portioning issues.
 
-### 5.2. AI Tools
+### 6.2. AI Tools
 
 -   **Navigate** to the **AI Tools** page.
 -   **Waste Prediction**: Provide historical data and current inventory to get an AI-powered analysis of potential future waste and suggestions for prevention.

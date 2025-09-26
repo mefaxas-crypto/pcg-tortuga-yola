@@ -63,7 +63,7 @@ export function UsersTable() {
   const getRoleBadgeClass = (role: AppUser['role']) => {
     switch (role) {
       case 'Admin':
-        return 'bg-primary/20 text-primary-foreground border-primary/50';
+        return 'bg-primary/20 text-primary border-primary/50';
       case 'Manager':
         return 'bg-blue-500/20 text-blue-700 border-blue-500/50';
       case 'Supervisor':
@@ -86,7 +86,7 @@ export function UsersTable() {
         <CardHeader>
             <CardTitle>Application Users</CardTitle>
             <CardDescription>
-                Manage user roles and approve new accounts. Users with a &quot;Pending&quot; role cannot access the application.
+                Manage user roles and approve new accounts. New users will have a &quot;Pending&quot; role by default and must be approved by an Admin to access the app.
             </CardDescription>
         </CardHeader>
       <CardContent>
