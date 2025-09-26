@@ -7,7 +7,7 @@ import { getAuth } from "firebase/auth";
 const firebaseConfig = {
   projectId: 'studio-6080596132-e636f',
   appId: '1:705868700170:web:63b2ba30e2427d0e271df3',
-  apiKey: 'AIzaSyDiKtzbrSlPg5CBnVCP5dP9srTcaQ_YuF0',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: 'studio-6080596132-e636f.firebaseapp.com',
   measurementId: '',
   messagingSenderId: '705868700170',
