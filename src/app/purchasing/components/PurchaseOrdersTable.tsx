@@ -23,7 +23,7 @@ import { ReceivePoDialog } from './ReceivePoDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CancelPoDialog } from './CancelPoDialog';
 import { useOutletContext } from '@/context/OutletContext';
-import { useRouter } from 'next-intl/client';
+import { useRouter } from 'next/navigation';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 
 type PurchaseOrdersTableProps = {
@@ -79,6 +79,14 @@ export function PurchaseOrdersTable({ status }: PurchaseOrdersTableProps) {
     
     const handleViewClick = (poId: string) => {
         router.push(`/purchasing/${poId}`);
+    }
+
+    if (!selectedOutlet) {
+        return (
+             <div className="py-12 text-center text-muted-foreground">
+                Please select an outlet to view purchase orders.
+            </div>
+        )
     }
 
     return (

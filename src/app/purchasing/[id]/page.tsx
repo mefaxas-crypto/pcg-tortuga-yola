@@ -25,7 +25,7 @@ import type { PurchaseOrder } from '@/lib/types';
 import { doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Printer, ArrowLeft } from 'lucide-react';
-import { useRouter, useParams } from 'next-intl/client';
+import { useRouter, useParams } from 'next/navigation';
 
 export default function PurchaseOrderPage() {
   const router = useRouter();
