@@ -15,10 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, Outlet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User } from 'lucide-react';
+import { User, Store } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { UserFormSheet } from './UserFormSheet';
@@ -26,31 +26,42 @@ import { UserFormSheet } from './UserFormSheet';
 
 export function UsersTable() {
   const [users, setUsers] = useState<AppUser[] | null>(null);
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetState, setSheetState] = useState<{ open: boolean; user?: AppUser }>({
     open: false,
   });
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
+    const qUsers = query(collection(db, 'users'), orderBy('displayName', 'asc'));
+    const unsubscribeUsers = onSnapshot(
+      qUsers,
       (querySnapshot) => {
         const data: AppUser[] = [];
         querySnapshot.forEach((doc) => {
           data.push({ uid: doc.id, ...doc.data() } as AppUser);
         });
         setUsers(data);
-        setLoading(false);
+        if (loading) setLoading(false);
       },
       (error) => {
         console.error('Error fetching users:', error);
-        setLoading(false);
+        if (loading) setLoading(false);
       }
     );
+    
+    const qOutlets = query(collection(db, 'outlets'));
+    const unsubscribeOutlets = onSnapshot(qOutlets, (snapshot) => {
+        const data: Outlet[] = [];
+        snapshot.forEach(doc => data.push({id: doc.id, ...doc.data()} as Outlet));
+        setOutlets(data);
+    });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      unsubscribeUsers();
+      unsubscribeOutlets();
+    };
+  }, [loading]);
 
   const handleEdit = (user: AppUser) => {
     setSheetState({ open: true, user });
@@ -63,14 +74,15 @@ export function UsersTable() {
   const getRoleBadgeClass = (role: AppUser['role']) => {
     switch (role) {
       case 'Admin':
-        return 'bg-primary/20 text-primary border-primary/50';
+        return 'bg-primary/20 text-primary-foreground border-primary/50';
       case 'Manager':
         return 'bg-blue-500/20 text-blue-700 border-blue-500/50';
       case 'Supervisor':
         return 'bg-purple-500/20 text-purple-700 border-purple-500/50';
       case 'Chef':
         return 'bg-green-500/20 text-green-700 border-green-500/50';
-      case 'User':
+      case 'Clerk':
+      case 'Cook':
         return 'bg-gray-500/20 text-gray-700 border-gray-500/50';
       case 'Pending':
         return 'bg-yellow-500/20 text-yellow-700 border-yellow-500/50';
@@ -96,7 +108,7 @@ export function UsersTable() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
+                <TableHead>Role & Assignment</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -113,7 +125,9 @@ export function UsersTable() {
                   </TableRow>
                 ))}
               {!loading &&
-                users?.map((user) => (
+                users?.map((user) => {
+                  const assignedOutlet = outlets.find(o => o.id === user.assignedOutletId);
+                  return (
                   <TableRow key={user.uid}>
                     <TableCell>
                         <div className='flex items-center gap-3'>
@@ -128,9 +142,17 @@ export function UsersTable() {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                      <TableCell>
-                        <Badge variant="outline" className={cn('capitalize', getRoleBadgeClass(user.role))}>
-                            {user.role}
-                        </Badge>
+                        <div className='flex flex-col gap-1'>
+                            <Badge variant="outline" className={cn('capitalize w-fit', getRoleBadgeClass(user.role))}>
+                                {user.role}
+                            </Badge>
+                            {assignedOutlet && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Store className="h-3 w-3" />
+                                    <span>{assignedOutlet.name}</span>
+                                </div>
+                            )}
+                        </div>
                      </TableCell>
                     <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
@@ -139,7 +161,7 @@ export function UsersTable() {
                         </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                )})}
             </TableBody>
           </Table>
         </div>

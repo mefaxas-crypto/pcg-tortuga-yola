@@ -203,4 +203,5 @@ export const appUserSchema = z.object({
   displayName: z.string().nullable(),
   photoURL: z.string().url().nullable(),
   role: z.enum(UserRoles),
+  assignedOutletId: z.string().optional(),
 });

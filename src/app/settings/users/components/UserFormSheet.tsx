@@ -31,13 +31,23 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, Outlet } from '@/lib/types';
 import { UserRoles } from '@/lib/validations';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   role: z.enum(UserRoles),
+  assignedOutletId: z.string().optional(),
+}).refine((data) => {
+    if ((data.role === 'Clerk' || data.role === 'Cook') && !data.assignedOutletId) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'An outlet must be assigned for Clerk and Cook roles.',
+    path: ['assignedOutletId'],
 });
 
 type UserFormSheetProps = {
@@ -48,10 +58,10 @@ type UserFormSheetProps = {
 
 const roleDescriptions: Record<AppUser['role'], string> = {
     Admin: 'Superuser with unrestricted access to all features, including user management and system settings.',
-    Manager: 'Can manage all operational aspects like inventory, purchasing, and reports, but cannot manage recipes, menus or users.',
-    Chef: 'Can manage recipes, menus, and create ingredients. Has access to most operational features, including production logs.',
-    Clerk: 'Admin staff role. Can log sales, manage suppliers, create ingredients, and handle purchasing. Cannot manage production or recipes.',
-    Cook: 'Kitchen staff role. Can log sub-recipe production, log butchering, and perform physical counts. Cannot log sales or manage recipes.',
+    Manager: 'High-level operator. Can do everything an Admin can do except manage users and core application settings. They can create ingredients, manage suppliers, handle all purchasing, run reports, and approve actions. They cannot manage recipes or menus.',
+    Chef: 'The recipe and menu expert. Can create/edit recipes, menus, and ingredients. Also handles all production and butchering logs.',
+    Clerk: 'Administrative staff role. Can log sales, manage suppliers, create ingredients, and handle the full purchasing workflow (creating and receiving POs). They cannot log production or manage recipes/menus.',
+    Cook: 'Kitchen staff role. Can log sub-recipe production, log butchering, perform physical inventory counts, and create/receive POs. They cannot log sales or create master ingredients/suppliers.',
     Pending: 'New user who cannot access any part of the application until their role is changed by an Admin.',
     Supervisor: 'This role is deprecated and should not be used.',
 }
@@ -62,18 +72,31 @@ export function UserFormSheet({
   onClose,
 }: UserFormSheetProps) {
   const [loading, setLoading] = useState(false);
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       role: 'Cook',
+      assignedOutletId: '',
     },
   });
 
   useEffect(() => {
+    const q = query(collection(db, 'outlets'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const data: Outlet[] = [];
+        snapshot.forEach(doc => data.push({id: doc.id, ...doc.data()} as Outlet));
+        setOutlets(data.sort((a,b) => a.name.localeCompare(b.name)));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (open && user) {
         form.reset({
-            role: user.role
+            role: user.role,
+            assignedOutletId: user.assignedOutletId || '',
         });
     }
   }, [user, open, form]);
@@ -86,10 +109,17 @@ export function UserFormSheet({
     setLoading(true);
     try {
         const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, { role: values.role });
+        const dataToUpdate: Partial<AppUser> = { role: values.role };
+        if (values.role === 'Clerk' || values.role === 'Cook') {
+            dataToUpdate.assignedOutletId = values.assignedOutletId;
+        } else {
+            dataToUpdate.assignedOutletId = ''; // Remove assignment for other roles
+        }
+
+        await updateDoc(userRef, dataToUpdate);
         toast({
             title: 'User Updated',
-            description: `${user.displayName}'s role has been set to ${values.role}.`,
+            description: `${user.displayName}'s role and assignment have been updated.`,
         });
       onClose();
     } catch (error) {
@@ -105,6 +135,7 @@ export function UserFormSheet({
   }
 
   const selectedRole = form.watch('role');
+  const showOutletAssignment = selectedRole === 'Clerk' || selectedRole === 'Cook';
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -120,7 +151,7 @@ export function UserFormSheet({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="grid gap-4 py-4"
+            className="grid gap-6 py-4"
           >
             <FormField
               control={form.control}
@@ -149,6 +180,36 @@ export function UserFormSheet({
                 </FormItem>
               )}
             />
+            {showOutletAssignment && (
+                <>
+                    <Separator />
+                     <FormField
+                        control={form.control}
+                        name="assignedOutletId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Assign to Outlet</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select an outlet" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {outlets.map(outlet => (
+                                    <SelectItem key={outlet.id} value={outlet.id}>{outlet.name}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                             <FormDescription>
+                                This user will only have access to this specific outlet.
+                            </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </>
+            )}
             <SheetFooter className="mt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
