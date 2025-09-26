@@ -29,15 +29,23 @@ type Props = {
   children: React.ReactNode;
 };
 
+const THEMES = ['theme-bamboo', 'theme-ocean'];
+
 function ThemedLayout({ children }: { children: React.ReactNode }) {
   const { selectedOutlet } = useOutletContext();
 
   useEffect(() => {
-    // Remove all theme classes and add the current one
-    document.documentElement.classList.remove('theme-bamboo');
+    const root = document.documentElement;
+    
+    // Remove all possible theme classes
+    root.classList.remove(...THEMES);
+    
+    // Determine the new theme, defaulting to 'theme-bamboo'
     const theme = selectedOutlet?.theme || 'theme-bamboo';
-    if(theme) {
-      document.documentElement.classList.add(theme);
+    
+    // Add the new theme class if it's not the default (empty string)
+    if (theme) {
+      root.classList.add(theme);
     }
   }, [selectedOutlet]);
 
