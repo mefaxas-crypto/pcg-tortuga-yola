@@ -9,7 +9,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { Header } from '@/components/layout/Header';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 import { useEffect } from 'react';
 
@@ -66,7 +66,7 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
           <SidebarInset>
             <Header />
             <main className="p-4 lg:p-6 max-w-7xl mx-auto">
-              <AuthGuard>{children}</AuthGuard>
+              {children}
             </main>
           </SidebarInset>
           <Toaster />
@@ -76,35 +76,6 @@ function ThemedLayout({ children }: { children: React.ReactNode }) {
     </html>
   );
 }
-
-function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { loading, user } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-[400px]">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h3 className="text-2xl mt-4 font-bold tracking-tight">
-            Loading...
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Authenticating your session.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    // The sidebar will show the sign-in button.
-    // We render nothing in the main content area to prevent data fetching.
-    return null;
-  }
-  
-  // If we have a user, render the page.
-  return <>{children}</>;
-}
-
 
 export default function RootLayout({ children }: Props) {
   return (
